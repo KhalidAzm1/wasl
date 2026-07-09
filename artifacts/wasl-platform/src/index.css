@@ -72,26 +72,26 @@
   --popover-foreground: 0 0% 98%;
   --popover-border: 230 40% 15%;
 
-  --primary: 262 83% 58%; /* #7C3AED */
+  --primary: 255 78% 56%; /* #4F32D6 — matches Wasl logo deep violet */
   --primary-foreground: 0 0% 100%;
-  
-  --secondary: 217 91% 60%; /* #3B82F6 */
-  --secondary-foreground: 0 0% 100%;
+
+  --secondary: 258 85% 74%; /* #A48CF2 — matches Wasl logo lavender */
+  --secondary-foreground: 255 40% 15%;
 
   --muted: 230 30% 15%;
   --muted-foreground: 230 20% 70%;
 
-  --accent: 262 83% 58%;
+  --accent: 255 78% 56%;
   --accent-foreground: 0 0% 98%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
   --input: 230 40% 15%;
-  --ring: 262 83% 58%;
-  
-  --chart-1: 262 83% 58%;
-  --chart-2: 217 91% 60%;
+  --ring: 255 78% 56%;
+
+  --chart-1: 255 78% 56%;
+  --chart-2: 258 85% 74%;
   --chart-3: 160 84% 39%;
   --chart-4: 43 96% 56%;
   --chart-5: 0 84% 60%;

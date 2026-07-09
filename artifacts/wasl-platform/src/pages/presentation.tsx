@@ -214,7 +214,7 @@ export default function PresentationMode() {
       </div>
 
       {/* Brand + navigation overlay */}
-      <img src={logoUrl} alt="Wasl" className="absolute top-6 left-6 w-16 h-auto z-50 opacity-90 drop-shadow-lg" />
+      <img src={logoUrl} alt="Wasl" className="absolute top-6 left-6 w-24 h-auto z-50 opacity-95 drop-shadow-lg" />
       <div className="absolute top-6 right-6 z-50">
         <NavControls variant="overlay" />
       </div>

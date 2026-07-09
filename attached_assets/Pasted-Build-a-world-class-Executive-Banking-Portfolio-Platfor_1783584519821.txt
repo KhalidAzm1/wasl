@@ -1,0 +1,396 @@
+Build a world-class Executive Banking Portfolio Platform for Wasl.
+
+Application Name:
+"منصة متابعة البنوك - وصل"
+
+This is NOT a traditional dashboard.
+
+This platform is designed for:
+
+- Executive meetings
+- Weekly portfolio reviews
+- Bank relationship management
+- Presentation mode
+- Strategic decision making
+- Executive reporting
+
+==================================================
+VISUAL IDENTITY
+==================================================
+
+Analyze all uploaded files and use the PowerPoint presentation as the primary design reference.
+
+Strictly follow:
+
+- Wasl branding
+- Wasl logo
+- Wasl colors
+- Wasl typography
+- Wasl presentation style
+
+The platform should feel like:
+
+- Apple Keynote
+- Stripe Dashboard
+- Linear
+- Mercury
+- Notion
+- Apple TV
+- Netflix
+- Salesforce
+- Monday.com
+
+The final result should feel like a multi-million-dollar enterprise fintech platform.
+
+==================================================
+BACKGROUND
+==================================================
+
+Create a cinematic immersive background.
+
+Requirements:
+
+- Deep navy background (#050816)
+- Purple gradients (#7C3AED)
+- Blue accents (#3B82F6)
+- Glassmorphism
+- Soft glows
+- Architectural geometric patterns
+- Subtle particles
+- Premium lighting
+- Parallax effects
+
+The background should remain visible while scrolling.
+
+==================================================
+MAIN NAVIGATION
+==================================================
+
+Create:
+
+1. Executive Dashboard
+Route:
+/admin
+
+2. Portfolio Wall
+Route:
+/portfolio
+
+3. Presentation Mode
+Route:
+/presentation
+
+4. Bank Details
+Route:
+/bank/[id]
+
+5. Settings
+Route:
+/settings
+
+==================================================
+HOME PAGE
+==================================================
+
+The home page should NOT look like a traditional dashboard.
+
+Do NOT create:
+
+- Small KPI cards
+- Traditional admin panels
+- Basic charts everywhere
+
+Create an Executive Command Center.
+
+Display:
+
+- Banks requiring attention
+- Upcoming meetings
+- Risks
+- Deadlines
+- Recent updates
+- Executive insights
+
+==================================================
+PORTFOLIO WALL
+==================================================
+
+This is the primary experience.
+
+Display all banks as large premium cards.
+
+The experience should feel like:
+
+- Netflix
+- Apple TV
+- Notion Gallery
+- Stripe Atlas
+
+Cards should be large, visual, and premium.
+
+==================================================
+BANK CARD
+==================================================
+
+Each bank card should include:
+
+- Large Hero Image
+- Transparent Bank Logo
+- Arabic Name
+- English Name
+- Product
+- Current Status
+- Progress Percentage
+- Current Stage
+- Responsible Person
+- Next Meeting Date
+- Risk Indicator
+
+Cards should feel like presentation slides.
+
+Hover:
+
+- Soft glow
+- Scale animation
+- Executive preview
+
+Click:
+
+Open full bank profile.
+
+==================================================
+PRESENTATION MODE
+==================================================
+
+Create a premium presentation experience.
+
+One slide per bank.
+
+Support:
+
+- Previous
+- Next
+- Swipe
+- Keyboard arrows
+- Full screen mode
+
+The experience should feel like:
+
+- Apple Keynote
+- PowerPoint
+- Netflix browsing
+
+==================================================
+BANK PROFILE PAGE
+==================================================
+
+When opening a bank:
+
+Create a premium company profile page.
+
+Sections:
+
+Overview
+Timeline
+Meetings
+Products
+Documents
+Risks
+Action Items
+Notes
+Analytics
+History
+Updates
+
+==================================================
+BANK INFORMATION
+==================================================
+
+Display:
+
+- Hero Image
+- Transparent Logo
+- Arabic Name
+- English Name
+- Status
+- Progress
+- Current Stage
+- Products
+- Executive Summary
+
+==================================================
+CONTACT INFORMATION
+==================================================
+
+Display:
+
+- Responsible Person
+- Phone Number
+- Email Address
+- Website
+- Relationship Manager
+- Department
+
+==================================================
+MEETINGS
+==================================================
+
+Display:
+
+- Last Meeting
+- Next Meeting
+- Meeting Notes
+- Decisions
+- Action Items
+
+==================================================
+PRODUCTS
+==================================================
+
+Display:
+
+- Available Products
+- Unavailable Products
+- Coming Soon Products
+
+==================================================
+TIMELINE
+==================================================
+
+Create a premium timeline:
+
+Agreement
+Business Analysis
+Development
+Testing
+NOC
+Go Live
+
+Highlight the current stage.
+
+==================================================
+RISKS
+==================================================
+
+Display:
+
+- High Risks
+- Medium Risks
+- Low Risks
+- Mitigation Plans
+
+==================================================
+SETTINGS
+==================================================
+
+Create a complete administration module.
+
+Allow administrators to:
+
+- Add banks
+- Edit banks
+- Delete banks
+- Upload bank logos
+- Upload hero images
+- Upload custom banners
+- Manage products
+- Manage stages
+- Manage statuses
+- Manage categories
+- Manage responsible persons
+- Manage executive summaries
+
+==================================================
+MEDIA LIBRARY
+==================================================
+
+Create a media library.
+
+Allow:
+
+- Upload logos
+- Replace logos
+- Upload hero images
+- Crop images
+- Preview images
+
+Support:
+
+PNG
+SVG
+JPG
+WEBP
+
+All logos must support transparent backgrounds.
+
+==================================================
+LOGO REQUIREMENTS
+==================================================
+
+Use transparent PNG or SVG logos.
+
+Remove white backgrounds.
+
+Bank logos should appear premium and clean.
+
+Wasl logo should also use transparent assets.
+
+Support changing logos later from settings.
+
+==================================================
+DESIGN REQUIREMENTS
+==================================================
+
+- Large cards
+- Large spacing
+- Premium typography
+- Dark mode
+- Glassmorphism
+- Framer Motion animations
+- Smooth transitions
+- Skeleton loading
+- Responsive layout
+- No text overlap
+- Auto resizing components
+
+==================================================
+DATA SOURCE
+==================================================
+
+Use the uploaded files as the source of truth:
+
+- Wasl Master Table.xlsx
+- PowerPoint Presentation
+
+Analyze all data and generate:
+
+- Banks
+- Products
+- Meetings
+- Timelines
+- Statuses
+- Executive summaries
+- Contact information
+- Risks
+- Updates
+
+Do NOT create the final production database yet.
+
+Use temporary data services and mock APIs.
+
+==================================================
+FUTURE READY
+==================================================
+
+Prepare the architecture for:
+
+- PostgreSQL
+- Prisma
+- Real-time updates
+- Deployment outside Replit
+
+For this phase:
+
+Focus entirely on creating the best Executive Banking Portfolio Platform possible.
+
+The entire application should feel like software built by a top-tier product company rather than an internal corporate dashboard.

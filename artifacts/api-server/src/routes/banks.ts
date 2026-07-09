@@ -124,14 +124,14 @@ router.patch("/banks/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  if (parsed.data.logoUrl !== undefined) {
+  if (parsed.data.logoUrl) {
     const imageError = validateImageDataUrl(parsed.data.logoUrl);
     if (imageError) {
       res.status(400).json({ error: imageError });
       return;
     }
   }
-  if (parsed.data.heroImageUrl !== undefined) {
+  if (parsed.data.heroImageUrl) {
     const imageError = validateImageDataUrl(parsed.data.heroImageUrl);
     if (imageError) {
       res.status(400).json({ error: imageError });

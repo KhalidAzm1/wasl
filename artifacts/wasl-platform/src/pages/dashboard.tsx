@@ -41,7 +41,7 @@ export default function Dashboard() {
     <div className="p-8 pb-24 max-w-7xl mx-auto w-full space-y-8">
       <header className="flex justify-between items-end mb-8 gap-6">
         <div className="flex items-center gap-5">
-          <img src={logoUrl} alt="Wasl" className="w-16 h-auto drop-shadow-lg hidden sm:block" />
+          <img src={logoUrl} alt="Wasl" className="w-28 h-auto drop-shadow-lg hidden sm:block" />
           <div>
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-white to-white/60 mb-2">
               لوحة القيادة التنفيذية

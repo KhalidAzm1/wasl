@@ -24,6 +24,12 @@ export function Layout({ children }: LayoutProps) {
     return (
       <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans" dir="rtl">
         <AnimatedBackground />
+        <img
+          src={logoUrl}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none select-none fixed bottom-[-6%] left-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
+        />
         <main className="relative z-10 w-full h-[100dvh] overflow-hidden">
           {children}
         </main>
@@ -34,11 +40,19 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans flex" dir="rtl">
       <AnimatedBackground />
-      
+
+      {/* Brand watermark, present behind all page content */}
+      <img
+        src={logoUrl}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none select-none fixed bottom-[-6%] left-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
+      />
+
       {/* Sidebar */}
       <aside className="relative z-20 w-72 glass-panel border-l border-r-0 flex flex-col items-center py-8 px-4 gap-8">
         <div className="w-full flex items-center justify-center mb-6">
-          <img src={logoUrl} alt="Wasl" className="w-32 h-auto drop-shadow-lg" />
+          <img src={logoUrl} alt="Wasl" className="w-48 h-auto drop-shadow-lg" />
         </div>
         
         <nav className="w-full flex flex-col gap-3">

@@ -5,6 +5,7 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { Layout } from '@/components/Layout';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
+import EntryExperience from '@/pages/entry-experience';
 import Dashboard from '@/pages/dashboard';
 import BankDetail from '@/pages/bank-detail';
 import Settings from '@/pages/settings';
@@ -18,13 +19,24 @@ const queryClient = new QueryClient({
   },
 });
 
-function Router() {
+// The cinematic entry experience is a standalone full-screen page (no
+// sidebar/chrome). Every other route lives inside the normal app Layout.
+function AppRoutes() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/bank/:id" component={BankDetail} />
-      <Route path="/settings" component={Settings} />
-      <Route component={NotFound} />
+      <Route path="/" component={EntryExperience} />
+      <Route path="/portfolio">
+        <Layout><Dashboard /></Layout>
+      </Route>
+      <Route path="/bank/:id">
+        <Layout><BankDetail /></Layout>
+      </Route>
+      <Route path="/settings">
+        <Layout><Settings /></Layout>
+      </Route>
+      <Route>
+        <Layout><NotFound /></Layout>
+      </Route>
     </Switch>
   );
 }
@@ -35,9 +47,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Layout>
-              <Router />
-            </Layout>
+            <AppRoutes />
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

@@ -29,7 +29,7 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { href: '/', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)' },
+  { href: '/portfolio', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)' },
   { href: '/settings', icon: Settings, label: 'الإعدادات (Settings)' },
 ];
 

@@ -1,0 +1,223 @@
+Create a world-class cinematic entry experience for:
+
+"منصة متابعة البنوك - وصل"
+Wasl Banking Command Center
+
+This is NOT a traditional login page.
+
+This is an Executive Digital Vault experience.
+
+==================================================
+OVERALL EXPERIENCE
+==================================================
+
+The user should feel like they are entering the headquarters of a premium fintech company or executive command center.
+
+The experience should feel inspired by:
+
+- Apple Vision Pro
+- Tesla
+- Resend
+- Vercel
+- High-end fintech software
+- Science-fiction executive control rooms
+
+The experience should be luxurious, immersive and cinematic.
+
+==================================================
+BACKGROUND
+==================================================
+
+Create a full-screen cinematic background.
+
+Requirements:
+
+- Deep navy background (#050816)
+- Purple gradients (#7C3AED)
+- Blue accents (#3B82F6)
+- Glass reflections
+- Soft volumetric lighting
+- Subtle particles
+- Geometric architecture lines
+- Slow ambient movement
+
+The page should feel alive.
+
+==================================================
+OPENING ANIMATION
+==================================================
+
+Step 1:
+
+Display the Wasl logo.
+
+The logo appears slowly with a premium fade and glow effect.
+
+Display:
+
+Wasl Banking Command Center
+منصة القيادة التنفيذية للبنوك
+
+==================================================
+DIGITAL VAULT
+==================================================
+
+Create a large premium digital glass door.
+
+The door should feel like:
+
+- Executive headquarters entrance
+- Futuristic glass vault
+- Premium bank command center
+
+The door should have:
+
+- Glass reflections
+- Metallic edges
+- Soft lighting
+- Animated particles
+
+==================================================
+3D CENTERPIECE
+==================================================
+
+Behind the glass door create a large premium rotating 3D cube.
+
+Technology:
+
+- Three.js
+- React Three Fiber
+- Drei
+
+This must be a REAL 3D cube.
+
+Do NOT create a fake CSS cube.
+
+==================================================
+3D CUBE DESIGN
+==================================================
+
+Requirements:
+
+- Slow continuous rotation.
+- Glass and metallic material.
+- Premium reflections.
+- Soft shadows.
+- Ambient lighting.
+- Mouse interaction.
+
+Size:
+
+300px to 350px.
+
+The cube should become the centerpiece of the experience.
+
+==================================================
+CUBE FACES
+==================================================
+
+Display:
+
+- Wasl logo
+- Al Rajhi logo
+- SNB logo
+- Alinma logo
+- Riyad Bank logo
+- BSF logo
+
+All logos:
+
+- Transparent PNG
+- SVG support
+- Premium quality
+- Centered on cube faces
+
+Support replacing logos later.
+
+==================================================
+STATISTICS
+==================================================
+
+Below the cube display:
+
+29 Banking Partners
+10 Active Integrations
+1 Completed
+
+Animate the counters.
+
+==================================================
+MAIN BUTTON
+==================================================
+
+Create one large premium button:
+
+ENTER COMMAND CENTER
+دخول مركز القيادة
+
+Glassmorphism style.
+
+Premium hover effects.
+
+==================================================
+ENTER ANIMATION
+==================================================
+
+When the button is pressed:
+
+1. The cube rotation speeds up.
+2. The digital vault doors open slowly.
+3. The camera moves forward.
+4. The camera passes through the cube.
+5. The screen transitions smoothly.
+6. Open:
+
+/portfolio
+
+==================================================
+TRANSITION
+==================================================
+
+Create a cinematic transition.
+
+Duration:
+
+1.5 to 2 seconds.
+
+The transition should feel like entering a premium operating system.
+
+==================================================
+SOUND (OPTIONAL)
+==================================================
+
+Create optional subtle sounds:
+
+- Door opening
+- Soft ambient sound
+- Confirmation sound
+
+Muted by default.
+
+==================================================
+RESPONSIVE
+==================================================
+
+The experience should work on:
+
+Desktop
+Large monitors
+Presentation screens
+
+==================================================
+IMPORTANT
+==================================================
+
+This is NOT a login page.
+
+This is an executive entry experience.
+
+The first impression should feel like:
+
+"I am entering the headquarters of a premium fintech company."
+
+The experience should be luxurious, futuristic and unforgettable.

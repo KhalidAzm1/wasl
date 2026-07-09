@@ -37,15 +37,15 @@ function CubeFaceMaterial({ url, index }: { url: string; index: number }) {
   );
 }
 
-function Cube({ faceUrls }: { faceUrls: string[] }) {
+function Cube({ faceUrls, spinBoost = 1 }: { faceUrls: string[]; spinBoost?: number }) {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
   const target = useRef({ x: 0, y: 0 });
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    // slow continuous rotation
-    groupRef.current.rotation.y += delta * 0.18;
+    // slow continuous rotation, sped up by spinBoost during the enter animation
+    groupRef.current.rotation.y += delta * 0.18 * spinBoost;
     groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, target.current.y, 0.04);
     groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, target.current.x * 0.15, 0.04);
   });
@@ -85,7 +85,7 @@ function StaticCubeFallback({ size }: { size: number }) {
   );
 }
 
-export function RotatingCube({ size = 280 }: { size?: number }) {
+export function RotatingCube({ size = 280, spinBoost = 1 }: { size?: number; spinBoost?: number }) {
   const { data: banks } = useListBanks();
   const webglOk = useMemo(() => isWebglAvailable(), []);
   const [contextLost, setContextLost] = useState(false);
@@ -129,7 +129,7 @@ export function RotatingCube({ size = 280 }: { size?: number }) {
           <pointLight position={[-4, -2, -3]} intensity={0.6} color="#7c3aed" />
           <pointLight position={[3, -3, 3]} intensity={0.5} color="#22d3ee" />
           <Suspense fallback={null}>
-            <Cube faceUrls={faceUrls} />
+            <Cube faceUrls={faceUrls} spinBoost={spinBoost} />
             <Environment preset="city" />
           </Suspense>
         </Canvas>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Presentation, Building2, Settings } from 'lucide-react';
+import { LayoutDashboard, Settings } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
@@ -11,31 +11,11 @@ interface LayoutProps {
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)' },
-  { href: '/presentation', icon: Presentation, label: 'وضع العرض (Presentation)' },
   { href: '/settings', icon: Settings, label: 'الإعدادات (Settings)' },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
-
-  const isPresentation = location === '/presentation';
-
-  if (isPresentation) {
-    return (
-      <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans" dir="rtl">
-        <AnimatedBackground />
-        <img
-          src={logoUrl}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none select-none fixed bottom-[-6%] left-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
-        />
-        <main className="relative z-10 w-full h-[100dvh] overflow-hidden">
-          {children}
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans flex" dir="rtl">

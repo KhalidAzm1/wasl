@@ -9,16 +9,12 @@ import {
   useSetBankLogo, 
   useSetBankHeroImage, 
   getListBanksQueryKey,
-  useGetLookups,
-  useUpdateLookups,
-  getGetLookupsQueryKey,
   useListProducts
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +30,7 @@ export default function Settings() {
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-white to-white/60 mb-2">
             إعدادات النظام
           </h1>
-          <p className="text-white/50 text-lg">إدارة البنوك والصور والقوائم المرجعية</p>
+          <p className="text-white/50 text-lg">إدارة البنوك والصور</p>
         </div>
         <NavControls />
       </header>
@@ -42,16 +38,11 @@ export default function Settings() {
       <Tabs defaultValue="banks" className="w-full">
         <TabsList className="w-full justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8">
           <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">البنوك وجهات التمويل</TabsTrigger>
-          <TabsTrigger value="lookups" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">القوائم المرجعية</TabsTrigger>
           <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">التحديثات الأخيرة</TabsTrigger>
         </TabsList>
 
         <TabsContent value="banks">
           <BanksManager />
-        </TabsContent>
-
-        <TabsContent value="lookups">
-          <LookupsManager />
         </TabsContent>
 
         <TabsContent value="updates">
@@ -312,82 +303,6 @@ function ImageUploader({ bankId, type, label, currentUrl }: { bankId: string, ty
         <UploadCloud className="w-3 h-3" />
         {label}
       </Button>
-    </div>
-  );
-}
-
-function LookupsManager() {
-  const { data: lookups, isLoading } = useGetLookups();
-  const updateLookups = useUpdateLookups();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  const [localLookups, setLocalLookups] = useState<Record<string, string>>({});
-
-  React.useEffect(() => {
-    if (lookups) {
-      setLocalLookups({
-        statuses: lookups.statuses.join('\n'),
-        stages: lookups.stages.join('\n'),
-        products: lookups.products.join('\n'),
-        responsiblePersons: lookups.responsiblePersons.join('\n'),
-        categories: lookups.categories.join('\n'),
-      });
-    }
-  }, [lookups]);
-
-  const handleSave = () => {
-    const payload = {
-      statuses: localLookups.statuses?.split('\n').map(s => s.trim()).filter(Boolean) || [],
-      stages: localLookups.stages?.split('\n').map(s => s.trim()).filter(Boolean) || [],
-      products: localLookups.products?.split('\n').map(s => s.trim()).filter(Boolean) || [],
-      responsiblePersons: localLookups.responsiblePersons?.split('\n').map(s => s.trim()).filter(Boolean) || [],
-      categories: localLookups.categories?.split('\n').map(s => s.trim()).filter(Boolean) || [],
-    };
-
-    updateLookups.mutate({ data: payload }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() });
-        toast({ title: 'تم الحفظ', description: 'تم تحديث القوائم المرجعية بنجاح' });
-      }
-    });
-  };
-
-  if (isLoading) return <div>جاري التحميل...</div>;
-
-  const fields = [
-    { key: 'statuses', label: 'حالات المشاريع (Statuses)' },
-    { key: 'stages', label: 'مراحل المنتجات (Stages)' },
-    { key: 'products', label: 'أنواع المنتجات (Products)' },
-    { key: 'responsiblePersons', label: 'المسؤولين (Responsible Persons)' },
-    { key: 'categories', label: 'التصنيفات (Categories)' },
-  ];
-
-  return (
-    <div className="space-y-6 max-w-4xl">
-      <Card className="bg-white/5 border-white/10">
-        <CardHeader>
-          <CardTitle>تعديل القوائم المرجعية</CardTitle>
-          <p className="text-sm text-white/50">أدخل كل قيمة في سطر جديد.</p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {fields.map(field => (
-            <div key={field.key} className="space-y-2">
-              <label className="text-sm font-medium text-white/80">{field.label}</label>
-              <Textarea 
-                value={localLookups[field.key] || ''} 
-                onChange={e => setLocalLookups({ ...localLookups, [field.key]: e.target.value })}
-                className="bg-white/5 border-white/10 h-32 font-mono"
-                dir="auto"
-              />
-            </div>
-          ))}
-          <Button onClick={handleSave} className="w-full gap-2" disabled={updateLookups.isPending}>
-            <Save className="w-4 h-4" /> 
-            {updateLookups.isPending ? 'جاري الحفظ...' : 'حفظ القوائم المرجعية'}
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -1,223 +1,279 @@
-import React from 'react';
-import { useGetBank, useListBanks, getGetBankQueryKey } from '@workspace/api-client-react';
+import React, { useState } from 'react';
+import { useListBanks, useGetBank, getGetBankQueryKey } from '@workspace/api-client-react';
+import type { Bank, BankDetail } from '@workspace/api-client-react';
 import { BankLogo } from '@/components/BankLogo';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Target, AlertTriangle, CheckSquare, Clock } from 'lucide-react';
-import { formatDate, formatPercentage } from '@/lib/utils';
 import { NavControls } from '@/components/NavControls';
+import { formatDate, formatPercentage } from '@/lib/utils';
+import { Link } from 'wouter';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 
-// We fetch full detail for each slide dynamically.
-export function BankSlide({ bankId, isActive }: { bankId: string, isActive: boolean }) {
-  const { data: bank, isLoading } = useGetBank(bankId, {
-    query: { enabled: !!bankId && isActive, queryKey: getGetBankQueryKey(bankId) }
-  });
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
 
-  if (!isActive) return null;
+const itemVariants = {
+  hidden: { opacity: 0, y: 40, scale: 0.95 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } }
+};
 
-  if (isLoading || !bank) {
+export default function PresentationMode() {
+  const { data: banks, isLoading } = useListBanks();
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string>('الكل');
+
+  if (isLoading) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-6" dir="rtl">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-white/50 text-xl font-light tracking-widest uppercase">جاري التحميل...</div>
       </div>
     );
   }
 
-  // Calculate average progress from products
-  const avgProgress = bank.products?.length 
-    ? bank.products.reduce((acc, p) => acc + p.progressPercent, 0) / bank.products.length 
-    : 0;
+  if (!banks || banks.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+         <div className="text-white/30 text-2xl font-light">لا توجد بنوك لعرضها</div>
+      </div>
+    );
+  }
+
+  const categories = ["الكل", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
+  const filteredBanks = filter === 'الكل' ? banks : banks.filter(b => b.category === filter);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.05 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="absolute inset-0 p-12 flex flex-col gap-8 h-full"
-    >
-      {/* Background Hero Layer */}
-      {bank.heroImageUrl && (
-        <div className="absolute inset-0 z-[-1] overflow-hidden">
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-10" />
-          <img src={bank.heroImageUrl} alt="" className="w-full h-full object-cover opacity-30 mix-blend-luminosity" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent z-10" />
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 rounded-2xl bg-white/5 border border-white/10 p-2 flex items-center justify-center overflow-hidden shadow-2xl backdrop-blur-md">
-            <BankLogo src={bank.logoUrl} alt={bank.nameEn} fallbackText={bank.nameAr.substring(0, 2)} />
-          </div>
-          <div>
-            <h1 className="text-5xl font-black text-white mb-2 tracking-tight">{bank.nameAr}</h1>
-            <h2 className="text-xl text-white/50 font-sans tracking-wide uppercase">{bank.nameEn}</h2>
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          <div className="text-center px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <p className="text-white/40 text-sm mb-1">نسبة الإنجاز</p>
-            <p className="text-3xl font-bold text-emerald-400 font-mono">{formatPercentage(avgProgress)}</p>
-          </div>
-          <div className="text-center px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <p className="text-white/40 text-sm mb-1">الحالة</p>
-            <Badge variant={bank.status === 'Completed' ? 'success' : 'default'} className="text-lg py-1">
-              {bank.status}
-            </Badge>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#030408] text-foreground overflow-x-hidden selection:bg-primary/30 font-sans" dir="rtl">
+      
+      {/* Background ambient light */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+         <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] mix-blend-screen opacity-50" />
+         <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-secondary/10 rounded-full blur-[100px] mix-blend-screen opacity-30" />
+         <div className="absolute inset-0 bg-grid-pattern opacity-10" />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="flex-1 grid grid-cols-12 gap-8 min-h-0">
+      {/* Header Bar */}
+      <div className="fixed top-0 left-0 right-0 w-full z-50 p-6 flex justify-between items-center pointer-events-none">
+         <div className="pointer-events-auto">
+            <NavControls variant="overlay" />
+         </div>
+         <img src={logoUrl} alt="Wasl" className="w-24 h-auto opacity-95 drop-shadow-2xl" />
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 pt-32 pb-32 px-8 md:px-16 2xl:px-24 max-w-[1920px] mx-auto min-h-screen flex flex-col">
         
-        {/* Left Column (Main Specs) */}
-        <div className="col-span-8 flex flex-col gap-6 min-h-0">
-          
-          <Card className="flex-none bg-white/5 border-white/10 backdrop-blur-md">
-            <CardContent className="p-8">
-              <h3 className="text-xl font-bold text-white/80 mb-4 border-b border-white/10 pb-4">الملخص التنفيذي</h3>
-              <p className="text-2xl leading-relaxed text-white/90">
-                {bank.executiveSummary || 'لا يوجد ملخص تنفيذي مدخل.'}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Hero Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="flex flex-col xl:flex-row xl:items-end justify-between gap-12 mb-20"
+        >
+          <div className="max-w-4xl">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-6 drop-shadow-2xl leading-[1.1]">
+              المحفظة <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">الاستراتيجية</span>
+            </h1>
+            <p className="text-xl md:text-3xl text-white/50 leading-relaxed font-light">
+              استعراض استراتيجي لشراكاتنا البنكية وجهات التمويل، مع متابعة حية لمستويات الإنجاز والقرارات الفعالة.
+            </p>
+          </div>
 
-          <Card className="flex-1 min-h-0 flex flex-col bg-white/5 border-white/10 backdrop-blur-md overflow-hidden">
-            <CardContent className="p-8 flex-1 overflow-y-auto hide-scrollbar">
-              <h3 className="text-xl font-bold text-white/80 mb-6 flex items-center gap-2">
-                <CheckSquare className="w-5 h-5 text-primary" />
-                أحدث الإجراءات والقرارات
-              </h3>
-              <div className="space-y-4">
-                {bank.actionItems?.slice(0, 4).map(action => (
-                  <div key={action.id} className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-start gap-4">
-                    <div className={`w-2 h-2 mt-2 rounded-full ${action.status === 'Completed' ? 'bg-emerald-400' : 'bg-orange-400'}`} />
-                    <div className="flex-1">
-                      <p className="text-lg text-white/90">{action.description}</p>
-                      <div className="flex gap-4 mt-2 text-sm text-white/40">
-                        {action.owner && <span>المالك: {action.owner}</span>}
-                        {action.dueDate && <span>الموعد: {formatDate(action.dueDate)}</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {(!bank.actionItems || bank.actionItems.length === 0) && (
-                  <div className="text-center text-white/30 py-8 text-lg">لا توجد إجراءات حالية</div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Filters */}
+          {categories.length > 2 && (
+            <div className="flex flex-wrap items-center justify-end gap-2 bg-white/5 p-2 rounded-2xl backdrop-blur-xl border border-white/10 shrink-0 shadow-2xl max-w-full xl:max-w-xl">
+              {categories.map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setFilter(cat)}
+                  className={`px-5 py-3 md:px-8 md:py-4 rounded-xl text-base md:text-lg font-bold whitespace-nowrap transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0c16] ${
+                    filter === cat 
+                      ? 'bg-primary text-white shadow-[0_0_20px_rgba(79,50,214,0.4)]' 
+                      : 'text-white/50 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </motion.div>
 
-        </div>
+        {/* Portfolio Wall Grid */}
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={filter}
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            exit={{ opacity: 0, y: 20, transition: { duration: 0.3 } }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-10 md:gap-14"
+          >
+            {filteredBanks.map(bank => (
+               <BankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} />
+            ))}
+          </motion.div>
+        </AnimatePresence>
+        
+        {filteredBanks.length === 0 && (
+           <div className="py-32 text-center text-white/30 text-2xl font-light">لا توجد بنوك في هذا التصنيف</div>
+        )}
 
-        {/* Right Column (Details & Risks) */}
-        <div className="col-span-4 flex flex-col gap-6 min-h-0">
-          
-          <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-            <CardContent className="p-8 space-y-6">
-              <div>
-                <p className="text-white/40 text-sm mb-1 flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  المسؤول
-                </p>
-                <p className="text-xl text-white font-medium">{bank.responsiblePerson || 'غير محدد'}</p>
-              </div>
-              <div className="h-px w-full bg-white/10" />
-              <div>
-                <p className="text-white/40 text-sm mb-1 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  الاجتماع القادم
-                </p>
-                <p className="text-xl text-white font-medium">{formatDate(bank.nextMeetingDate)}</p>
-                {bank.nextMeetingTopic && <p className="text-white/60 mt-1">{bank.nextMeetingTopic}</p>}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="flex-1 min-h-0 bg-white/5 border-white/10 backdrop-blur-md overflow-hidden flex flex-col">
-            <CardContent className="p-8 flex-1 overflow-y-auto hide-scrollbar">
-              <h3 className="text-xl font-bold text-white/80 mb-6 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
-                المخاطر الرئيسية
-              </h3>
-              <div className="space-y-4">
-                {bank.risks?.map(risk => (
-                  <div key={risk.id} className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant="destructive">{risk.level}</Badge>
-                      <span className="text-xs text-white/40">{risk.status}</span>
-                    </div>
-                    <p className="text-white/90">{risk.description}</p>
-                  </div>
-                ))}
-                {(!bank.risks || bank.risks.length === 0) && (
-                  <div className="text-center text-white/30 py-8 text-lg">لا توجد مخاطر مسجلة</div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-export default function PresentationMode() {
-  const { data: banks, isLoading } = useListBanks();
-  const [currentIndex, setCurrentIndex] = React.useState(0);
+function BankCard({ bankSummary, hoveredId, setHoveredId }: { bankSummary: Bank, hoveredId: string | null, setHoveredId: (id: string | null) => void }) {
+  // Fetch full details gracefully in the background to access nested products for live progress
+  const { data: bankDetail } = useGetBank(bankSummary.id, {
+    query: { queryKey: getGetBankQueryKey(bankSummary.id) }
+  });
 
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!banks) return;
-      if (e.key === 'ArrowLeft') {
-        setCurrentIndex(prev => Math.min(prev + 1, banks.length - 1));
-      } else if (e.key === 'ArrowRight') {
-        setCurrentIndex(prev => Math.max(prev - 1, 0));
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [banks]);
+  const isHovered = hoveredId === bankSummary.id;
+  const isDimmed = hoveredId !== null && hoveredId !== bankSummary.id;
 
-  if (isLoading) {
-    return <div className="h-screen w-full flex items-center justify-center">جاري التحميل...</div>;
-  }
-
-  if (!banks || banks.length === 0) {
-    return <div className="h-screen w-full flex items-center justify-center">لا توجد بنوك لعرضها</div>;
-  }
+  const displayBank = bankDetail || bankSummary;
+  const products = (displayBank as BankDetail).products;
+  const avgProgress = products?.length 
+    ? products.reduce((acc, p) => acc + p.progressPercent, 0) / products.length 
+    : 0;
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-background">
-      <AnimatePresence mode="wait">
-        <BankSlide key={banks[currentIndex].id} bankId={banks[currentIndex].id} isActive={true} />
-      </AnimatePresence>
-
-      {/* Progress / Navigation indicator */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2 z-50">
-        {banks.map((b, idx) => (
-          <button
-            key={b.id}
-            onClick={() => setCurrentIndex(idx)}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              idx === currentIndex ? 'w-12 bg-primary' : 'w-2 bg-white/20 hover:bg-white/40'
-            }`}
+    <motion.div variants={itemVariants} className="will-change-transform">
+      <Link
+        href={`/bank/${displayBank.id}`}
+        className="block relative group rounded-[2.5rem] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#030408]"
+        style={{ perspective: 1000 }}
+        onFocus={() => setHoveredId(displayBank.id)}
+        onBlur={() => { if (hoveredId === displayBank.id) setHoveredId(null); }}
+      >
+        <motion.div
+          onMouseEnter={() => setHoveredId(displayBank.id)}
+          onMouseLeave={() => setHoveredId(null)}
+          animate={{
+            scale: isHovered ? 1.04 : isDimmed ? 0.96 : 1,
+            opacity: isDimmed ? 0.4 : 1,
+            filter: isDimmed ? "blur(12px) brightness(0.7)" : "blur(0px) brightness(1)",
+            y: isHovered ? -16 : 0,
+            rotateX: isHovered ? 2 : 0,
+            rotateY: isHovered ? -2 : 0,
+          }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full aspect-[2/3] rounded-[2.5rem] overflow-hidden bg-[#0a0c16] border border-white/10 cursor-pointer shadow-2xl"
+          style={{ zIndex: isHovered ? 50 : 1, transformStyle: 'preserve-3d' }}
+        >
+          {/* Background Image / Gradient */}
+          <div className="absolute inset-0 z-0">
+            {displayBank.heroImageUrl ? (
+              <motion.img 
+                src={displayBank.heroImageUrl} 
+                alt="" 
+                className="w-full h-full object-cover mix-blend-luminosity opacity-50"
+                animate={{ scale: isHovered ? 1.15 : 1.05 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-secondary/10 opacity-40" />
+            )}
+          </div>
+          
+          {/* Gradients */}
+          <div className="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/50 to-transparent opacity-95" />
+          <motion.div 
+            className="absolute inset-0 z-10 bg-gradient-to-t from-primary/50 via-primary/5 to-transparent mix-blend-screen"
+            animate={{ opacity: isHovered ? 1 : 0 }}
+            transition={{ duration: 0.6 }}
           />
-        ))}
-      </div>
 
-      {/* Brand + navigation overlay */}
-      <img src={logoUrl} alt="Wasl" className="absolute top-6 left-6 w-24 h-auto z-50 opacity-95 drop-shadow-lg" />
-      <div className="absolute top-6 right-6 z-50">
-        <NavControls variant="overlay" />
-      </div>
-    </div>
+          {/* Dynamic Glare Effect */}
+          <motion.div 
+            className="absolute inset-0 z-40 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 pointer-events-none"
+            animate={{ opacity: isHovered ? 1 : 0 }}
+            transition={{ duration: 0.6 }}
+          />
+
+          {/* Content Container */}
+          <div className="absolute inset-0 z-20 p-8 md:p-10 flex flex-col justify-between items-center text-center">
+            
+            {/* Logo Section */}
+            <motion.div 
+              className="flex-1 flex flex-col items-center justify-center w-full"
+              animate={{ y: isHovered ? -24 : 0, scale: isHovered ? 1.05 : 1 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            >
+               <div className="w-36 h-36 md:w-44 md:h-44 rounded-[2.5rem] bg-white/5 backdrop-blur-3xl border border-white/20 p-6 flex items-center justify-center shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+                 <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
+               </div>
+               {/* Priority Badge */}
+               {displayBank.priorityImpact === 'HOT' && (
+                 <div className="mt-6 px-6 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full font-bold tracking-widest text-sm backdrop-blur-md">
+                   أولوية قصوى
+                 </div>
+               )}
+            </motion.div>
+            
+            {/* Title & Info Section */}
+            <motion.div 
+              className="w-full flex flex-col items-center"
+              animate={{ y: isHovered ? -16 : 0 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <h2 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight drop-shadow-xl leading-tight text-center">{displayBank.nameAr}</h2>
+              <h3 className="text-xl md:text-2xl text-white/50 font-sans tracking-[0.2em] uppercase mb-2 text-center">{displayBank.nameEn}</h3>
+              
+              <motion.div 
+                className="overflow-hidden w-full"
+                initial={false}
+                animate={{ 
+                  height: isHovered ? 'auto' : 0, 
+                  opacity: isHovered ? 1 : 0,
+                  marginTop: isHovered ? 32 : 0
+                }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              >
+                 <div className="h-px w-24 bg-white/20 mx-auto mb-8" />
+                 
+                 <div className="flex items-center justify-center gap-10 mb-8">
+                    <div className="text-center">
+                       <div className="text-4xl font-mono font-bold text-emerald-400 drop-shadow-xl">{formatPercentage(avgProgress)}</div>
+                       <div className="text-white/50 text-sm uppercase tracking-widest mt-3 font-medium">نسبة الإنجاز</div>
+                    </div>
+                    <div className="w-px h-16 bg-white/10" />
+                    <div className="text-center">
+                       <div className="text-2xl font-bold text-white drop-shadow-xl mt-1">{displayBank.status}</div>
+                       <div className="text-white/50 text-sm uppercase tracking-widest mt-3 font-medium">الحالة</div>
+                    </div>
+                 </div>
+                 
+                 {displayBank.nextMeetingDate && (
+                   <div className="w-full bg-white/5 rounded-2xl py-4 px-6 border border-white/10 backdrop-blur-xl">
+                     <div className="text-white/50 text-xs uppercase tracking-[0.2em] mb-2">الاجتماع القادم</div>
+                     <div className="text-xl text-white font-medium">{formatDate(displayBank.nextMeetingDate)}</div>
+                   </div>
+                 )}
+              </motion.div>
+            </motion.div>
+
+          </div>
+          
+          {/* Cinematic Glow Border */}
+          <motion.div 
+            className="absolute inset-0 z-30 rounded-[2.5rem] border-2 border-primary/60 pointer-events-none mix-blend-overlay"
+            animate={{ opacity: isHovered ? 1 : 0 }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div 
+            className="absolute inset-0 z-[-1] rounded-[2.5rem] pointer-events-none"
+            animate={{ boxShadow: isHovered ? "0 0 80px -20px rgba(79,50,214,0.6)" : "0 0 0px rgba(79,50,214,0)" }}
+            transition={{ duration: 0.5 }}
+          />
+        </motion.div>
+      </Link>
+    </motion.div>
   );
 }

@@ -1,10 +1,28 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Link, useLocation } from 'wouter';
 import { LayoutDashboard, Settings } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
-import { RotatingCube } from './RotatingCube';
+
+// Loaded lazily and behind its own error boundary: if the three.js/WebGL
+// stack fails to load or mount on a given browser, it must never be able to
+// block the rest of the app (sidebar nav, dashboard, etc.) from rendering.
+const RotatingCube = lazy(() =>
+  import('./RotatingCube').then((m) => ({ default: m.RotatingCube })).catch(() => ({
+    default: () => (
+      <div className="w-[260px] h-[260px] mx-auto flex items-center justify-center rounded-3xl bg-gradient-to-br from-white/10 via-primary/10 to-secondary/10 border border-white/10">
+        <img src={logoUrl} alt="Wasl" className="w-2/3 h-auto opacity-80" />
+      </div>
+    ),
+  }))
+);
+
+function CubeSlotFallback() {
+  return (
+    <div className="w-[260px] h-[260px] mx-auto flex items-center justify-center rounded-3xl bg-white/5 border border-white/10 animate-pulse" />
+  );
+}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -57,7 +75,9 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         <div className="mt-auto w-full flex items-center justify-center pt-4">
-          <RotatingCube size={260} />
+          <Suspense fallback={<CubeSlotFallback />}>
+            <RotatingCube size={260} />
+          </Suspense>
         </div>
       </aside>
 

@@ -25,7 +25,7 @@ function KpiButton({ label, value, colorClass, active, onClick }: { label: strin
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col text-right rounded-xl px-3 py-1.5 -mx-3 -my-1.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${
+      className={`flex flex-col text-right rounded-xl px-3 py-1.5 shrink-0 w-[140px] md:w-auto transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${
         active ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/5'
       }`}
     >
@@ -115,16 +115,17 @@ export default function Dashboard() {
            </h1>
         </div>
         
-        {/* KPI Strip */}
-        <div className="flex flex-wrap items-center gap-6 md:gap-10">
+        {/* KPI Strip. Horizontal scroll (snap) on mobile so 5 KPIs never
+            wrap/overlap on narrow screens; normal wrapping row from md up. */}
+        <div className="flex md:flex-wrap items-center gap-4 md:gap-10 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0">
           <KpiButton label="إجمالي البنوك" value={summary.totalBanks} colorClass="text-white" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
-          <div className="w-px h-8 md:h-10 bg-white/10" />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
           <KpiButton label="قيد التنفيذ" value={summary.inProgress} colorClass="text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />
-          <div className="w-px h-8 md:h-10 bg-white/10" />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
           <KpiButton label="مكتمل" value={summary.completed} colorClass="text-emerald-400" active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
-          <div className="w-px h-8 md:h-10 bg-white/10" />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
           <KpiButton label="متأخر" value={summary.delayed} colorClass="text-red-400" active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} />
-          <div className="w-px h-8 md:h-10 bg-white/10" />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
           <KpiButton label="مخاطر عالية" value={highRiskBankCount} colorClass="text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
         </div>
       </div>

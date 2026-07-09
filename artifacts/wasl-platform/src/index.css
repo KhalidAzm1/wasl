@@ -142,3 +142,16 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+/* Safe-area padding for iPhone notch / Dynamic Island / Safari bottom bar. */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* Defensive guard against unintended image mirroring (e.g. RTL contexts
+   or transformed ancestors) for brand logos. */
+.no-mirror {
+  transform: none;
+  backface-visibility: hidden;
+}

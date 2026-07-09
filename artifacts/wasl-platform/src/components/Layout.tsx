@@ -1,0 +1,78 @@
+import React from 'react';
+import { Link, useLocation } from 'wouter';
+import { LayoutDashboard, Presentation, Building2, Settings } from 'lucide-react';
+import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
+import { cn } from '@/lib/utils';
+import { AnimatedBackground } from './AnimatedBackground';
+
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+const navItems = [
+  { href: '/', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)' },
+  { href: '/presentation', icon: Presentation, label: 'وضع العرض (Presentation)' },
+  { href: '/settings', icon: Settings, label: 'الإعدادات (Settings)' },
+];
+
+export function Layout({ children }: LayoutProps) {
+  const [location] = useLocation();
+
+  const isPresentation = location === '/presentation';
+
+  if (isPresentation) {
+    return (
+      <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans" dir="rtl">
+        <AnimatedBackground />
+        <main className="relative z-10 w-full h-[100dvh] overflow-hidden">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans flex" dir="rtl">
+      <AnimatedBackground />
+      
+      {/* Sidebar */}
+      <aside className="relative z-20 w-72 glass-panel border-l border-r-0 flex flex-col items-center py-8 px-4 gap-8">
+        <div className="w-full flex items-center justify-center mb-6">
+          <img src={logoUrl} alt="Wasl" className="w-32 h-auto drop-shadow-lg" />
+        </div>
+        
+        <nav className="w-full flex flex-col gap-3">
+          {navItems.map((item) => {
+            const isActive = location === item.href;
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href}>
+                <div className={cn(
+                  "flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer",
+                  isActive 
+                    ? "bg-primary/20 text-white border border-primary/30 shadow-[0_0_15px_rgba(124,58,237,0.2)]" 
+                    : "text-white/60 hover:text-white hover:bg-white/5 border border-transparent"
+                )}>
+                  <Icon className="w-5 h-5" />
+                  <span className="font-semibold text-[15px]">{item.label}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto w-full px-4 py-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-secondary mx-auto mb-3 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+            م.ت
+          </div>
+          <p className="text-white/80 font-medium text-sm">محمد التميمي</p>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="relative z-10 flex-1 flex flex-col h-[100dvh] overflow-y-auto hide-scrollbar">
+        {children}
+      </main>
+    </div>
+  );
+}

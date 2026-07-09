@@ -1,0 +1,268 @@
+Build a world-class Executive Banking Portfolio Platform for Wasl.
+
+Application Name:
+"منصة متابعة البنوك - وصل"
+
+This is NOT a traditional dashboard.
+
+The platform is designed for:
+- Executive meetings
+- Weekly portfolio reviews
+- Bank relationship management
+- Presentation mode
+- Strategic decision making
+
+==================================================
+VISUAL IDENTITY
+==================================================
+
+Analyze the uploaded PowerPoint presentation and use it as the primary design reference.
+
+Match:
+
+- Wasl branding
+- Wasl logo
+- Colors
+- Typography
+- Executive presentation style
+
+The platform should feel like:
+
+- Apple Keynote
+- Stripe Dashboard
+- Linear
+- Mercury
+- Salesforce
+- Notion
+- Monday.com
+
+The final product should feel like a multi-million-dollar enterprise platform.
+
+==================================================
+BACKGROUND
+==================================================
+
+Create a cinematic immersive background.
+
+Requirements:
+
+- Deep navy background (#050816)
+- Purple gradients (#7C3AED)
+- Blue accents (#3B82F6)
+- Soft glows
+- Geometric architecture patterns
+- Glassmorphism
+- Subtle particles
+- Parallax effects
+
+Background remains visible while scrolling.
+
+==================================================
+MAIN NAVIGATION
+==================================================
+
+Create:
+
+1. Executive Dashboard
+Route:
+/admin
+
+2. Presentation Mode
+Route:
+/presentation
+
+3. Bank Details
+Route:
+/bank/[id]
+
+4. Settings
+Route:
+/settings
+
+==================================================
+HOME DASHBOARD
+==================================================
+
+Display:
+
+- Total Banks
+- In Progress
+- Completed
+- Delayed
+- Upcoming Meetings
+- High Risks
+- Product Status
+
+Create premium KPI cards.
+
+Create charts.
+
+Create activity feed.
+
+Create upcoming meetings section.
+
+Create executive alerts.
+
+==================================================
+PRESENTATION MODE
+==================================================
+
+This is the main feature.
+
+Display all banks as large premium slides.
+
+One slide per bank.
+
+Executives should navigate:
+
+- Next
+- Previous
+- Swipe
+- Keyboard arrows
+
+The experience should feel like:
+
+PowerPoint
+Apple Keynote
+Netflix browsing
+
+==================================================
+BANK SLIDE
+==================================================
+
+Each bank slide must include:
+
+Large Hero Image
+Bank Logo
+Arabic Name
+English Name
+Product
+Status
+Progress
+Current Stage
+Responsible Person
+Last Meeting
+Next Meeting
+Target Date
+Risks
+Action Items
+Executive Summary
+
+Display information in large presentation cards.
+
+==================================================
+BANK DETAILS PAGE
+==================================================
+
+When clicking:
+
+View Details
+
+Open:
+
+/bank/[id]
+
+Create a premium detail page.
+
+Sections:
+
+Overview
+Timeline
+Meetings
+Documents
+Notes
+Risks
+Action Items
+Analytics
+History
+Product Matrix
+Updates
+
+==================================================
+SETTINGS PAGE
+==================================================
+
+Create a complete settings module.
+
+Allow:
+
+Add new bank.
+Edit bank.
+Delete bank.
+Upload logo.
+Upload hero image.
+Manage statuses.
+Manage stages.
+Manage products.
+Manage responsible persons.
+Manage categories.
+
+Architecture should support full CRUD operations later.
+
+==================================================
+DESIGN REQUIREMENTS
+==================================================
+
+Large cards.
+
+No text overlap.
+
+Responsive.
+
+Dark mode.
+
+Premium spacing.
+
+Premium typography.
+
+Micro interactions.
+
+Smooth animations.
+
+Framer Motion.
+
+Skeleton loading.
+
+Glassmorphism.
+
+==================================================
+DATA SOURCE
+==================================================
+
+Use the uploaded files:
+
+- Wasl Master Table.xlsx
+- PowerPoint Presentation
+
+as the source of truth.
+
+Analyze all data.
+
+Generate:
+
+Banks
+Products
+Stages
+Meetings
+Timelines
+Statuses
+Executive Summaries
+
+Do NOT create the final production database yet.
+
+Use temporary data services and mock APIs.
+
+==================================================
+FUTURE READY
+==================================================
+
+Prepare the architecture for:
+
+PostgreSQL
+Prisma
+Real-time updates
+Deployment outside Replit
+
+But in this phase:
+
+Focus entirely on building the best Executive Banking Presentation Platform possible.

@@ -1,0 +1,4 @@
+- [Office file parsing without python3/xlsx](office-file-parsing.md) — no python3, no xlsx npm pkg in sandbox; unzip+regex XML parse works.
+- [logo.clearbit.com unreachable](clearbit-logo-dns.md) — DNS for logo.clearbit.com fails in this environment; always add onError image fallbacks for external logo URLs.
+- [Drizzle schema edits need a full rebuild](drizzle-schema-rebuild.md) — after adding/changing a column in lib/db, run root `tsc --build` (not just drizzle push) before restarting dependent services, or stale dist types cause confusing "No values to set" runtime errors.
+- [PATCH routes must re-validate image fields](patch-image-validation-bypass.md) — a dedicated validated upload endpoint (e.g. PUT /logo) does not protect a general PATCH endpoint that also accepts the same field; validate on every write path that can set it.

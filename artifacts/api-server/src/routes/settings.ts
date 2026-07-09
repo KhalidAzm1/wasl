@@ -1,0 +1,48 @@
+import { Router, type IRouter } from "express";
+import { db, lookupsTable } from "@workspace/db";
+import { GetLookupsResponse, UpdateLookupsBody, UpdateLookupsResponse } from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+const KEYS = [
+  "statuses",
+  "stages",
+  "products",
+  "responsiblePersons",
+  "categories",
+] as const;
+
+async function readLookups() {
+  const rows = await db.select().from(lookupsTable);
+  const map = new Map(rows.map((r) => [r.key, r.values]));
+  return {
+    statuses: map.get("statuses") ?? [],
+    stages: map.get("stages") ?? [],
+    products: map.get("products") ?? [],
+    responsiblePersons: map.get("responsiblePersons") ?? [],
+    categories: map.get("categories") ?? [],
+  };
+}
+
+router.get("/settings/lookups", async (_req, res): Promise<void> => {
+  res.json(GetLookupsResponse.parse(await readLookups()));
+});
+
+router.patch("/settings/lookups", async (req, res): Promise<void> => {
+  const parsed = UpdateLookupsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  for (const key of KEYS) {
+    const values = parsed.data[key];
+    if (values === undefined) continue;
+    await db
+      .insert(lookupsTable)
+      .values({ key, values })
+      .onConflictDoUpdate({ target: lookupsTable.key, set: { values } });
+  }
+  res.json(UpdateLookupsResponse.parse(await readLookups()));
+});
+
+export default router;

@@ -5,6 +5,7 @@ import { Users, Link2, CheckCircle2 } from 'lucide-react';
 import { useGetDashboardSummary } from '@workspace/api-client-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { CubeErrorBoundary, isWebglAvailable } from '@/components/CubeErrorBoundary';
+import { VaultHallwayBackdrop } from '@/components/VaultHallwayBackdrop';
 
 // The 3D vault (glass doors, cube, reflective floor, particles, camera
 // dolly) is heavy and WebGL-dependent. Lazy-load it and guard it with an
@@ -79,10 +80,15 @@ export default function EntryExperience() {
   };
 
   return (
-    <div dir="rtl" className="relative min-h-[100dvh] w-full overflow-hidden text-white bg-[#050816]">
-      {/* Full-screen 3D vault: glass doors, rotating bank-logo cube,
-          reflective floor, particles. */}
-      <div className="absolute inset-0">
+    <div dir="rtl" className="relative h-screen w-full overflow-hidden text-white bg-[#050816]">
+      {/* CSS architectural backdrop: glass hallway, converging door frames,
+          outer wall signage — precisely matches the reference composition. */}
+      <div className="absolute inset-0 z-0">
+        <VaultHallwayBackdrop entering={entering} />
+      </div>
+
+      {/* Transparent-background 3D cube layered on top of the hallway. */}
+      <div className="absolute inset-0 z-[5]">
         {webglOk ? (
           <CubeErrorBoundary fallback={<StaticVaultFallback />}>
             <Suspense fallback={<StaticVaultFallback />}>
@@ -96,7 +102,7 @@ export default function EntryExperience() {
 
       {/* Vignette for cinematic depth */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 z-[6] pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(3,3,10,0.8) 100%)' }}
       />
 
@@ -104,13 +110,13 @@ export default function EntryExperience() {
       <motion.div
         animate={entering ? { opacity: 0, y: -16 } : { opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 flex flex-col items-center justify-between min-h-[100dvh] px-4 sm:px-6 py-8 md:py-10 pointer-events-none"
+        className="relative z-20 flex flex-col items-center justify-between h-full px-4 sm:px-6 py-6 md:py-8 pointer-events-none"
       >
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.1, delay: 0.2 }}
-          className="text-center flex flex-col items-center gap-2"
+          className="relative text-center flex flex-col items-center gap-2 px-8 py-4 sm:px-12 sm:py-5 rounded-2xl border border-white/15 shadow-[0_0_35px_rgba(124,58,237,0.25),inset_0_0_25px_rgba(124,58,237,0.08)]"
         >
           <img src={logoUrl} alt="Wasl" className="h-8 md:h-10 w-auto drop-shadow-[0_0_20px_rgba(124,58,237,0.6)]" />
           <h1 className="text-lg md:text-2xl font-bold tracking-wide text-white">

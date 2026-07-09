@@ -1,0 +1,157 @@
+Redesign the Portfolio Wall layout.
+
+The current bank cards are too large and executives cannot see enough banks at once.
+
+==================================================
+GRID LAYOUT
+==================================================
+
+Desktop (1920px):
+Display exactly 4 cards per row.
+
+grid-template-columns:
+repeat(4, minmax(280px, 1fr));
+
+Gap:
+24px.
+
+Laptop:
+3 cards per row.
+
+Tablet:
+2 cards per row.
+
+Mobile:
+1 card per row.
+
+Never allow horizontal scrolling.
+
+==================================================
+CARD SIZE
+==================================================
+
+Reduce the card size.
+
+Width:
+Auto based on grid.
+
+Height:
+320px–360px maximum.
+
+Cards should feel compact and executive.
+
+The objective is to allow executives to compare multiple banks on one screen.
+
+==================================================
+CARD CONTENT
+==================================================
+
+Display ONLY:
+
+• Bank Logo
+• Bank Name (Arabic + English)
+• Status
+• Progress %
+• Responsible Person
+• Next Meeting
+• Last Updated
+
+Hide secondary information.
+
+All other information should appear only after opening the bank profile.
+
+==================================================
+VISUAL DESIGN
+==================================================
+
+Netflix-style cards.
+
+Dark premium theme.
+
+Glassmorphism.
+
+Large border radius.
+
+Soft shadows.
+
+Background watermark logo:
+10% opacity.
+
+Smooth hover effect:
+
+scale(1.03)
+
+Premium glow.
+
+No text overlap.
+
+No clipping.
+
+No overflowing.
+
+==================================================
+CARD INTERACTION
+==================================================
+
+Hover:
+Lift card slightly.
+
+Click:
+Open:
+
+/bank/[id]
+
+with the full executive profile.
+
+==================================================
+BANK PROFILE PAGE
+==================================================
+
+Show:
+
+• Executive Summary
+• Timeline
+• Meetings
+• Contacts
+• Products
+• Risks
+• Action Items
+• Documents
+• Analytics
+• Notes
+• History
+
+==================================================
+RESPONSIVE RULES
+==================================================
+
+Desktop:
+4 cards.
+
+Laptop:
+3 cards.
+
+Tablet:
+2 cards.
+
+Mobile:
+1 card.
+
+Everything must work perfectly on:
+
+• 1920x1080
+• 1440p
+• MacBook Pro
+• iPad
+• iPhone
+• Samsung devices.
+
+==================================================
+GOAL
+==================================================
+
+Executives should be able to open the Portfolio Wall and immediately see multiple banks at once instead of a single oversized card.
+
+The experience should feel like:
+
+Netflix + Bloomberg Terminal + Apple Keynote + Executive Portfolio Management Platform.

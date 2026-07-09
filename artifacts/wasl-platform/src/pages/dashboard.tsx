@@ -170,10 +170,10 @@ export default function Dashboard() {
             initial="hidden"
             animate="show"
             exit={{ opacity: 0, y: 20, transition: { duration: 0.3 } }}
-            className="grid grid-cols-1 2xl:grid-cols-2 gap-10 md:gap-14 pb-24"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-24"
           >
             {filteredBanks.map(bank => (
-              <HorizontalBankCard 
+              <CompactBankCard
                 key={bank.id} 
                 bankSummary={bank} 
                 hoveredId={hoveredId} 
@@ -319,14 +319,13 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
   );
 }
 
-function HorizontalBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSummary: Bank, hoveredId: string | null, setHoveredId: (id: string | null) => void }) {
+function CompactBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSummary: Bank, hoveredId: string | null, setHoveredId: (id: string | null) => void }) {
   const { data: bankDetail } = useGetBank(bankSummary.id, {
     query: { queryKey: getGetBankQueryKey(bankSummary.id) }
   });
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const isHovered = hoveredId === bankSummary.id;
-  const isDimmed = hoveredId !== null && hoveredId !== bankSummary.id;
 
   const displayBank = bankDetail || bankSummary;
   const products = (displayBank as BankDetail).products;
@@ -335,19 +334,19 @@ function HorizontalBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSumm
     : 0;
 
   return (
-    <motion.div variants={itemVariants} className="will-change-transform h-full relative">
+    <motion.div variants={itemVariants} className="will-change-transform relative">
       <button
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditOpen(true); }}
-        className="absolute top-6 left-6 z-40 w-11 h-11 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/70 hover:text-white hover:bg-primary/60 hover:border-primary transition-all"
+        className="absolute top-3 left-3 z-40 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/70 hover:text-white hover:bg-primary/60 hover:border-primary transition-all"
         title="تعديل بيانات البنك"
       >
-        <Pencil className="w-4 h-4" />
+        <Pencil className="w-3.5 h-3.5" />
       </button>
       <EditBankDialog bank={displayBank} open={isEditOpen} onOpenChange={setIsEditOpen} />
       <Link
         href={`/bank/${displayBank.id}`}
-        className="block relative group rounded-[2.5rem] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/70 h-full"
+        className="block relative group rounded-3xl focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/70"
         onFocus={() => setHoveredId(displayBank.id)}
         onBlur={() => { if (hoveredId === displayBank.id) setHoveredId(null); }}
       >
@@ -355,126 +354,70 @@ function HorizontalBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSumm
           onMouseEnter={() => setHoveredId(displayBank.id)}
           onMouseLeave={() => setHoveredId(null)}
           animate={{
-            scale: isHovered ? 1.02 : isDimmed ? 0.98 : 1,
-            opacity: isDimmed ? 0.4 : 1,
-            filter: isDimmed ? "blur(8px) brightness(0.7)" : "blur(0px) brightness(1)",
-            y: isHovered ? -8 : 0,
+            scale: isHovered ? 1.03 : 1,
+            y: isHovered ? -6 : 0,
           }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full h-full min-h-[300px] md:min-h-[340px] rounded-[2.5rem] overflow-hidden bg-card border border-white/5 cursor-pointer shadow-2xl"
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full h-[340px] rounded-3xl overflow-hidden bg-card/60 backdrop-blur-xl border border-white/10 cursor-pointer shadow-xl"
         >
-          {/* Background Image / Gradient */}
-          <div className="absolute inset-0 z-0">
-            {displayBank.heroImageUrl ? (
-              <motion.img 
-                src={displayBank.heroImageUrl} 
-                alt="" 
-                className="w-full h-full object-cover mix-blend-luminosity opacity-40"
-                animate={{ scale: isHovered ? 1.1 : 1.05 }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/5 opacity-40" />
-            )}
-          </div>
-          
-          {/* Gradients: RTL -> From Right to Left */}
-          <div className="absolute inset-0 z-10 bg-gradient-to-t from-background/95 via-background/60 to-transparent opacity-95 md:bg-gradient-to-l md:from-background md:via-background/80 md:to-transparent" />
-          
-          <motion.div 
-            className="absolute inset-0 z-10 bg-gradient-to-br from-primary/30 via-primary/5 to-transparent mix-blend-screen"
-            animate={{ opacity: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.5 }}
-          />
+          {/* Watermark logo, 10% opacity */}
+          {displayBank.logoUrl && (
+            <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden pointer-events-none">
+              <img src={displayBank.logoUrl} alt="" className="w-3/4 h-3/4 object-contain opacity-10 blur-[1px]" />
+            </div>
+          )}
+          <div className="absolute inset-0 z-0 bg-gradient-to-b from-background/40 via-background/70 to-background/95" />
 
-          {/* Dynamic Glare Effect */}
-          <motion.div 
-            className="absolute inset-0 z-30 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none"
-            animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? '100%' : '-100%' }}
-            transition={{ duration: 1, ease: "easeInOut" }}
+          {/* Premium hover glow */}
+          <motion.div
+            className="absolute inset-0 z-10 rounded-3xl pointer-events-none"
+            animate={{ boxShadow: isHovered ? "inset 0 0 0 1.5px rgba(139,92,246,0.6), 0 20px 60px -15px rgba(79,50,214,0.55)" : "inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 0px rgba(79,50,214,0)" }}
+            transition={{ duration: 0.35 }}
           />
 
           {/* Content Container */}
-          <div className="relative z-20 w-full h-full p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12">
-            
-            {/* Logo Section */}
-            <motion.div 
-              className="shrink-0"
-              animate={{ scale: isHovered ? 1.05 : 1 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            >
-               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2rem] bg-white/5 backdrop-blur-2xl border border-white/10 p-6 md:p-8 flex items-center justify-center shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
-                 <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
-               </div>
-            </motion.div>
+          <div className="relative z-20 w-full h-full p-5 flex flex-col gap-3">
 
-            {/* Info Section */}
-            <div className="flex-1 w-full flex flex-col justify-center gap-6">
-              
-              {/* Headers */}
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                 <div>
-                   <h2 className="text-3xl md:text-5xl font-black text-white mb-3 tracking-tight drop-shadow-xl leading-tight">{displayBank.nameAr}</h2>
-                   <h3 className="text-base md:text-xl text-white/50 font-sans tracking-[0.2em] uppercase">{displayBank.nameEn}</h3>
-                 </div>
-                 {displayBank.priorityImpact === 'HOT' && (
-                   <div className="shrink-0 px-5 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full font-bold tracking-widest text-sm backdrop-blur-md self-start mt-2">
-                     أولوية قصوى
-                   </div>
-                 )}
+            {/* Logo */}
+            <div className="flex items-start justify-between">
+              <div className="w-14 h-14 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-2.5 flex items-center justify-center shadow-lg shrink-0">
+                <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
               </div>
-
-              <div className="h-px w-full bg-white/10 my-2" />
-
-              {/* Stats Row */}
-              <div className="flex flex-wrap gap-8 md:gap-14 items-end justify-start">
-                 
-                 <div className="shrink-0 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.3)] transition-all duration-500">
-                    <div className="text-3xl md:text-4xl font-mono font-bold text-emerald-400">{formatPercentage(avgProgress)}</div>
-                    <div className="text-white/50 text-[11px] md:text-xs uppercase tracking-widest mt-2 font-medium">نسبة الإنجاز</div>
-                 </div>
-                 
-                 <div className="shrink-0">
-                    <div className={`flex items-center gap-2 text-xl md:text-2xl font-bold drop-shadow-xl ${getStatusColor(displayBank.status).text}`}>
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${getStatusColor(displayBank.status).dot}`} />
-                      {displayBank.status}
-                    </div>
-                    <div className="text-white/50 text-[11px] md:text-xs uppercase tracking-widest mt-2 font-medium">الحالة</div>
-                 </div>
-
-                 <div className="shrink-0 max-w-[180px]">
-                    <div className="text-lg md:text-xl text-white font-medium truncate drop-shadow-xl">{displayBank.responsiblePerson || 'غير محدد'}</div>
-                    <div className="text-white/50 text-[11px] md:text-xs uppercase tracking-widest mt-2 font-medium">المسؤول</div>
-                 </div>
-
-                 <div className="shrink-0">
-                    <div className="text-lg md:text-xl text-white font-medium drop-shadow-xl">{formatDate(displayBank.lastMeetingDate)}</div>
-                    <div className="text-white/50 text-[11px] md:text-xs uppercase tracking-widest mt-2 font-medium">آخر اجتماع</div>
-                 </div>
-
-                 <div className="shrink-0 hidden sm:block">
-                    <div className="text-lg md:text-xl text-white font-medium drop-shadow-xl">{formatDate(displayBank.nextMeetingDate)}</div>
-                    <div className="text-white/50 text-[11px] md:text-xs uppercase tracking-widest mt-2 font-medium">الاجتماع القادم</div>
-                 </div>
-
-              </div>
-
-              <div className="text-white/30 text-xs">آخر تحديث: {formatDateTime(displayBank.updatedAt)}</div>
             </div>
 
+            {/* Name */}
+            <div className="min-w-0">
+              <h2 className="text-lg font-black text-white leading-tight truncate">{displayBank.nameAr}</h2>
+              <h3 className="text-[11px] text-white/45 font-sans tracking-[0.15em] uppercase truncate">{displayBank.nameEn}</h3>
+            </div>
+
+            {/* Status + Progress */}
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <div className={`flex items-center gap-1.5 text-xs font-bold truncate ${getStatusColor(displayBank.status).text}`}>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${getStatusColor(displayBank.status).dot}`} />
+                <span className="truncate">{displayBank.status}</span>
+              </div>
+              <div className="text-base font-mono font-bold text-emerald-400 shrink-0">{formatPercentage(avgProgress)}</div>
+            </div>
+
+            <div className="h-px w-full bg-white/10" />
+
+            {/* Meta grid: responsible, next meeting, last updated */}
+            <div className="mt-auto grid grid-cols-1 gap-1.5 text-[11px]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-white/40">المسؤول</span>
+                <span className="text-white/85 font-medium truncate max-w-[65%]">{displayBank.responsiblePerson || 'غير محدد'}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-white/40">الاجتماع القادم</span>
+                <span className="text-white/85 font-medium truncate max-w-[65%]">{formatDate(displayBank.nextMeetingDate)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-white/30">آخر تحديث</span>
+                <span className="text-white/50 truncate max-w-[65%]">{formatDateTime(displayBank.updatedAt)}</span>
+              </div>
+            </div>
           </div>
-          
-          {/* Cinematic Glow Border */}
-          <motion.div 
-            className="absolute inset-0 z-30 rounded-[2.5rem] border-2 border-primary/60 pointer-events-none mix-blend-overlay"
-            animate={{ opacity: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.5 }}
-          />
-          <motion.div 
-            className="absolute inset-0 z-[-1] rounded-[2.5rem] pointer-events-none"
-            animate={{ boxShadow: isHovered ? "0 0 80px -20px rgba(79,50,214,0.6)" : "0 0 0px rgba(79,50,214,0)" }}
-            transition={{ duration: 0.5 }}
-          />
         </motion.div>
       </Link>
     </motion.div>

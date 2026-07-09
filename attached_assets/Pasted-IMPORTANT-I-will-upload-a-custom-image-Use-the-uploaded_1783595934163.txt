@@ -1,0 +1,216 @@
+IMPORTANT
+
+I will upload a custom image.
+
+Use the uploaded image EXACTLY as it is.
+
+Do NOT recreate the scene.
+Do NOT redesign the image.
+Do NOT generate another background.
+
+The uploaded image is the source of truth.
+
+==================================================
+PAGE PURPOSE
+==================================================
+
+This is the executive entry page for:
+
+منصة القيادة التنفيذية للبنوك
+WASL BANKING COMMAND CENTER
+
+This is NOT a traditional login page.
+
+This should feel like entering the headquarters of Wasl.
+
+Inspired by:
+
+- Apple Vision Pro
+- Tesla
+- Resend
+- Vercel
+- High-end fintech software
+
+==================================================
+BACKGROUND
+==================================================
+
+Use the uploaded image as the full-screen hero background.
+
+Requirements:
+
+- width: 100vw
+- height: 100vh
+- keep image proportions
+- no distortion
+- no cropping of important content
+- center image
+
+Desktop:
+background-size: contain;
+
+Mobile:
+Automatically adapt to screen size while keeping the important center area visible.
+
+Background color:
+#050816
+
+Add only a subtle overlay:
+
+rgba(5,8,22,0.15)
+
+==================================================
+REMOVE EVERYTHING
+==================================================
+
+Do NOT add:
+
+- Statistics cards
+- Extra texts
+- Floating widgets
+- Side menus
+- Additional logos
+- Additional buttons
+
+Only the uploaded image should be visible.
+
+==================================================
+ENTRY BUTTON
+==================================================
+
+Create one premium glass button.
+
+Text:
+
+ENTER PLATFORM
+دخول المنصة
+
+Style:
+
+- Glassmorphism
+- Border radius: 24px
+- Soft blue glow
+- Purple ambient light
+- Blur effect
+- Premium shadow
+
+Position:
+
+Bottom center.
+
+Desktop:
+Width: 320px
+Height: 80px
+
+Mobile:
+Width: 85%
+Max-width: 320px
+
+The button must always remain visible.
+
+Never overlap with the image.
+
+==================================================
+ANIMATIONS
+==================================================
+
+Page load:
+
+- Fade in.
+- Soft particles.
+- Slow cinematic zoom (1%).
+- Ambient blue glow.
+
+Button hover:
+
+- Slight scale up.
+- Glow intensifies.
+
+Button click:
+
+1. Glass panel lights up.
+2. Purple pulse effect.
+3. Camera slowly moves toward the center cube in the image.
+4. Fade to black.
+5. Open:
+
+/portfolio
+
+==================================================
+LOADING TRANSITION
+==================================================
+
+Duration:
+1–2 seconds.
+
+Show:
+
+- Wasl logo.
+- Blue particles.
+- Purple glow.
+- Thin loading line.
+
+Then enter the dashboard.
+
+==================================================
+RESPONSIVE DESIGN (VERY IMPORTANT)
+==================================================
+
+This platform will be used on:
+
+- Desktop
+- Laptop
+- Tablet
+- Mobile
+
+Requirements:
+
+- No text overlap.
+- No cut elements.
+- No overflow.
+- No horizontal scrolling.
+- No UI collisions.
+- No overlapping components.
+
+Use proper responsive breakpoints.
+
+Mobile:
+320px – 768px
+
+Tablet:
+768px – 1024px
+
+Desktop:
+1024px+
+
+==================================================
+INSIDE THE PLATFORM
+==================================================
+
+The same premium quality must continue inside the dashboard.
+
+Requirements:
+
+- Responsive everywhere.
+- Large touch targets.
+- Smooth page transitions.
+- Maintain Wasl branding.
+- No overlapping cards.
+- No cut text.
+
+==================================================
+FINAL GOAL
+==================================================
+
+The user should feel like:
+
+"I am entering the futuristic headquarters of Wasl."
+
+The uploaded image is the hero experience.
+
+Only add:
+
+✔ The uploaded image
+✔ One premium glass button
+✔ Cinematic transition to the dashboard
+✔ Perfect responsiveness on all devices

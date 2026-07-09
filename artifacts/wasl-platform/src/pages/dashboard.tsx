@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { useGetDashboardSummary, useListBanks, useGetBank, getGetBankQueryKey } from '@workspace/api-client-react';
+import { useGetDashboardSummary, useListBanks, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey } from '@workspace/api-client-react';
 import type { Bank, BankDetail } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
+import { Pencil, Save } from 'lucide-react';
 import { BankLogo } from '@/components/BankLogo';
-import { formatDate, formatPercentage } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { formatDate, formatDateTime, formatPercentage } from '@/lib/utils';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -129,10 +136,123 @@ export default function Dashboard() {
   );
 }
 
+function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolean, onOpenChange: (v: boolean) => void }) {
+  const [form, setForm] = useState<Partial<Bank> & { contacts?: any[] }>(bank);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const updateBank = useUpdateBank();
+
+  React.useEffect(() => {
+    if (open) setForm(bank);
+  }, [open, bank]);
+
+  const contacts = form.contacts || [];
+
+  const updateContact = (idx: number, field: 'name' | 'title' | 'phone', value: string) => {
+    const next = contacts.map((c, i) => i === idx ? { ...c, [field]: value } : c);
+    setForm({ ...form, contacts: next });
+  };
+
+  const handleSave = () => {
+    const payload = {
+      status: form.status,
+      responsiblePerson: form.responsiblePerson || undefined,
+      lastMeetingDate: form.lastMeetingDate || undefined,
+      lastMeetingSummary: form.lastMeetingSummary || undefined,
+      nextMeetingDate: form.nextMeetingDate || undefined,
+      nextMeetingTopic: form.nextMeetingTopic || undefined,
+      nextAction: form.nextAction || undefined,
+      executiveSummary: form.executiveSummary || undefined,
+      descriptionNotes: form.descriptionNotes || undefined,
+      contacts: contacts.filter(c => c.name?.trim()),
+    };
+    updateBank.mutate({ id: bank.id, data: payload }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) });
+        onOpenChange(false);
+        toast({ title: 'تم الحفظ', description: 'تم تحديث بيانات البنك بنجاح' });
+      },
+      onError: () => {
+        toast({ title: 'خطأ', description: 'فشل حفظ التعديلات', variant: 'destructive' });
+      }
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] bg-card border-white/10 text-white max-h-[85vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle>تعديل {bank.nameAr}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">الحالة</label>
+              <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary"
+                value={form.status || ''} onChange={e => setForm({ ...form, status: e.target.value })}>
+                <option value="Not Started">لم يبدأ</option>
+                <option value="In Progress">قيد التنفيذ</option>
+                <option value="Active - Integration In Progress">نشط - جاري التكامل</option>
+                <option value="Delayed">متأخر</option>
+                <option value="Completed">مكتمل</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">المسؤول</label>
+              <Input value={form.responsiblePerson || ''} onChange={e => setForm({ ...form, responsiblePerson: e.target.value })} className="bg-white/5 border-white/10" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">تاريخ آخر اجتماع</label>
+              <Input value={form.lastMeetingDate || ''} onChange={e => setForm({ ...form, lastMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">تاريخ الاجتماع القادم</label>
+              <Input value={form.nextMeetingDate || ''} onChange={e => setForm({ ...form, nextMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm text-white/70">موضوع الاجتماع القادم</label>
+            <Input value={form.nextMeetingTopic || ''} onChange={e => setForm({ ...form, nextMeetingTopic: e.target.value })} className="bg-white/5 border-white/10" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm text-white/70">الخطوة القادمة</label>
+            <Input value={form.nextAction || ''} onChange={e => setForm({ ...form, nextAction: e.target.value })} className="bg-white/5 border-white/10" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm text-white/70">ملاحظات الوصف</label>
+            <Textarea value={form.descriptionNotes || ''} onChange={e => setForm({ ...form, descriptionNotes: e.target.value })} className="bg-white/5 border-white/10 h-24" />
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-white/10">
+            <label className="text-sm text-white/70">جهات الاتصال</label>
+            {contacts.map((c, idx) => (
+              <div key={idx} className="grid grid-cols-3 gap-2">
+                <Input value={c.name || ''} placeholder="الاسم" onChange={e => updateContact(idx, 'name', e.target.value)} className="bg-white/5 border-white/10" />
+                <Input value={c.title || ''} placeholder="المسمى" onChange={e => updateContact(idx, 'title', e.target.value)} className="bg-white/5 border-white/10" />
+                <Input value={c.phone || ''} placeholder="الجوال" onChange={e => updateContact(idx, 'phone', e.target.value)} className="bg-white/5 border-white/10" dir="ltr" />
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={() => setForm({ ...form, contacts: [...contacts, { name: '', title: '', phone: '' }] })}>
+              + إضافة جهة اتصال
+            </Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleSave} className="w-full gap-2" disabled={updateBank.isPending}>
+            <Save className="w-4 h-4" /> {updateBank.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function HorizontalBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSummary: Bank, hoveredId: string | null, setHoveredId: (id: string | null) => void }) {
   const { data: bankDetail } = useGetBank(bankSummary.id, {
     query: { queryKey: getGetBankQueryKey(bankSummary.id) }
   });
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const isHovered = hoveredId === bankSummary.id;
   const isDimmed = hoveredId !== null && hoveredId !== bankSummary.id;
@@ -144,7 +264,16 @@ function HorizontalBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSumm
     : 0;
 
   return (
-    <motion.div variants={itemVariants} className="will-change-transform h-full">
+    <motion.div variants={itemVariants} className="will-change-transform h-full relative">
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditOpen(true); }}
+        className="absolute top-6 left-6 z-40 w-11 h-11 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/70 hover:text-white hover:bg-primary/60 hover:border-primary transition-all"
+        title="تعديل بيانات البنك"
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
+      <EditBankDialog bank={displayBank} open={isEditOpen} onOpenChange={setIsEditOpen} />
       <Link
         href={`/bank/${displayBank.id}`}
         className="block relative group rounded-[2.5rem] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/70 h-full"
@@ -255,6 +384,8 @@ function HorizontalBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSumm
                  </div>
 
               </div>
+
+              <div className="text-white/30 text-xs">آخر تحديث: {formatDateTime(displayBank.updatedAt)}</div>
             </div>
 
           </div>

@@ -26,4 +26,5 @@ export interface Product {
   /** @nullable */
   riskLevel?: string | null;
   createdAt: string;
+  updatedAt: string;
 }

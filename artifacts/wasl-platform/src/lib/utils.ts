@@ -15,6 +15,18 @@ export function formatDate(dateString: string | null | undefined, locale = 'ar-S
   }).format(date);
 }
 
+export function formatDateTime(dateString: string | null | undefined, locale = 'ar-SA') {
+  if (!dateString) return 'غير محدد';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export function formatPercentage(val: number) {
   return `${Math.round(val * 100)}%`;
 }

@@ -11,7 +11,8 @@ import {
   getListBanksQueryKey,
   useGetLookups,
   useUpdateLookups,
-  getGetLookupsQueryKey
+  getGetLookupsQueryKey,
+  useListProducts
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +22,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Image as ImageIcon, Trash2, Edit, Plus, Save, UploadCloud } from 'lucide-react';
+import { Building2, Image as ImageIcon, Trash2, Edit, Plus, Save, UploadCloud, History } from 'lucide-react';
+import { formatDateTime } from '@/lib/utils';
 import type { Bank } from '@workspace/api-client-react';
 
 export default function Settings() {
@@ -41,6 +43,7 @@ export default function Settings() {
         <TabsList className="w-full justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8">
           <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">البنوك وجهات التمويل</TabsTrigger>
           <TabsTrigger value="lookups" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">القوائم المرجعية</TabsTrigger>
+          <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">التحديثات الأخيرة</TabsTrigger>
         </TabsList>
 
         <TabsContent value="banks">
@@ -49,6 +52,10 @@ export default function Settings() {
 
         <TabsContent value="lookups">
           <LookupsManager />
+        </TabsContent>
+
+        <TabsContent value="updates">
+          <RecentUpdates />
         </TabsContent>
       </Tabs>
     </div>
@@ -191,6 +198,74 @@ function BanksManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function RecentUpdates() {
+  const { data: banks, isLoading: isLoadingBanks } = useListBanks();
+  const { data: products, isLoading: isLoadingProducts } = useListProducts();
+
+  if (isLoadingBanks || isLoadingProducts) return <div>جاري التحميل...</div>;
+
+  type Row = { id: string; label: string; sub: string; updatedAt: string; kind: 'بنك' | 'منتج' };
+
+  const bankRows: Row[] = (banks || []).map(b => ({
+    id: b.id,
+    label: b.nameAr,
+    sub: b.nameEn,
+    updatedAt: b.updatedAt,
+    kind: 'بنك',
+  }));
+
+  const productRows: Row[] = (products || []).map(p => {
+    const bank = (banks || []).find(b => b.id === p.bankId);
+    return {
+      id: `${p.bankId}-${p.id}`,
+      label: `${p.productCode} — ${p.categoryStage}`,
+      sub: bank ? bank.nameAr : p.bankId,
+      updatedAt: p.updatedAt,
+      kind: 'منتج',
+    };
+  });
+
+  const rows = [...bankRows, ...productRows].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <div className="flex items-center gap-3">
+        <History className="w-6 h-6 text-primary" />
+        <div>
+          <h2 className="text-2xl font-bold text-white">سجل كل التحديثات</h2>
+          <p className="text-sm text-white/50">آخر تعديل لكل بنك ومنتج، مرتبة من الأحدث للأقدم.</p>
+        </div>
+      </div>
+
+      <Card className="bg-white/5 border-white/10">
+        <CardContent className="p-0">
+          <div className="divide-y divide-white/5">
+            {rows.map(row => (
+              <div key={`${row.kind}-${row.id}`} className="flex items-center justify-between gap-4 px-6 py-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${row.kind === 'بنك' ? 'bg-primary/20 text-primary' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                    {row.kind}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-white truncate">{row.label}</p>
+                    <p className="text-sm text-white/40 truncate">{row.sub}</p>
+                  </div>
+                </div>
+                <div className="shrink-0 text-sm text-white/60 font-mono">{formatDateTime(row.updatedAt)}</div>
+              </div>
+            ))}
+            {rows.length === 0 && (
+              <div className="py-12 text-center text-white/30">لا توجد تحديثات مسجلة</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

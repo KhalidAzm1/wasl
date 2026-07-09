@@ -154,7 +154,8 @@ export const GetBankResponse = zod.object({
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 })).optional(),
   "meetings": zod.array(zod.object({
   "id": zod.number(),
@@ -365,7 +366,8 @@ export const ListProductsResponseItem = zod.object({
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -400,7 +402,8 @@ export const CreateProductResponse = zod.object({
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 })
 
 
@@ -437,7 +440,8 @@ export const UpdateProductResponse = zod.object({
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 })
 
 

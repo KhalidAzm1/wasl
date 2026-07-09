@@ -2,9 +2,9 @@ import React, { Suspense, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, RoundedBox, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import waslLogoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { CubeErrorBoundary, isWebglAvailable } from './CubeErrorBoundary';
 import { useBankCubeFaces } from './useBankCubeFaces';
+import { MinimalCubeGlyph, minimalCubeGlyphDataUrl } from './MinimalCubeGlyph';
 
 function CubeFaceMaterial({ url, index }: { url: string; index: number }) {
   const texture = useTexture(url);
@@ -92,9 +92,13 @@ function Cube({
 function CssRotatingCubeFallback({ size, faceUrls }: { size: number; faceUrls: string[] }) {
   const [paused, setPaused] = useState(false);
   // Only 4 side faces are ever visible on a Y-axis-spinning cube; skip
-  // top/bottom and use the first 4 branded textures (Wasl + 3 banks).
-  const sideFaces = (faceUrls.length ? faceUrls : [waslLogoUrl]).slice(0, 4);
-  while (sideFaces.length < 4) sideFaces.push(sideFaces[0] ?? waslLogoUrl);
+  // top/bottom and use the first 4 branded textures. IMPORTANT: the Wasl
+  // wordmark logo must never be used here, even as a last-resort fallback —
+  // use the neutral, non-logo glyph instead so this path can never
+  // reintroduce the duplicate-logo bug.
+  const neutral = minimalCubeGlyphDataUrl();
+  const sideFaces = (faceUrls.length ? faceUrls : [neutral]).slice(0, 4);
+  while (sideFaces.length < 4) sideFaces.push(sideFaces[0] ?? neutral);
   const half = size / 2;
 
   return (
@@ -189,6 +193,7 @@ export function RotatingCube({
       style={{
         width: size + 40,
         height: size + 40,
+        maxWidth: '100%',
         boxShadow:
           '0 0 40px 6px rgba(124,58,237,0.22), 0 0 60px 14px rgba(59,130,246,0.14), inset 0 1px 0 rgba(255,255,255,0.08)',
       }}

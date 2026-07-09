@@ -4,19 +4,28 @@ import { LayoutDashboard, Settings } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
+import { MinimalCubeGlyph } from './MinimalCubeGlyph';
+
+// Sized to always fit inside the sidebar's inner width (w-72 = 288px minus
+// px-4 * 2 = 32px padding = 256px available). Glass wrapper adds 40px, so
+// keep CUBE_SIZE well under 216 to leave breathing room at narrower widths.
+const CUBE_SIZE = 176;
 
 // Loaded lazily and behind its own error boundary: if the three.js/WebGL
 // stack fails to load or mount on a given browser, it must never be able to
 // block the rest of the app (sidebar nav, dashboard, etc.) from rendering.
-const CUBE_SIZE = 240;
+// NOTE: this catch-fallback must NEVER render a second static Wasl logo —
+// that was the original duplicate-logo bug. It renders a small non-logo
+// glyph instead, matching the CSS-cube fallback's "still looks like a
+// widget, not a logo" intent.
 const RotatingCube = lazy(() =>
   import('./RotatingCube').then((m) => ({ default: m.RotatingCube })).catch(() => ({
     default: () => (
       <div
-        style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40 }}
+        style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40, maxWidth: '100%' }}
         className="mx-auto flex items-center justify-center rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl"
       >
-        <img src={logoUrl} alt="Wasl" className="w-1/2 h-auto opacity-70" />
+        <MinimalCubeGlyph size={CUBE_SIZE * 0.4} />
       </div>
     ),
   }))
@@ -25,7 +34,7 @@ const RotatingCube = lazy(() =>
 function CubeSlotFallback() {
   return (
     <div
-      style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40 }}
+      style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40, maxWidth: '100%' }}
       className="mx-auto flex items-center justify-center rounded-3xl bg-white/5 border border-white/10 animate-pulse"
     />
   );
@@ -84,7 +93,7 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Remaining space: cube centered vertically, empty spacing above/below. */}
-        <div className="flex-1 w-full min-h-0 flex items-center justify-center">
+        <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden">
           <Suspense fallback={<CubeSlotFallback />}>
             <RotatingCube size={CUBE_SIZE} glass />
           </Suspense>

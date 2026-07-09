@@ -1,44 +1,9 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { LayoutDashboard, Settings } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
-import { MinimalCubeGlyph } from './MinimalCubeGlyph';
-
-// Sized to always fit inside the sidebar's inner width (w-72 = 288px minus
-// px-4 * 2 = 32px padding = 256px available). Glass wrapper adds 40px, so
-// keep CUBE_SIZE well under 216 to leave breathing room at narrower widths.
-const CUBE_SIZE = 176;
-
-// Loaded lazily and behind its own error boundary: if the three.js/WebGL
-// stack fails to load or mount on a given browser, it must never be able to
-// block the rest of the app (sidebar nav, dashboard, etc.) from rendering.
-// NOTE: this catch-fallback must NEVER render a second static Wasl logo —
-// that was the original duplicate-logo bug. It renders a small non-logo
-// glyph instead, matching the CSS-cube fallback's "still looks like a
-// widget, not a logo" intent.
-const RotatingCube = lazy(() =>
-  import('./RotatingCube').then((m) => ({ default: m.RotatingCube })).catch(() => ({
-    default: () => (
-      <div
-        style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40, maxWidth: '100%' }}
-        className="mx-auto flex items-center justify-center rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl"
-      >
-        <MinimalCubeGlyph size={CUBE_SIZE * 0.4} />
-      </div>
-    ),
-  }))
-);
-
-function CubeSlotFallback() {
-  return (
-    <div
-      style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40, maxWidth: '100%' }}
-      className="mx-auto flex items-center justify-center rounded-3xl bg-white/5 border border-white/10 animate-pulse"
-    />
-  );
-}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -64,9 +29,9 @@ export function Layout({ children }: LayoutProps) {
         className="pointer-events-none select-none fixed bottom-[-6%] left-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
       />
 
-      {/* Sidebar. Hierarchy: logo -> nav -> rotating cube (only one Wasl
-          logo lives in the sidebar; the cube widget replaces what used to
-          be a second, large logo card). */}
+      {/* Sidebar. Hierarchy: logo -> nav -> empty space. Only one Wasl logo
+          lives in the sidebar (top); per explicit user direction, no cube
+          widget or second logo card fills the remaining space below nav. */}
       <aside className="relative z-20 w-72 glass-panel border-l border-r-0 flex flex-col items-center py-8 px-4 gap-8 overflow-hidden">
         <div className="w-full flex items-center justify-center shrink-0">
           <img src={logoUrl} alt="Wasl" className="w-48 h-auto drop-shadow-lg" />
@@ -92,12 +57,8 @@ export function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        {/* Remaining space: cube centered vertically, empty spacing above/below. */}
-        <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden">
-          <Suspense fallback={<CubeSlotFallback />}>
-            <RotatingCube size={CUBE_SIZE} glass />
-          </Suspense>
-        </div>
+        {/* Remaining space intentionally left empty. */}
+        <div className="flex-1 w-full min-h-0" />
       </aside>
 
       {/* Main Content */}

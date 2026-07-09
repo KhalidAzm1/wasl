@@ -1,0 +1,129 @@
+CRITICAL MOBILE RESPONSIVE FIX
+
+The mobile experience is broken.
+
+Issues:
+- 3D cube overflows outside the sidebar.
+- Wasl logo becomes mirrored and clipped.
+- Sidebar width is too large.
+- Components overlap.
+- Layout is unusable on phones.
+
+Create a dedicated mobile layout.
+
+==================================================
+BREAKPOINTS
+==================================================
+
+Desktop:
+min-width: 1280px
+
+Tablet:
+768px - 1279px
+
+Mobile:
+max-width: 767px
+
+==================================================
+SIDEBAR
+==================================================
+
+Desktop:
+width: 340px
+
+Tablet:
+width: 280px
+
+Mobile:
+collapse sidebar into a slide drawer.
+
+The drawer should open from the right.
+
+Hide the cube inside the drawer.
+
+==================================================
+3D CUBE
+==================================================
+
+Desktop:
+240px
+
+Tablet:
+180px
+
+Mobile:
+120px maximum.
+
+On mobile:
+- pause auto rotation
+- simplify reflections
+- lower GPU usage
+- center inside container
+- never overflow.
+
+Use:
+
+overflow:hidden;
+max-width:100%;
+object-fit:contain;
+
+==================================================
+LOGOS
+==================================================
+
+Never mirror logos.
+
+Use:
+
+backface-visibility:hidden;
+transform-style:preserve-3d;
+
+==================================================
+MOBILE HOME
+==================================================
+
+Move KPI cards into a horizontal scroll section.
+
+Cards:
+width: 140px.
+
+==================================================
+PRESENTATION MODE
+==================================================
+
+On mobile:
+
+Display one card at a time.
+
+Swipe left/right.
+
+Hide large side panel.
+
+==================================================
+SAFE AREAS
+==================================================
+
+Support:
+
+iPhone notch
+Dynamic Island
+Safari bottom bar
+
+Use:
+
+padding-top: env(safe-area-inset-top);
+padding-bottom: env(safe-area-inset-bottom);
+
+==================================================
+GENERAL
+==================================================
+
+No horizontal scrolling.
+No overlapping.
+No clipping.
+Everything must fit perfectly on:
+
+iPhone 13
+iPhone 14 Pro Max
+Samsung S24 Ultra
+iPad Mini.

@@ -18,7 +18,14 @@ export interface BankUpdate {
   contacts?: BankContact[];
   riskLevel?: string;
   priorityImpact?: string;
-  responsiblePerson?: string;
+  /** @nullable */
+  responsiblePerson?: string | null;
+  /** @nullable */
+  relationshipManager?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
   lastMeetingDate?: string;
   lastMeetingSummary?: string;
   nextMeetingDate?: string;

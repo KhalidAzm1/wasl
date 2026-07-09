@@ -1,0 +1,205 @@
+FINAL REDESIGN REQUEST
+
+Keep the current dark theme and Wasl branding.
+
+==================================================
+RIGHT SIDEBAR REDESIGN
+==================================================
+
+Remove:
+
+- User avatar (محمد التميمي)
+- Empty area under the navigation.
+
+Replace that entire area with a premium 3D object.
+
+==================================================
+3D ROTATING CUBE
+==================================================
+
+Create a large premium rotating cube exactly inspired by the cube on Resend.com.
+
+Requirements:
+
+- Use Three.js + React Three Fiber.
+- Real 3D cube.
+- Slow continuous rotation.
+- Metallic and glass material.
+- Reflections and soft lighting.
+- Premium shadows.
+- Mouse interaction.
+- Smooth animations.
+
+The cube should feel luxurious and futuristic.
+
+==================================================
+CUBE FACES
+==================================================
+
+Display:
+
+- Wasl logo
+- Al Rajhi logo
+- SNB logo
+- Alinma logo
+- Riyad Bank logo
+- BSF logo
+
+Support transparent PNG and SVG logos.
+
+The logos should be centered on each face.
+
+The cube should support dynamic logo replacement from Settings.
+
+==================================================
+CUBE SIZE
+==================================================
+
+The cube should be large.
+
+Approximately:
+
+250px–320px
+
+It should become the centerpiece of the right sidebar.
+
+==================================================
+SIDEBAR LAYOUT
+==================================================
+
+Top:
+
+Wasl logo.
+
+Middle:
+
+Navigation buttons.
+
+Bottom:
+
+Large rotating 3D cube.
+
+Remove the user profile completely.
+
+==================================================
+DASHBOARD FILTERS
+==================================================
+
+Make KPI cards interactive.
+
+When clicking:
+
+قيد التنفيذ
+
+Show ONLY banks that are:
+
+In Progress.
+
+When clicking:
+
+مكتمل
+
+Show ONLY completed banks.
+
+When clicking:
+
+متأخر
+
+Show ONLY delayed banks.
+
+When clicking:
+
+مخاطر عالية
+
+Show ONLY high-risk banks.
+
+When clicking:
+
+إجمالي البنوك
+
+Show all banks.
+
+==================================================
+FILTER BEHAVIOR
+==================================================
+
+Filtering should happen instantly.
+
+Add:
+
+- Smooth animations.
+- Fade transitions.
+- Counter animations.
+
+The Portfolio Wall should update immediately.
+
+==================================================
+PORTFOLIO WALL
+==================================================
+
+Display large Netflix-style bank cards.
+
+Each card should include:
+
+- Hero image
+- Large bank logo
+- Arabic bank name
+- English bank name
+- Status
+- Progress
+- Next meeting
+- Responsible person
+- Risk level
+
+Cards should be large and highly visual.
+
+==================================================
+BANK DETAILS PAGE
+==================================================
+
+Keep:
+
+- Timeline
+- Meetings
+- Products
+- Notes
+- Documents
+
+Add:
+
+- Phone numbers
+- Email addresses
+- Website
+- Executive summary
+- Last updates
+- Relationship manager
+
+==================================================
+ANIMATIONS
+==================================================
+
+Use:
+
+Framer Motion.
+
+The experience should feel like:
+
+- Apple TV
+- Netflix
+- Stripe
+- Resend
+- Vercel
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT create a fake CSS cube.
+
+Create a real 3D cube using:
+
+Three.js
+React Three Fiber
+Drei
+
+The cube should look almost identical to the premium rotating cube on Resend.com.

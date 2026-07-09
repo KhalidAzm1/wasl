@@ -151,6 +151,26 @@ export default function BankDetail() {
                     <p className="font-medium">{bank.responsiblePerson || '-'}</p>
                   </div>
                   <div>
+                    <p className="text-sm text-white/40 mb-1">مدير العلاقة</p>
+                    <p className="font-medium">{bank.relationshipManager || '-'}</p>
+                  </div>
+                  {bank.email && (
+                    <div>
+                      <p className="text-sm text-white/40 mb-1">البريد الإلكتروني</p>
+                      <a href={`mailto:${bank.email}`} className="font-medium text-primary hover:underline" dir="ltr">
+                        {bank.email}
+                      </a>
+                    </div>
+                  )}
+                  {bank.website && (
+                    <div>
+                      <p className="text-sm text-white/40 mb-1">الموقع الإلكتروني</p>
+                      <a href={bank.website} target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1" dir="ltr">
+                        {bank.website} <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+                  <div>
                     <p className="text-sm text-white/40 mb-1">تاريخ آخر اجتماع</p>
                     <p className="font-medium">{formatDate(bank.lastMeetingDate)}</p>
                   </div>
@@ -187,6 +207,11 @@ export default function BankDetail() {
                           <a href={`tel:${contact.phone}`} className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline" dir="ltr">
                             <Phone className="w-3 h-3" />
                             {contact.phone}
+                          </a>
+                        )}
+                        {contact.email && (
+                          <a href={`mailto:${contact.email}`} className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline" dir="ltr">
+                            {contact.email}
                           </a>
                         )}
                       </div>

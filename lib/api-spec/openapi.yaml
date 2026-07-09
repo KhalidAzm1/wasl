@@ -590,6 +590,9 @@ components:
         riskLevel: { type: string, description: "Low | Medium | High" }
         priorityImpact: { type: string, description: "HOT | Unclassified | etc" }
         responsiblePerson: { type: ["string", "null"] }
+        relationshipManager: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
         lastMeetingDate: { type: ["string", "null"] }
         lastMeetingSummary: { type: ["string", "null"] }
         nextMeetingDate: { type: ["string", "null"] }
@@ -637,7 +640,10 @@ components:
           items: { $ref: "#/components/schemas/BankContact" }
         riskLevel: { type: string }
         priorityImpact: { type: string }
-        responsiblePerson: { type: string }
+        responsiblePerson: { type: ["string", "null"] }
+        relationshipManager: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
         lastMeetingDate: { type: string }
         lastMeetingSummary: { type: string }
         nextMeetingDate: { type: string }
@@ -661,7 +667,10 @@ components:
           items: { $ref: "#/components/schemas/BankContact" }
         riskLevel: { type: string }
         priorityImpact: { type: string }
-        responsiblePerson: { type: string }
+        responsiblePerson: { type: ["string", "null"] }
+        relationshipManager: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
         lastMeetingDate: { type: string }
         lastMeetingSummary: { type: string }
         nextMeetingDate: { type: string }
@@ -677,6 +686,7 @@ components:
         name: { type: string }
         title: { type: ["string", "null"] }
         phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
 
     Product:
       type: object

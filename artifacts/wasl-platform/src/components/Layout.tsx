@@ -4,6 +4,7 @@ import { LayoutDashboard, Settings } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
+import { RotatingCube } from './RotatingCube';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -55,11 +56,8 @@ export function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        <div className="mt-auto w-full px-4 py-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-secondary mx-auto mb-3 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-            م.ت
-          </div>
-          <p className="text-white/80 font-medium text-sm">محمد التميمي</p>
+        <div className="mt-auto w-full flex items-center justify-center pt-4">
+          <RotatingCube size={260} />
         </div>
       </aside>
 

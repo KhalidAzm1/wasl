@@ -6,6 +6,7 @@ export const bankContactSchema = z.object({
   name: z.string(),
   title: z.string().nullish(),
   phone: z.string().nullish(),
+  email: z.string().nullish(),
 });
 export type BankContact = z.infer<typeof bankContactSchema>;
 
@@ -22,6 +23,9 @@ export const banksTable = pgTable("banks", {
   riskLevel: text("risk_level").notNull(),
   priorityImpact: text("priority_impact").notNull(),
   responsiblePerson: text("responsible_person"),
+  relationshipManager: text("relationship_manager"),
+  email: text("email"),
+  website: text("website"),
   lastMeetingDate: text("last_meeting_date"),
   lastMeetingSummary: text("last_meeting_summary"),
   nextMeetingDate: text("next_meeting_date"),

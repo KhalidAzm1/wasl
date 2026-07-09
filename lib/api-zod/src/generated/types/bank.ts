@@ -28,6 +28,12 @@ export interface Bank {
   /** @nullable */
   responsiblePerson?: string | null;
   /** @nullable */
+  relationshipManager?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
   lastMeetingDate?: string | null;
   /** @nullable */
   lastMeetingSummary?: string | null;

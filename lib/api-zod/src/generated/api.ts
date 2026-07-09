@@ -32,11 +32,15 @@ export const ListBanksResponseItem = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().nullish(),
   "lastMeetingSummary": zod.string().nullish(),
   "nextMeetingDate": zod.string().nullish(),
@@ -64,11 +68,15 @@ export const CreateBankBody = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string(),
   "priorityImpact": zod.string(),
-  "responsiblePerson": zod.string().optional(),
+  "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().optional(),
   "lastMeetingSummary": zod.string().optional(),
   "nextMeetingDate": zod.string().optional(),
@@ -90,11 +98,15 @@ export const CreateBankResponse = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().nullish(),
   "lastMeetingSummary": zod.string().nullish(),
   "nextMeetingDate": zod.string().nullish(),
@@ -126,11 +138,15 @@ export const GetBankResponse = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().nullish(),
   "lastMeetingSummary": zod.string().nullish(),
   "nextMeetingDate": zod.string().nullish(),
@@ -213,11 +229,15 @@ export const UpdateBankBody = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().optional(),
   "priorityImpact": zod.string().optional(),
-  "responsiblePerson": zod.string().optional(),
+  "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().optional(),
   "lastMeetingSummary": zod.string().optional(),
   "nextMeetingDate": zod.string().optional(),
@@ -239,11 +259,15 @@ export const UpdateBankResponse = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().nullish(),
   "lastMeetingSummary": zod.string().nullish(),
   "nextMeetingDate": zod.string().nullish(),
@@ -289,11 +313,15 @@ export const SetBankLogoResponse = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().nullish(),
   "lastMeetingSummary": zod.string().nullish(),
   "nextMeetingDate": zod.string().nullish(),
@@ -329,11 +357,15 @@ export const SetBankHeroImageResponse = zod.object({
   "contacts": zod.array(zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "lastMeetingDate": zod.string().nullish(),
   "lastMeetingSummary": zod.string().nullish(),
   "nextMeetingDate": zod.string().nullish(),

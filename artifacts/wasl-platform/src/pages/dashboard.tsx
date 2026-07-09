@@ -21,6 +21,31 @@ const containerVariants = {
   }
 };
 
+function KpiButton({ label, value, colorClass, active, onClick }: { label: string; value: number; colorClass: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col text-right rounded-xl px-3 py-1.5 -mx-3 -my-1.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${
+        active ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/5'
+      }`}
+    >
+      <span className="text-white/50 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">{label}</span>
+      <AnimatePresence mode="popLayout">
+        <motion.span
+          key={value}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.3 }}
+          className={`text-2xl md:text-3xl font-mono font-bold ${colorClass}`}
+        >
+          {value}
+        </motion.span>
+      </AnimatePresence>
+    </button>
+  );
+}
+
 const itemVariants = {
   hidden: { opacity: 0, y: 40, scale: 0.95 },
   show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } }
@@ -32,6 +57,7 @@ export default function Dashboard() {
   const { data: products, isLoading: isLoadingProducts } = useListProducts();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('الكل');
+  const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk'>('all');
 
   if (isLoadingSummary || isLoadingBanks || isLoadingProducts) {
     return (
@@ -58,7 +84,24 @@ export default function Dashboard() {
   }
 
   const categories = ["الكل", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
-  const filteredBanks = [...(filter === 'الكل' ? banks : banks.filter(b => b.category === filter))]
+
+  // Mirrors the exact substring predicates used by the /dashboard/summary API
+  // route, so the KPI counters and the filtered results always agree.
+  const normalizeStatus = (s: string) => s.toLowerCase();
+  const matchesKpi = (bank: Bank) => {
+    if (kpiFilter === 'all') return true;
+    if (kpiFilter === 'highRisk') return bank.riskLevel === 'High';
+    const status = normalizeStatus(bank.status);
+    if (kpiFilter === 'completed') return status.includes('complet');
+    if (kpiFilter === 'delayed') return status.includes('delay');
+    if (kpiFilter === 'inProgress') return status.includes('progress');
+    return true;
+  };
+
+  const highRiskBankCount = banks.filter(b => b.riskLevel === 'High').length;
+
+  const filteredBanks = [...banks]
+    .filter(b => (filter === 'الكل' || b.category === filter) && matchesKpi(b))
     .sort((a, b) => (progressByBank.get(b.id) || 0) - (progressByBank.get(a.id) || 0));
 
   return (
@@ -74,32 +117,28 @@ export default function Dashboard() {
         
         {/* KPI Strip */}
         <div className="flex flex-wrap items-center gap-6 md:gap-10">
-          <div className="flex flex-col">
-            <span className="text-white/50 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">إجمالي البنوك</span>
-            <span className="text-2xl md:text-3xl font-mono font-bold text-white">{summary.totalBanks}</span>
-          </div>
+          <KpiButton label="إجمالي البنوك" value={summary.totalBanks} colorClass="text-white" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
           <div className="w-px h-8 md:h-10 bg-white/10" />
-          <div className="flex flex-col">
-            <span className="text-white/50 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">قيد التنفيذ</span>
-            <span className="text-2xl md:text-3xl font-mono font-bold text-purple-400">{summary.inProgress}</span>
-          </div>
+          <KpiButton label="قيد التنفيذ" value={summary.inProgress} colorClass="text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />
           <div className="w-px h-8 md:h-10 bg-white/10" />
-          <div className="flex flex-col">
-            <span className="text-white/50 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">مكتمل</span>
-            <span className="text-2xl md:text-3xl font-mono font-bold text-emerald-400">{summary.completed}</span>
-          </div>
+          <KpiButton label="مكتمل" value={summary.completed} colorClass="text-emerald-400" active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
           <div className="w-px h-8 md:h-10 bg-white/10" />
-          <div className="flex flex-col">
-            <span className="text-white/50 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">متأخر</span>
-            <span className="text-2xl md:text-3xl font-mono font-bold text-orange-400">{summary.delayed}</span>
-          </div>
+          <KpiButton label="متأخر" value={summary.delayed} colorClass="text-red-400" active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} />
           <div className="w-px h-8 md:h-10 bg-white/10" />
-          <div className="flex flex-col">
-            <span className="text-white/50 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">مخاطر عالية</span>
-            <span className="text-2xl md:text-3xl font-mono font-bold text-red-400">{summary.highRisks}</span>
-          </div>
+          <KpiButton label="مخاطر عالية" value={highRiskBankCount} colorClass="text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
         </div>
       </div>
+
+      {kpiFilter !== 'all' && (
+        <div className="px-8 md:px-10 max-w-[1920px] mx-auto w-full -mb-4 pt-4">
+          <button
+            onClick={() => setKpiFilter('all')}
+            className="text-sm text-primary hover:text-white bg-primary/10 hover:bg-primary/30 border border-primary/30 rounded-full px-4 py-1.5 transition-colors"
+          >
+            ✕ إزالة الفلتر
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 p-8 md:p-10 max-w-[1920px] mx-auto w-full flex flex-col gap-8">
         
@@ -125,7 +164,7 @@ export default function Dashboard() {
         {/* Gallery Grid */}
         <AnimatePresence mode="wait">
           <motion.div 
-            key={filter}
+            key={`${filter}-${kpiFilter}`}
             variants={containerVariants}
             initial="hidden"
             animate="show"
@@ -163,7 +202,7 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
 
   const contacts = form.contacts || [];
 
-  const updateContact = (idx: number, field: 'name' | 'title' | 'phone', value: string) => {
+  const updateContact = (idx: number, field: 'name' | 'title' | 'phone' | 'email', value: string) => {
     const next = contacts.map((c, i) => i === idx ? { ...c, [field]: value } : c);
     setForm({ ...form, contacts: next });
   };
@@ -171,7 +210,10 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
   const handleSave = () => {
     const payload = {
       status: form.status,
-      responsiblePerson: form.responsiblePerson || undefined,
+      responsiblePerson: form.responsiblePerson?.trim() ? form.responsiblePerson : null,
+      relationshipManager: form.relationshipManager?.trim() ? form.relationshipManager : null,
+      email: form.email?.trim() ? form.email : null,
+      website: form.website?.trim() ? form.website : null,
       lastMeetingDate: form.lastMeetingDate || undefined,
       lastMeetingSummary: form.lastMeetingSummary || undefined,
       nextMeetingDate: form.nextMeetingDate || undefined,
@@ -218,6 +260,18 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
               <Input value={form.responsiblePerson || ''} onChange={e => setForm({ ...form, responsiblePerson: e.target.value })} className="bg-white/5 border-white/10" />
             </div>
             <div className="space-y-2">
+              <label className="text-sm text-white/70">مدير العلاقة</label>
+              <Input value={form.relationshipManager || ''} onChange={e => setForm({ ...form, relationshipManager: e.target.value })} className="bg-white/5 border-white/10" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">البريد الإلكتروني</label>
+              <Input value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">الموقع الإلكتروني</label>
+              <Input value={form.website || ''} onChange={e => setForm({ ...form, website: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm text-white/70">تاريخ آخر اجتماع</label>
               <Input value={form.lastMeetingDate || ''} onChange={e => setForm({ ...form, lastMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
             </div>
@@ -246,9 +300,10 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
                 <Input value={c.name || ''} placeholder="الاسم" onChange={e => updateContact(idx, 'name', e.target.value)} className="bg-white/5 border-white/10" />
                 <Input value={c.title || ''} placeholder="المسمى" onChange={e => updateContact(idx, 'title', e.target.value)} className="bg-white/5 border-white/10" />
                 <Input value={c.phone || ''} placeholder="الجوال" onChange={e => updateContact(idx, 'phone', e.target.value)} className="bg-white/5 border-white/10" dir="ltr" />
+                <Input value={c.email || ''} placeholder="البريد الإلكتروني" onChange={e => updateContact(idx, 'email', e.target.value)} className="bg-white/5 border-white/10 col-span-3" dir="ltr" />
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={() => setForm({ ...form, contacts: [...contacts, { name: '', title: '', phone: '' }] })}>
+            <Button variant="outline" size="sm" onClick={() => setForm({ ...form, contacts: [...contacts, { name: '', title: '', phone: '', email: '' }] })}>
               + إضافة جهة اتصال
             </Button>
           </div>

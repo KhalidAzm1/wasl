@@ -1,0 +1,233 @@
+IMPORTANT:
+
+Use the attached image as the PRIMARY VISUAL REFERENCE.
+
+The final result should match the reference image as closely as possible.
+
+Do NOT create your own interpretation.
+
+Do NOT create a simple landing page.
+
+Replicate the composition, lighting, spacing, mood, and cinematic feel of the reference image.
+
+==================================================
+PROJECT
+==================================================
+
+Wasl Banking Command Center
+منصة القيادة التنفيذية للبنوك
+
+This is NOT a login page.
+
+This is a cinematic executive entry experience.
+
+==================================================
+VISUAL STYLE
+==================================================
+
+Create an experience that feels like:
+
+- Apple Vision Pro
+- Tesla
+- Resend
+- Vercel
+- High-end fintech software
+- Luxury executive headquarters
+
+==================================================
+LAYOUT (MATCH THE REFERENCE IMAGE)
+==================================================
+
+Top Center:
+
+- Wasl logo
+- Arabic title:
+منصة القيادة التنفيذية للبنوك
+- English title:
+WASL BANKING COMMAND CENTER
+
+Center:
+
+- Massive rotating 3D cube.
+
+Bottom:
+
+Three premium glass statistic cards:
+
+29 Banking Partners
+10 Active Integrations
+1 Completed
+
+Bottom Center:
+
+Large premium button:
+
+ENTER COMMAND CENTER
+دخول مركز القيادة
+
+The composition should look almost identical to the attached reference image.
+
+==================================================
+BACKGROUND
+==================================================
+
+Create a massive executive glass building interior.
+
+Requirements:
+
+- Dark navy background (#050816)
+- Black glass surfaces
+- Purple neon lighting (#7C3AED)
+- Blue neon accents (#3B82F6)
+- Reflections on the floor
+- Glass walls
+- Volumetric fog
+- Soft particles
+- Ambient lighting
+- Cinematic depth
+
+The user should feel like they are standing inside a futuristic executive headquarters.
+
+==================================================
+DIGITAL VAULT DOORS
+==================================================
+
+Create giant transparent glass doors behind the cube.
+
+Requirements:
+
+- Glass reflections
+- Metal frames
+- Purple glow
+- Blue accent lights
+- Luxury fintech aesthetics
+
+==================================================
+3D CUBE
+==================================================
+
+Use:
+
+- Three.js
+- React Three Fiber
+- Drei
+
+The cube MUST be real 3D.
+
+No fake CSS cube.
+
+Size:
+
+400px.
+
+==================================================
+CUBE MATERIAL
+==================================================
+
+- Black glass
+- Glossy material
+- Metallic reflections
+- Purple neon edges
+- Soft bloom effect
+- Cinematic shadows
+
+==================================================
+CUBE FACES
+==================================================
+
+Display:
+
+- Wasl logo
+- Al Rajhi logo
+- SNB logo
+- Riyad Bank logo
+- Alinma logo
+- BSF logo
+
+Requirements:
+
+- Transparent PNG logos
+- SVG support
+- Large and highly visible
+- Centered on every face
+
+==================================================
+ANIMATION
+==================================================
+
+Initial state:
+
+Dark screen.
+
+Then:
+
+1. Wasl logo fades in.
+2. Purple lights activate.
+3. Glass building appears.
+4. Cube emerges from darkness.
+5. Statistics animate upward.
+
+Cube:
+
+- Rotates slowly.
+- Reacts slightly to mouse movement.
+
+==================================================
+STAT CARDS
+==================================================
+
+Create premium glass cards exactly like the reference image.
+
+Each card:
+
+- Glassmorphism
+- Glow effect
+- Large numbers
+- Arabic + English labels
+- Hover effect
+
+==================================================
+BUTTON
+==================================================
+
+Large glass button:
+
+ENTER COMMAND CENTER
+دخول مركز القيادة
+
+Purple glow.
+
+Soft hover animation.
+
+==================================================
+ENTER TRANSITION
+==================================================
+
+When the button is pressed:
+
+- Cube rotation speeds up.
+- Glass doors slowly open.
+- Camera moves toward the cube.
+- User passes through the cube.
+- Smooth cinematic transition.
+- Navigate to:
+
+/portfolio
+
+==================================================
+FINAL GOAL
+==================================================
+
+The final experience should feel like:
+
+"I am entering the headquarters of Wasl."
+
+The page should look almost identical to the attached reference image.
+
+Focus heavily on:
+
+- Cinematic atmosphere
+- Luxury fintech aesthetics
+- Premium lighting
+- Executive presentation quality
+- Exact composition of the reference image.

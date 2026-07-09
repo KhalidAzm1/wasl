@@ -2,17 +2,9 @@ import React, { Suspense, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, RoundedBox, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { useListBanks } from '@workspace/api-client-react';
 import waslLogoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { CubeErrorBoundary, isWebglAvailable } from './CubeErrorBoundary';
-
-// Known flagship banks whose logos should appear on the cube faces.
-const FACE_BANK_NAMES = ['Al Rajhi', 'Saudi National', 'Alinma', 'Riyad Bank', 'Fransi'];
-
-function makeFaceTexture(imageUrl: string | null | undefined): string {
-  // Falls back to a blank transparent pixel if no logo is available yet.
-  return imageUrl || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4=';
-}
+import { useBankCubeFaces } from './useBankCubeFaces';
 
 function CubeFaceMaterial({ url, index }: { url: string; index: number }) {
   const texture = useTexture(url);
@@ -86,24 +78,9 @@ function StaticCubeFallback({ size }: { size: number }) {
 }
 
 export function RotatingCube({ size = 280, spinBoost = 1 }: { size?: number; spinBoost?: number }) {
-  const { data: banks } = useListBanks();
   const webglOk = useMemo(() => isWebglAvailable(), []);
   const [contextLost, setContextLost] = useState(false);
-
-  const faceUrls = useMemo(() => {
-    const findLogo = (fragment: string) => {
-      const bank = (banks || []).find(b => b.nameEn.toLowerCase().includes(fragment.toLowerCase()));
-      return bank?.logoUrl || null;
-    };
-    return [
-      makeFaceTexture(waslLogoUrl),
-      makeFaceTexture(findLogo(FACE_BANK_NAMES[0])),
-      makeFaceTexture(findLogo(FACE_BANK_NAMES[1])),
-      makeFaceTexture(findLogo(FACE_BANK_NAMES[2])),
-      makeFaceTexture(findLogo(FACE_BANK_NAMES[3])),
-      makeFaceTexture(findLogo(FACE_BANK_NAMES[4])),
-    ];
-  }, [banks]);
+  const faceUrls = useBankCubeFaces();
 
   const fallback = <StaticCubeFallback size={size} />;
 

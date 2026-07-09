@@ -236,6 +236,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
       categoryStage: editing.categoryStage,
       status: editing.status,
       progressPercent: Number(editing.progressPercent) / 100,
+      responsiblePerson: editing.responsiblePerson || undefined,
     };
     if (editing.id) {
       updateProduct.mutate({ id: editing.id, data: payload }, {
@@ -284,7 +285,12 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
               </div>
               <h4 className="font-bold text-lg mb-1">{p.categoryStage}</h4>
               <p className="text-sm text-white/50 mb-4">{p.status}</p>
-              
+
+              <div className="flex items-center gap-2 text-sm text-white/70 mb-4">
+                <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="truncate">{p.responsiblePerson || 'غير محدد'}</span>
+              </div>
+
               <div className="mt-auto pt-4">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-white/60">الإنجاز</span>
@@ -308,6 +314,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
             <Input placeholder="المرحلة/التصنيف" value={editing?.categoryStage || ''} onChange={e => setEditing({...editing, categoryStage: e.target.value})} />
             <Input placeholder="الحالة" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})} />
             <Input type="number" placeholder="نسبة الإنجاز (0-100)" value={editing?.progressPercent || 0} onChange={e => setEditing({...editing, progressPercent: e.target.value})} />
+            <Input placeholder="المسؤول" value={editing?.responsiblePerson || ''} onChange={e => setEditing({...editing, responsiblePerson: e.target.value})} />
           </div>
           <DialogFooter><Button onClick={handleSave}>حفظ</Button></DialogFooter>
         </DialogContent>

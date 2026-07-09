@@ -30,3 +30,24 @@ export function formatDateTime(dateString: string | null | undefined, locale = '
 export function formatPercentage(val: number) {
   return `${Math.round(val * 100)}%`;
 }
+
+export function getStatusColor(status: string | null | undefined): { text: string; dot: string } {
+  const s = (status || '').toLowerCase();
+  if (s.includes('complete') || s.includes('مكتمل')) {
+    return { text: 'text-emerald-400', dot: 'bg-emerald-400' };
+  }
+  if (s.includes('delay') || s.includes('متأخر') || s.includes('blocked') || s.includes('متوقف')) {
+    return { text: 'text-red-400', dot: 'bg-red-400' };
+  }
+  if (
+    s.includes('not started') ||
+    s.includes('not yet') ||
+    s.includes('لم يبدأ') ||
+    s.includes('لم يتم التواصل') ||
+    s.includes('لا يوجد') ||
+    s.includes('لايوجد')
+  ) {
+    return { text: 'text-slate-300', dot: 'bg-slate-300' };
+  }
+  return { text: 'text-yellow-400', dot: 'bg-yellow-400' };
+}

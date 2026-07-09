@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useGetDashboardSummary, useListBanks, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey } from '@workspace/api-client-react';
+import { useGetDashboardSummary, useListBanks, useListProducts, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey } from '@workspace/api-client-react';
 import type { Bank, BankDetail } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate, formatDateTime, formatPercentage } from '@/lib/utils';
+import { formatDate, formatDateTime, formatPercentage, getStatusColor } from '@/lib/utils';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -29,10 +29,11 @@ const itemVariants = {
 export default function Dashboard() {
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
   const { data: banks, isLoading: isLoadingBanks } = useListBanks();
+  const { data: products, isLoading: isLoadingProducts } = useListProducts();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('الكل');
 
-  if (isLoadingSummary || isLoadingBanks) {
+  if (isLoadingSummary || isLoadingBanks || isLoadingProducts) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-6">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -43,8 +44,22 @@ export default function Dashboard() {
 
   if (!summary || !banks) return null;
 
+  const progressTotals = new Map<string, { sum: number; count: number }>();
+  for (const p of products || []) {
+    const entry = progressTotals.get(p.bankId) || { sum: 0, count: 0 };
+    entry.sum += p.progressPercent;
+    entry.count += 1;
+    progressTotals.set(p.bankId, entry);
+  }
+  const progressByBank = new Map<string, number>();
+  for (const bank of banks) {
+    const entry = progressTotals.get(bank.id);
+    progressByBank.set(bank.id, entry && entry.count ? entry.sum / entry.count : 0);
+  }
+
   const categories = ["الكل", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
-  const filteredBanks = filter === 'الكل' ? banks : banks.filter(b => b.category === filter);
+  const filteredBanks = [...(filter === 'الكل' ? banks : banks.filter(b => b.category === filter))]
+    .sort((a, b) => (progressByBank.get(b.id) || 0) - (progressByBank.get(a.id) || 0));
 
   return (
     <div className="min-h-full flex flex-col w-full overflow-x-hidden">
@@ -364,7 +379,10 @@ function HorizontalBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSumm
                  </div>
                  
                  <div className="shrink-0">
-                    <div className="text-xl md:text-2xl font-bold text-white drop-shadow-xl">{displayBank.status}</div>
+                    <div className={`flex items-center gap-2 text-xl md:text-2xl font-bold drop-shadow-xl ${getStatusColor(displayBank.status).text}`}>
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${getStatusColor(displayBank.status).dot}`} />
+                      {displayBank.status}
+                    </div>
                     <div className="text-white/50 text-[11px] md:text-xs uppercase tracking-widest mt-2 font-medium">الحالة</div>
                  </div>
 

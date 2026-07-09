@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate, formatPercentage } from '@/lib/utils';
+import { formatDate, formatPercentage, getStatusColor } from '@/lib/utils';
 import { 
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
   CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User
@@ -74,7 +74,10 @@ export default function BankDetail() {
           <div className="flex flex-wrap items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-white">{bank.nameAr}</h1>
             <Badge variant="outline" className="border-white/20 bg-white/5">{bank.category}</Badge>
-            <Badge variant={bank.status === 'Completed' ? 'success' : 'default'}>{bank.status}</Badge>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-xs font-semibold ${getStatusColor(bank.status).text}`}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${getStatusColor(bank.status).dot}`} />
+              {bank.status}
+            </span>
             {bank.riskLevel === 'High' && <Badge variant="destructive">مخاطر عالية</Badge>}
             {bank.priorityImpact === 'HOT' && <Badge variant="warning">أولوية قصوى</Badge>}
           </div>
@@ -284,7 +287,10 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                 </div>
               </div>
               <h4 className="font-bold text-lg mb-1">{p.categoryStage}</h4>
-              <p className="text-sm text-white/50 mb-4">{p.status}</p>
+              <div className={`flex items-center gap-2 text-sm mb-4 font-medium ${getStatusColor(p.status).text}`}>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${getStatusColor(p.status).dot}`} />
+                {p.status}
+              </div>
 
               <div className="flex items-center gap-2 text-sm text-white/70 mb-4">
                 <User className="w-3.5 h-3.5 text-primary shrink-0" />

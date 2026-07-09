@@ -8,11 +8,15 @@ import { AnimatedBackground } from './AnimatedBackground';
 // Loaded lazily and behind its own error boundary: if the three.js/WebGL
 // stack fails to load or mount on a given browser, it must never be able to
 // block the rest of the app (sidebar nav, dashboard, etc.) from rendering.
+const CUBE_SIZE = 240;
 const RotatingCube = lazy(() =>
   import('./RotatingCube').then((m) => ({ default: m.RotatingCube })).catch(() => ({
     default: () => (
-      <div className="w-[260px] h-[260px] mx-auto flex items-center justify-center rounded-3xl bg-gradient-to-br from-white/10 via-primary/10 to-secondary/10 border border-white/10">
-        <img src={logoUrl} alt="Wasl" className="w-2/3 h-auto opacity-80" />
+      <div
+        style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40 }}
+        className="mx-auto flex items-center justify-center rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl"
+      >
+        <img src={logoUrl} alt="Wasl" className="w-1/2 h-auto opacity-70" />
       </div>
     ),
   }))
@@ -20,7 +24,10 @@ const RotatingCube = lazy(() =>
 
 function CubeSlotFallback() {
   return (
-    <div className="w-[260px] h-[260px] mx-auto flex items-center justify-center rounded-3xl bg-white/5 border border-white/10 animate-pulse" />
+    <div
+      style={{ width: CUBE_SIZE + 40, height: CUBE_SIZE + 40 }}
+      className="mx-auto flex items-center justify-center rounded-3xl bg-white/5 border border-white/10 animate-pulse"
+    />
   );
 }
 
@@ -48,13 +55,15 @@ export function Layout({ children }: LayoutProps) {
         className="pointer-events-none select-none fixed bottom-[-6%] left-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
       />
 
-      {/* Sidebar */}
-      <aside className="relative z-20 w-72 glass-panel border-l border-r-0 flex flex-col items-center py-8 px-4 gap-8">
-        <div className="w-full flex items-center justify-center mb-6">
+      {/* Sidebar. Hierarchy: logo -> nav -> rotating cube (only one Wasl
+          logo lives in the sidebar; the cube widget replaces what used to
+          be a second, large logo card). */}
+      <aside className="relative z-20 w-72 glass-panel border-l border-r-0 flex flex-col items-center py-8 px-4 gap-8 overflow-hidden">
+        <div className="w-full flex items-center justify-center shrink-0">
           <img src={logoUrl} alt="Wasl" className="w-48 h-auto drop-shadow-lg" />
         </div>
-        
-        <nav className="w-full flex flex-col gap-3">
+
+        <nav className="w-full flex flex-col gap-3 shrink-0">
           {navItems.map((item) => {
             const isActive = location === item.href;
             const Icon = item.icon;
@@ -74,9 +83,10 @@ export function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        <div className="mt-auto w-full flex items-center justify-center pt-4">
+        {/* Remaining space: cube centered vertically, empty spacing above/below. */}
+        <div className="flex-1 w-full min-h-0 flex items-center justify-center">
           <Suspense fallback={<CubeSlotFallback />}>
-            <RotatingCube size={260} />
+            <RotatingCube size={CUBE_SIZE} glass />
           </Suspense>
         </div>
       </aside>

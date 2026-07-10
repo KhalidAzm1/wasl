@@ -64,6 +64,21 @@ export interface Bank {
   executiveSummary?: string | null;
   /** @nullable */
   descriptionNotes?: string | null;
+  /** Ids of assigned product types from the catalog */
+  productTypeIds?: number[];
+  isArchived: boolean;
+  /** @nullable */
+  archivedAt?: string | null;
+  /**
+     * Display name of the user who archived this record
+     * @nullable
+     */
+  archivedBy?: string | null;
+  /**
+     * Display name of the user who last updated this record
+     * @nullable
+     */
+  updatedBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,7 +120,16 @@ export interface Meeting {
      * @nullable
      */
   status?: string | null;
+  isArchived: boolean;
+  /** @nullable */
+  archivedAt?: string | null;
+  /** @nullable */
+  archivedBy?: string | null;
+  /** @nullable */
+  updatedBy?: string | null;
   createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
 }
 
 export interface Risk {
@@ -137,7 +161,30 @@ export interface Document {
   link?: string | null;
   /** @nullable */
   docType?: string | null;
+  /**
+     * Link to open the file in OneDrive/SharePoint
+     * @nullable
+     */
+  oneDriveWebUrl?: string | null;
+  /** @nullable */
+  oneDriveItemId?: string | null;
+  /**
+     * Display name of the user who uploaded this file
+     * @nullable
+     */
+  uploadedBy?: string | null;
+  /** @nullable */
+  uploadedAt?: string | null;
+  /** @nullable */
+  updatedBy?: string | null;
+  isArchived: boolean;
+  /** @nullable */
+  archivedAt?: string | null;
+  /** @nullable */
+  archivedBy?: string | null;
   createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
 }
 
 export type BankDetail = Bank & {
@@ -174,6 +221,7 @@ export interface BankInput {
   nextAction?: string;
   executiveSummary?: string;
   descriptionNotes?: string;
+  productTypeIds?: number[];
 }
 
 export interface BankUpdate {
@@ -202,6 +250,7 @@ export interface BankUpdate {
   nextAction?: string;
   executiveSummary?: string;
   descriptionNotes?: string;
+  productTypeIds?: number[];
 }
 
 export interface ProductInput {
@@ -229,6 +278,23 @@ export interface ProductUpdate {
   priorityImpact?: string;
   descriptionNotes?: string;
   riskLevel?: string;
+}
+
+export interface ProductType {
+  id: number;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductTypeInput {
+  name: string;
+}
+
+export interface ProductTypeUpdate {
+  name?: string;
+  isActive?: boolean;
 }
 
 export interface MeetingInput {
@@ -281,6 +347,21 @@ export interface DocumentInput {
   title: string;
   link?: string;
   docType?: string;
+}
+
+export interface DocumentUpload {
+  bankId: string;
+  title: string;
+  docType?: string;
+  fileName: string;
+  /** Base64-encoded data URL of the file contents (e.g. data:application/pdf;base64,...) */
+  fileDataBase64: string;
+}
+
+export interface DocumentUpdate {
+  title?: string;
+  docType?: string;
+  link?: string;
 }
 
 export type DashboardSummaryStatusBreakdownItem = {
@@ -339,8 +420,43 @@ export interface LookupsUpdate {
   categories?: string[];
 }
 
+export interface AuditLogEntry {
+  id: number;
+  /** @nullable */
+  userId?: string | null;
+  /** @nullable */
+  userName?: string | null;
+  /** @nullable */
+  userEmail?: string | null;
+  /** CREATE | UPDATE | ARCHIVE | RESTORE */
+  action: string;
+  /** bank | document | meeting | product | productType */
+  entityType: string;
+  /** @nullable */
+  entityId?: string | null;
+  /** @nullable */
+  entityLabel?: string | null;
+  details?: unknown;
+  createdAt: string;
+}
+
+export interface AuditLogPage {
+  items: AuditLogEntry[];
+  total: number;
+}
+
+export interface ArchiveSummary {
+  banks: Bank[];
+  documents: Document[];
+  meetings: Meeting[];
+}
+
 export type ListProductsParams = {
 bankId?: string;
+};
+
+export type ListProductTypesParams = {
+includeInactive?: boolean;
 };
 
 export type ListMeetingsParams = {
@@ -357,5 +473,12 @@ bankId?: string;
 
 export type ListDocumentsParams = {
 bankId?: string;
+};
+
+export type ListAuditLogsParams = {
+entityType?: string;
+entityId?: string;
+limit?: number;
+offset?: number;
 };
 

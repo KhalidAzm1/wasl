@@ -8,6 +8,7 @@ declare global {
       authUser?: {
         id: string;
         email: string;
+        name: string;
         role: UserRole;
       };
     }
@@ -37,7 +38,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, email, role, deleted_at")
+    .select("id, email, name, role, deleted_at")
     .eq("id", userData.user.id)
     .single();
 
@@ -46,7 +47,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  req.authUser = { id: profile.id, email: profile.email, role: profile.role as UserRole };
+  req.authUser = {
+    id: profile.id,
+    email: profile.email,
+    name: profile.name ?? profile.email,
+    role: profile.role as UserRole,
+  };
   next();
 }
 

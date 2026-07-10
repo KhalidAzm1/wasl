@@ -47,6 +47,21 @@ export interface Bank {
   executiveSummary?: string | null;
   /** @nullable */
   descriptionNotes?: string | null;
+  /** Ids of assigned product types from the catalog */
+  productTypeIds?: number[];
+  isArchived: boolean;
+  /** @nullable */
+  archivedAt?: string | null;
+  /**
+     * Display name of the user who archived this record
+     * @nullable
+     */
+  archivedBy?: string | null;
+  /**
+     * Display name of the user who last updated this record
+     * @nullable
+     */
+  updatedBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }

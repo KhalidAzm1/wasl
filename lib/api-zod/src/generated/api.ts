@@ -18,7 +18,7 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary List all banks and financing entities
+ * @summary List all active (non-archived) banks and financing entities
  */
 export const ListBanksResponseItem = zod.object({
   "id": zod.string(),
@@ -48,6 +48,11 @@ export const ListBanksResponseItem = zod.object({
   "nextAction": zod.string().nullish(),
   "executiveSummary": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -83,7 +88,8 @@ export const CreateBankBody = zod.object({
   "nextMeetingTopic": zod.string().optional(),
   "nextAction": zod.string().optional(),
   "executiveSummary": zod.string().optional(),
-  "descriptionNotes": zod.string().optional()
+  "descriptionNotes": zod.string().optional(),
+  "productTypeIds": zod.array(zod.number()).optional()
 })
 
 export const CreateBankResponse = zod.object({
@@ -114,6 +120,11 @@ export const CreateBankResponse = zod.object({
   "nextAction": zod.string().nullish(),
   "executiveSummary": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -154,6 +165,11 @@ export const GetBankResponse = zod.object({
   "nextAction": zod.string().nullish(),
   "executiveSummary": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 }).and(zod.object({
@@ -181,7 +197,12 @@ export const GetBankResponse = zod.object({
   "summary": zod.string().nullish(),
   "attendees": zod.string().nullish(),
   "status": zod.string().nullish().describe('Planned | Completed'),
-  "createdAt": zod.string()
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
 })).optional(),
   "risks": zod.array(zod.object({
   "id": zod.number(),
@@ -206,7 +227,16 @@ export const GetBankResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "createdAt": zod.string()
+  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
+  "oneDriveItemId": zod.string().nullish(),
+  "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
+  "uploadedAt": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
 })).optional()
 }))
 
@@ -244,7 +274,8 @@ export const UpdateBankBody = zod.object({
   "nextMeetingTopic": zod.string().optional(),
   "nextAction": zod.string().optional(),
   "executiveSummary": zod.string().optional(),
-  "descriptionNotes": zod.string().optional()
+  "descriptionNotes": zod.string().optional(),
+  "productTypeIds": zod.array(zod.number()).optional()
 })
 
 export const UpdateBankResponse = zod.object({
@@ -275,19 +306,69 @@ export const UpdateBankResponse = zod.object({
   "nextAction": zod.string().nullish(),
   "executiveSummary": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
 
 
 /**
- * @summary Delete a bank
+ * @summary Archive a bank (soft delete). The record is hidden from normal views but can be restored.
  */
 export const DeleteBankParams = zod.object({
   "id": zod.coerce.string()
 })
 
 export const DeleteBankResponse = zod.void()
+
+
+/**
+ * @summary Restore a previously archived bank
+ */
+export const RestoreBankParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RestoreBankResponse = zod.object({
+  "id": zod.string(),
+  "nameEn": zod.string(),
+  "nameAr": zod.string(),
+  "category": zod.string().describe('Local Bank | Financing Entity'),
+  "status": zod.string(),
+  "logoUrl": zod.string().nullish(),
+  "heroImageUrl": zod.string().nullish(),
+  "referenceLink": zod.string().nullish(),
+  "contacts": zod.array(zod.object({
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
+})).optional(),
+  "riskLevel": zod.string().describe('Low | Medium | High'),
+  "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
+  "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "lastMeetingDate": zod.string().nullish(),
+  "lastMeetingSummary": zod.string().nullish(),
+  "nextMeetingDate": zod.string().nullish(),
+  "nextMeetingTopic": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "executiveSummary": zod.string().nullish(),
+  "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
 
 
 /**
@@ -329,6 +410,11 @@ export const SetBankLogoResponse = zod.object({
   "nextAction": zod.string().nullish(),
   "executiveSummary": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -373,6 +459,11 @@ export const SetBankHeroImageResponse = zod.object({
   "nextAction": zod.string().nullish(),
   "executiveSummary": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -488,6 +579,70 @@ export const DeleteProductResponse = zod.void()
 
 
 /**
+ * @summary List the product-type catalog
+ */
+export const ListProductTypesQueryParams = zod.object({
+  "includeInactive": zod.coerce.boolean().optional()
+})
+
+export const ListProductTypesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListProductTypesResponse = zod.array(ListProductTypesResponseItem)
+
+
+/**
+ * @summary Create a product type (Super Admin only)
+ */
+export const CreateProductTypeBody = zod.object({
+  "name": zod.string()
+})
+
+export const CreateProductTypeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a product type (Super Admin only)
+ */
+export const UpdateProductTypeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateProductTypeBody = zod.object({
+  "name": zod.string().optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateProductTypeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Deactivate a product type (Super Admin only). Existing bank assignments are kept.
+ */
+export const DeactivateProductTypeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeactivateProductTypeResponse = zod.void()
+
+
+/**
  * @summary List meetings, optionally filtered by bank
  */
 export const ListMeetingsQueryParams = zod.object({
@@ -502,7 +657,12 @@ export const ListMeetingsResponseItem = zod.object({
   "summary": zod.string().nullish(),
   "attendees": zod.string().nullish(),
   "status": zod.string().nullish().describe('Planned | Completed'),
-  "createdAt": zod.string()
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
 })
 export const ListMeetingsResponse = zod.array(ListMeetingsResponseItem)
 
@@ -527,7 +687,12 @@ export const CreateMeetingResponse = zod.object({
   "summary": zod.string().nullish(),
   "attendees": zod.string().nullish(),
   "status": zod.string().nullish().describe('Planned | Completed'),
-  "createdAt": zod.string()
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
 })
 
 
@@ -554,18 +719,47 @@ export const UpdateMeetingResponse = zod.object({
   "summary": zod.string().nullish(),
   "attendees": zod.string().nullish(),
   "status": zod.string().nullish().describe('Planned | Completed'),
-  "createdAt": zod.string()
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
 })
 
 
 /**
- * @summary Delete a meeting record
+ * @summary Archive a meeting (soft delete)
  */
 export const DeleteMeetingParams = zod.object({
   "id": zod.coerce.number()
 })
 
 export const DeleteMeetingResponse = zod.void()
+
+
+/**
+ * @summary Restore a previously archived meeting
+ */
+export const RestoreMeetingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RestoreMeetingResponse = zod.object({
+  "id": zod.number(),
+  "bankId": zod.string(),
+  "date": zod.string(),
+  "topic": zod.string(),
+  "summary": zod.string().nullish(),
+  "attendees": zod.string().nullish(),
+  "status": zod.string().nullish().describe('Planned | Completed'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
 
 
 /**
@@ -728,13 +922,22 @@ export const ListDocumentsResponseItem = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "createdAt": zod.string()
+  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
+  "oneDriveItemId": zod.string().nullish(),
+  "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
+  "uploadedAt": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
 })
 export const ListDocumentsResponse = zod.array(ListDocumentsResponseItem)
 
 
 /**
- * @summary Create a document record
+ * @summary Register a document by external link (no file bytes stored)
  */
 export const CreateDocumentBody = zod.object({
   "bankId": zod.string(),
@@ -749,18 +952,115 @@ export const CreateDocumentResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "createdAt": zod.string()
+  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
+  "oneDriveItemId": zod.string().nullish(),
+  "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
+  "uploadedAt": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
 })
 
 
 /**
- * @summary Delete a document record
+ * @summary Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+ */
+export const UploadDocumentBody = zod.object({
+  "bankId": zod.string(),
+  "title": zod.string(),
+  "docType": zod.string().optional(),
+  "fileName": zod.string(),
+  "fileDataBase64": zod.string().describe('Base64-encoded data URL of the file contents (e.g. data:application\/pdf;base64,...)')
+})
+
+export const UploadDocumentResponse = zod.object({
+  "id": zod.number(),
+  "bankId": zod.string(),
+  "title": zod.string(),
+  "link": zod.string().nullish(),
+  "docType": zod.string().nullish(),
+  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
+  "oneDriveItemId": zod.string().nullish(),
+  "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
+  "uploadedAt": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update a document's metadata
+ */
+export const UpdateDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDocumentBody = zod.object({
+  "title": zod.string().optional(),
+  "docType": zod.string().optional(),
+  "link": zod.string().optional()
+})
+
+export const UpdateDocumentResponse = zod.object({
+  "id": zod.number(),
+  "bankId": zod.string(),
+  "title": zod.string(),
+  "link": zod.string().nullish(),
+  "docType": zod.string().nullish(),
+  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
+  "oneDriveItemId": zod.string().nullish(),
+  "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
+  "uploadedAt": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Archive a document record (soft delete). The OneDrive file itself is left untouched.
  */
 export const DeleteDocumentParams = zod.object({
   "id": zod.coerce.number()
 })
 
 export const DeleteDocumentResponse = zod.void()
+
+
+/**
+ * @summary Restore a previously archived document
+ */
+export const RestoreDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RestoreDocumentResponse = zod.object({
+  "id": zod.number(),
+  "bankId": zod.string(),
+  "title": zod.string(),
+  "link": zod.string().nullish(),
+  "docType": zod.string().nullish(),
+  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
+  "oneDriveItemId": zod.string().nullish(),
+  "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
+  "uploadedAt": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
 
 
 /**
@@ -834,6 +1134,108 @@ export const UpdateLookupsResponse = zod.object({
   "products": zod.array(zod.string()),
   "responsiblePersons": zod.array(zod.string()),
   "categories": zod.array(zod.string())
+})
+
+
+/**
+ * @summary List audit log entries, most recent first
+ */
+export const ListAuditLogsQueryParams = zod.object({
+  "entityType": zod.coerce.string().optional(),
+  "entityId": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
+export const ListAuditLogsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "userId": zod.string().nullish(),
+  "userName": zod.string().nullish(),
+  "userEmail": zod.string().nullish(),
+  "action": zod.string().describe('CREATE | UPDATE | ARCHIVE | RESTORE'),
+  "entityType": zod.string().describe('bank | document | meeting | product | productType'),
+  "entityId": zod.string().nullish(),
+  "entityLabel": zod.string().nullish(),
+  "details": zod.unknown().optional(),
+  "createdAt": zod.string()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary List all archived (soft-deleted) banks, documents, and meetings
+ */
+export const GetArchiveResponse = zod.object({
+  "banks": zod.array(zod.object({
+  "id": zod.string(),
+  "nameEn": zod.string(),
+  "nameAr": zod.string(),
+  "category": zod.string().describe('Local Bank | Financing Entity'),
+  "status": zod.string(),
+  "logoUrl": zod.string().nullish(),
+  "heroImageUrl": zod.string().nullish(),
+  "referenceLink": zod.string().nullish(),
+  "contacts": zod.array(zod.object({
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
+})).optional(),
+  "riskLevel": zod.string().describe('Low | Medium | High'),
+  "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
+  "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "lastMeetingDate": zod.string().nullish(),
+  "lastMeetingSummary": zod.string().nullish(),
+  "nextMeetingDate": zod.string().nullish(),
+  "nextMeetingTopic": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "executiveSummary": zod.string().nullish(),
+  "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "bankId": zod.string(),
+  "title": zod.string(),
+  "link": zod.string().nullish(),
+  "docType": zod.string().nullish(),
+  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
+  "oneDriveItemId": zod.string().nullish(),
+  "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
+  "uploadedAt": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})),
+  "meetings": zod.array(zod.object({
+  "id": zod.number(),
+  "bankId": zod.string(),
+  "date": zod.string(),
+  "topic": zod.string(),
+  "summary": zod.string().nullish(),
+  "attendees": zod.string().nullish(),
+  "status": zod.string().nullish().describe('Planned | Completed'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+}))
 })
 
 

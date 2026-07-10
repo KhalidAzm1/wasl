@@ -20,5 +20,14 @@ export interface Meeting {
      * @nullable
      */
   status?: string | null;
+  isArchived: boolean;
+  /** @nullable */
+  archivedAt?: string | null;
+  /** @nullable */
+  archivedBy?: string | null;
+  /** @nullable */
+  updatedBy?: string | null;
   createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
 }

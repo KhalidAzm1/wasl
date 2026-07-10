@@ -12,8 +12,11 @@ import {
   DeleteRiskParams,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
+import { requireAuth } from "../middlewares/auth";
+import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
+router.use(requireAuth);
 
 router.get("/risks", async (req, res): Promise<void> => {
   const query = ListRisksQueryParams.safeParse(req.query);
@@ -34,6 +37,12 @@ router.post("/risks", async (req, res): Promise<void> => {
     return;
   }
   const [row] = await db.insert(risksTable).values(parsed.data).returning();
+  await logAudit(req, {
+    action: "CREATE",
+    entityType: "risk",
+    entityId: String(row.id),
+    entityLabel: row.description,
+  });
   res.status(201).json(CreateRiskResponse.parse(toPlain(row)));
 });
 
@@ -57,6 +66,13 @@ router.patch("/risks/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Risk not found" });
     return;
   }
+  await logAudit(req, {
+    action: "UPDATE",
+    entityType: "risk",
+    entityId: String(row.id),
+    entityLabel: row.description,
+    details: parsed.data,
+  });
   res.json(UpdateRiskResponse.parse(toPlain(row)));
 });
 
@@ -74,6 +90,12 @@ router.delete("/risks/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Risk not found" });
     return;
   }
+  await logAudit(req, {
+    action: "ARCHIVE",
+    entityType: "risk",
+    entityId: String(row.id),
+    entityLabel: row.description,
+  });
   res.sendStatus(204);
 });
 

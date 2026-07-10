@@ -14,6 +14,8 @@ tags:
     description: Bank / financing entity relationship records
   - name: products
     description: Product integration stage records per bank
+  - name: productTypes
+    description: Super-admin managed catalog of product types assignable to banks
   - name: meetings
     description: Meetings with banks
   - name: risks
@@ -21,11 +23,15 @@ tags:
   - name: actionItems
     description: Action items / follow-ups per bank
   - name: documents
-    description: Documents / links per bank
+    description: Documents / links per bank, stored in Microsoft OneDrive
   - name: dashboard
     description: Executive dashboard aggregates
   - name: settings
     description: Configurable lookups (statuses, stages, products, persons, categories)
+  - name: auditLogs
+    description: Enterprise audit trail of create/update/archive/restore actions
+  - name: archive
+    description: Archived (soft-deleted) records across entities
 
 paths:
   /healthz:
@@ -46,7 +52,7 @@ paths:
     get:
       operationId: listBanks
       tags: [banks]
-      summary: List all banks and financing entities
+      summary: List all active (non-archived) banks and financing entities
       responses:
         "200":
           description: List of banks
@@ -112,12 +118,27 @@ paths:
     delete:
       operationId: deleteBank
       tags: [banks]
-      summary: Delete a bank
+      summary: Archive a bank (soft delete). The record is hidden from normal views but can be restored.
       parameters:
         - $ref: "#/components/parameters/BankId"
       responses:
         "204":
-          description: Deleted
+          description: Archived
+
+  /banks/{id}/restore:
+    post:
+      operationId: restoreBank
+      tags: [banks]
+      summary: Restore a previously archived bank
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bank"
 
   /banks/{id}/logo:
     put:
@@ -229,6 +250,74 @@ paths:
         "204":
           description: Deleted
 
+  /product-types:
+    get:
+      operationId: listProductTypes
+      tags: [productTypes]
+      summary: List the product-type catalog
+      parameters:
+        - name: includeInactive
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of product types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductType"
+    post:
+      operationId: createProductType
+      tags: [productTypes]
+      summary: Create a product type (Super Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductTypeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductType"
+
+  /product-types/{id}:
+    patch:
+      operationId: updateProductType
+      tags: [productTypes]
+      summary: Update a product type (Super Admin only)
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductTypeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductType"
+    delete:
+      operationId: deactivateProductType
+      tags: [productTypes]
+      summary: Deactivate a product type (Super Admin only). Existing bank assignments are kept.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "204":
+          description: Deactivated
+
   /meetings:
     get:
       operationId: listMeetings
@@ -290,12 +379,27 @@ paths:
     delete:
       operationId: deleteMeeting
       tags: [meetings]
-      summary: Delete a meeting record
+      summary: Archive a meeting (soft delete)
       parameters:
         - $ref: "#/components/parameters/EntityId"
       responses:
         "204":
-          description: Deleted
+          description: Archived
+
+  /meetings/{id}/restore:
+    post:
+      operationId: restoreMeeting
+      tags: [meetings]
+      summary: Restore a previously archived meeting
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
 
   /risks:
     get:
@@ -456,7 +560,7 @@ paths:
     post:
       operationId: createDocument
       tags: [documents]
-      summary: Create a document record
+      summary: Register a document by external link (no file bytes stored)
       requestBody:
         required: true
         content:
@@ -471,16 +575,69 @@ paths:
               schema:
                 $ref: "#/components/schemas/Document"
 
+  /documents/upload:
+    post:
+      operationId: uploadDocument
+      tags: [documents]
+      summary: Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpload"
+      responses:
+        "201":
+          description: Uploaded and created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
   /documents/{id}:
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      summary: Update a document's metadata
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
     delete:
       operationId: deleteDocument
       tags: [documents]
-      summary: Delete a document record
+      summary: Archive a document record (soft delete). The OneDrive file itself is left untouched.
       parameters:
         - $ref: "#/components/parameters/EntityId"
       responses:
         "204":
-          description: Deleted
+          description: Archived
+
+  /documents/{id}/restore:
+    post:
+      operationId: restoreDocument
+      tags: [documents]
+      summary: Restore a previously archived document
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
 
   /dashboard/summary:
     get:
@@ -540,6 +697,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/Lookups"
 
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [auditLogs]
+      summary: List audit log entries, most recent first
+      parameters:
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit log page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogPage"
+
+  /archive:
+    get:
+      operationId: getArchive
+      tags: [archive]
+      summary: List all archived (soft-deleted) banks, documents, and meetings
+      responses:
+        "200":
+          description: Archived records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveSummary"
+
 components:
   parameters:
     BankId:
@@ -574,7 +778,7 @@ components:
 
     Bank:
       type: object
-      required: [id, nameEn, nameAr, category, status, riskLevel, priorityImpact, createdAt, updatedAt]
+      required: [id, nameEn, nameAr, category, status, riskLevel, priorityImpact, isArchived, createdAt, updatedAt]
       properties:
         id: { type: string }
         nameEn: { type: string }
@@ -600,6 +804,14 @@ components:
         nextAction: { type: ["string", "null"] }
         executiveSummary: { type: ["string", "null"] }
         descriptionNotes: { type: ["string", "null"] }
+        productTypeIds:
+          type: array
+          items: { type: integer }
+          description: Ids of assigned product types from the catalog
+        isArchived: { type: boolean }
+        archivedAt: { type: ["string", "null"] }
+        archivedBy: { type: ["string", "null"], description: "Display name of the user who archived this record" }
+        updatedBy: { type: ["string", "null"], description: "Display name of the user who last updated this record" }
         createdAt: { type: string }
         updatedAt: { type: string }
 
@@ -651,6 +863,9 @@ components:
         nextAction: { type: string }
         executiveSummary: { type: string }
         descriptionNotes: { type: string }
+        productTypeIds:
+          type: array
+          items: { type: integer }
 
     BankUpdate:
       type: object
@@ -678,6 +893,9 @@ components:
         nextAction: { type: string }
         executiveSummary: { type: string }
         descriptionNotes: { type: string }
+        productTypeIds:
+          type: array
+          items: { type: integer }
 
     BankContact:
       type: object
@@ -737,9 +955,31 @@ components:
         descriptionNotes: { type: string }
         riskLevel: { type: string }
 
+    ProductType:
+      type: object
+      required: [id, name, isActive, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    ProductTypeInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    ProductTypeUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        isActive: { type: boolean }
+
     Meeting:
       type: object
-      required: [id, bankId, date, topic, createdAt]
+      required: [id, bankId, date, topic, isArchived, createdAt]
       properties:
         id: { type: integer }
         bankId: { type: string }
@@ -748,7 +988,12 @@ components:
         summary: { type: ["string", "null"] }
         attendees: { type: ["string", "null"] }
         status: { type: ["string", "null"], description: "Planned | Completed" }
+        isArchived: { type: boolean }
+        archivedAt: { type: ["string", "null"] }
+        archivedBy: { type: ["string", "null"] }
+        updatedBy: { type: ["string", "null"] }
         createdAt: { type: string }
+        updatedAt: { type: ["string", "null"] }
 
     MeetingInput:
       type: object
@@ -829,14 +1074,23 @@ components:
 
     Document:
       type: object
-      required: [id, bankId, title, createdAt]
+      required: [id, bankId, title, isArchived, createdAt]
       properties:
         id: { type: integer }
         bankId: { type: string }
         title: { type: string }
         link: { type: ["string", "null"] }
         docType: { type: ["string", "null"] }
+        oneDriveWebUrl: { type: ["string", "null"], description: "Link to open the file in OneDrive/SharePoint" }
+        oneDriveItemId: { type: ["string", "null"] }
+        uploadedBy: { type: ["string", "null"], description: "Display name of the user who uploaded this file" }
+        uploadedAt: { type: ["string", "null"] }
+        updatedBy: { type: ["string", "null"] }
+        isArchived: { type: boolean }
+        archivedAt: { type: ["string", "null"] }
+        archivedBy: { type: ["string", "null"] }
         createdAt: { type: string }
+        updatedAt: { type: ["string", "null"] }
 
     DocumentInput:
       type: object
@@ -846,6 +1100,25 @@ components:
         title: { type: string }
         link: { type: string }
         docType: { type: string }
+
+    DocumentUpload:
+      type: object
+      required: [bankId, title, fileName, fileDataBase64]
+      properties:
+        bankId: { type: string }
+        title: { type: string }
+        docType: { type: string }
+        fileName: { type: string }
+        fileDataBase64:
+          type: string
+          description: Base64-encoded data URL of the file contents (e.g. data:application/pdf;base64,...)
+
+    DocumentUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        docType: { type: string }
+        link: { type: string }
 
     DashboardSummary:
       type: object
@@ -945,3 +1218,41 @@ components:
         categories:
           type: array
           items: { type: string }
+
+    AuditLogEntry:
+      type: object
+      required: [id, action, entityType, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: ["string", "null"] }
+        userName: { type: ["string", "null"] }
+        userEmail: { type: ["string", "null"] }
+        action: { type: string, description: "CREATE | UPDATE | ARCHIVE | RESTORE" }
+        entityType: { type: string, description: "bank | document | meeting | product | productType" }
+        entityId: { type: ["string", "null"] }
+        entityLabel: { type: ["string", "null"] }
+        details: {}
+        createdAt: { type: string }
+
+    AuditLogPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AuditLogEntry" }
+        total: { type: integer }
+
+    ArchiveSummary:
+      type: object
+      required: [banks, documents, meetings]
+      properties:
+        banks:
+          type: array
+          items: { $ref: "#/components/schemas/Bank" }
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/Document" }
+        meetings:
+          type: array
+          items: { $ref: "#/components/schemas/Meeting" }

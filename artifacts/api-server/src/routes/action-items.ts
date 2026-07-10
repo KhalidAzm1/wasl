@@ -12,8 +12,11 @@ import {
   DeleteActionItemParams,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
+import { requireAuth } from "../middlewares/auth";
+import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
+router.use(requireAuth);
 
 router.get("/action-items", async (req, res): Promise<void> => {
   const query = ListActionItemsQueryParams.safeParse(req.query);
@@ -40,6 +43,12 @@ router.post("/action-items", async (req, res): Promise<void> => {
     .insert(actionItemsTable)
     .values(parsed.data)
     .returning();
+  await logAudit(req, {
+    action: "CREATE",
+    entityType: "actionItem",
+    entityId: String(row.id),
+    entityLabel: row.description,
+  });
   res.status(201).json(CreateActionItemResponse.parse(toPlain(row)));
 });
 
@@ -63,6 +72,13 @@ router.patch("/action-items/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Action item not found" });
     return;
   }
+  await logAudit(req, {
+    action: "UPDATE",
+    entityType: "actionItem",
+    entityId: String(row.id),
+    entityLabel: row.description,
+    details: parsed.data,
+  });
   res.json(UpdateActionItemResponse.parse(toPlain(row)));
 });
 
@@ -80,6 +96,12 @@ router.delete("/action-items/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Action item not found" });
     return;
   }
+  await logAudit(req, {
+    action: "ARCHIVE",
+    entityType: "actionItem",
+    entityId: String(row.id),
+    entityLabel: row.description,
+  });
   res.sendStatus(204);
 });
 

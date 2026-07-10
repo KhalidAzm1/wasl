@@ -1,8 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db, lookupsTable } from "@workspace/db";
 import { GetLookupsResponse, UpdateLookupsBody, UpdateLookupsResponse } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
+import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
+router.use(requireAuth);
 
 const KEYS = [
   "statuses",
@@ -42,6 +45,13 @@ router.patch("/settings/lookups", async (req, res): Promise<void> => {
       .values({ key, values })
       .onConflictDoUpdate({ target: lookupsTable.key, set: { values } });
   }
+  await logAudit(req, {
+    action: "UPDATE",
+    entityType: "settings",
+    entityId: "lookups",
+    entityLabel: "Lookups configuration",
+    details: parsed.data,
+  });
   res.json(UpdateLookupsResponse.parse(await readLookups()));
 });
 

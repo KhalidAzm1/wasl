@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, gte, sql } from "drizzle-orm";
+import { desc, eq, gte, sql } from "drizzle-orm";
 import {
   db,
   banksTable,
@@ -13,13 +13,16 @@ import {
   GetDashboardSummaryResponse,
   GetActivityFeedResponse,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
+router.use(requireAuth);
 
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
-  const banks = await db.select().from(banksTable);
-  const risks = await db.select().from(risksTable);
-  const products = await db.select().from(productsTable);
+  const banks = await db.select().from(banksTable).where(eq(banksTable.isArchived, false));
+  const activeBankIds = new Set(banks.map((b) => b.id));
+  const risks = (await db.select().from(risksTable)).filter((r) => activeBankIds.has(r.bankId));
+  const products = (await db.select().from(productsTable)).filter((p) => activeBankIds.has(p.bankId));
 
   const normalize = (s: string) => s.toLowerCase();
   const inProgress = banks.filter((b) =>
@@ -84,7 +87,12 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 router.get("/dashboard/activity", async (_req, res): Promise<void> => {
   const [meetings, risks, actionItems, documents, products, banks] =
     await Promise.all([
-      db.select().from(meetingsTable).orderBy(desc(meetingsTable.createdAt)).limit(15),
+      db
+        .select()
+        .from(meetingsTable)
+        .where(eq(meetingsTable.isArchived, false))
+        .orderBy(desc(meetingsTable.createdAt))
+        .limit(15),
       db.select().from(risksTable).orderBy(desc(risksTable.createdAt)).limit(15),
       db
         .select()
@@ -94,6 +102,7 @@ router.get("/dashboard/activity", async (_req, res): Promise<void> => {
       db
         .select()
         .from(documentsTable)
+        .where(eq(documentsTable.isArchived, false))
         .orderBy(desc(documentsTable.createdAt))
         .limit(15),
       db
@@ -101,7 +110,7 @@ router.get("/dashboard/activity", async (_req, res): Promise<void> => {
         .from(productsTable)
         .orderBy(desc(productsTable.createdAt))
         .limit(15),
-      db.select().from(banksTable),
+      db.select().from(banksTable).where(eq(banksTable.isArchived, false)),
     ]);
 
   const bankMap = new Map(banks.map((b) => [b.id, b]));

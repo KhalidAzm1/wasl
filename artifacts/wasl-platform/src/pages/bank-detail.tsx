@@ -8,7 +8,7 @@ import {
   useCreateMeeting, useUpdateMeeting, useDeleteMeeting,
   useCreateRisk, useUpdateRisk, useDeleteRisk,
   useCreateActionItem, useUpdateActionItem, useDeleteActionItem,
-  useCreateDocument, useDeleteDocument,
+  useCreateDocument, useUploadDocument, useDeleteDocument,
   getGetBankQueryKey
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,10 +20,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate, formatPercentage, getStatusColor } from '@/lib/utils';
+import { formatDate, formatDateTime, formatPercentage, getStatusColor } from '@/lib/utils';
 import { 
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
-  CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User
+  CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud
 } from 'lucide-react';
 
 export default function BankDetail() {
@@ -385,6 +385,9 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
             <div className="flex-1">
               <h4 className="font-bold text-lg">{m.topic}</h4>
               <p className="text-white/70 mt-1">{m.summary || 'لا يوجد ملخص'}</p>
+              {m.updatedBy && (
+                <p className="text-xs text-white/30 mt-2">آخر تحديث بواسطة {m.updatedBy}{m.updatedAt ? ` — ${formatDateTime(m.updatedAt)}` : ''}</p>
+              )}
             </div>
             <Button variant="ghost" size="icon" className="text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}>
               <Trash2 className="w-4 h-4" />
@@ -523,8 +526,12 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
 function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [uploadFile, setUploadFile] = useState<{ name: string, title: string, docType: string, dataUrl: string } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const createDoc = useCreateDocument();
+  const uploadDoc = useUploadDocument();
   const deleteDoc = useDeleteDocument();
 
   const handleSave = () => {
@@ -533,27 +540,79 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUploadFile({ name: file.name, title: file.name, docType: '', dataUrl: event.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpload = () => {
+    if (!uploadFile) return;
+    uploadDoc.mutate({ data: { bankId, title: uploadFile.title, fileName: uploadFile.name, docType: uploadFile.docType, fileDataBase64: uploadFile.dataUrl } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+        setUploadFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        toast({ title: 'تم الرفع', description: 'تم رفع المستند إلى OneDrive بنجاح' });
+      },
+      onError: (err: any) => {
+        toast({ title: 'خطأ', description: err?.message || 'فشل رفع المستند', variant: 'destructive' });
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">المستندات والروابط</h3>
-        <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2"><Plus className="w-4 h-4" /> مستند جديد</Button>
+        <div className="flex gap-2">
+          <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
+            <UploadCloud className="w-4 h-4" /> رفع ملف إلى OneDrive
+          </Button>
+          <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2">
+            <Plus className="w-4 h-4" /> رابط جديد
+          </Button>
+        </div>
       </div>
+
+      {uploadFile && (
+        <div className="p-4 rounded-xl bg-white/5 border border-primary/30 flex flex-col md:flex-row gap-3 md:items-center">
+          <span className="text-sm text-white/70 shrink-0">الملف: {uploadFile.name}</span>
+          <Input placeholder="عنوان المستند" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} className="max-w-xs" />
+          <Input placeholder="نوع المستند (عقد، تقرير...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} className="max-w-xs" />
+          <div className="flex gap-2 md:mr-auto">
+            <Button size="sm" onClick={handleUpload} disabled={uploadDoc.isPending}>{uploadDoc.isPending ? 'جاري الرفع...' : 'تأكيد الرفع'}</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>إلغاء</Button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {documents.map(d => (
-          <Card key={d.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all cursor-pointer" onClick={() => d.link && window.open(d.link, '_blank')}>
+          <Card key={d.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all cursor-pointer" onClick={() => { const url = d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
             <CardContent className="p-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-primary/70" />
-                <div>
-                  <h4 className="font-bold">{d.title}</h4>
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText className="w-8 h-8 text-primary/70 shrink-0" />
+                <div className="min-w-0">
+                  <h4 className="font-bold truncate">{d.title}</h4>
                   <p className="text-sm text-white/50">{d.docType}</p>
+                  {(d.uploadedBy || d.updatedBy) && (
+                    <p className="text-xs text-white/30 mt-1">
+                      {d.oneDriveItemId ? 'رفع بواسطة' : 'أضيف بواسطة'} {d.uploadedBy || d.updatedBy}
+                    </p>
+                  )}
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="text-red-400/50" onClick={(e) => { e.stopPropagation(); deleteDoc.mutate({ id: d.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) }); }}><Trash2 className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="text-red-400/50 shrink-0" onClick={(e) => { e.stopPropagation(); deleteDoc.mutate({ id: d.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) }); }}><Trash2 className="w-4 h-4" /></Button>
             </CardContent>
           </Card>
         ))}
+        {documents.length === 0 && <div className="col-span-full py-8 text-center text-white/30">لا توجد مستندات مسجلة</div>}
       </div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent dir="rtl">

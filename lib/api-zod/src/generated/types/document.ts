@@ -14,5 +14,28 @@ export interface Document {
   link?: string | null;
   /** @nullable */
   docType?: string | null;
+  /**
+     * Link to open the file in OneDrive/SharePoint
+     * @nullable
+     */
+  oneDriveWebUrl?: string | null;
+  /** @nullable */
+  oneDriveItemId?: string | null;
+  /**
+     * Display name of the user who uploaded this file
+     * @nullable
+     */
+  uploadedBy?: string | null;
+  /** @nullable */
+  uploadedAt?: string | null;
+  /** @nullable */
+  updatedBy?: string | null;
+  isArchived: boolean;
+  /** @nullable */
+  archivedAt?: string | null;
+  /** @nullable */
+  archivedBy?: string | null;
   createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
 }

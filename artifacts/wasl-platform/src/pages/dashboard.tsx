@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useGetDashboardSummary, useListBanks, useListProducts, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey } from '@workspace/api-client-react';
+import { useGetDashboardSummary, useListBanks, useListProducts, useListProductTypes, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey } from '@workspace/api-client-react';
 import type { Bank, BankDetail } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -196,6 +196,7 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updateBank = useUpdateBank();
+  const { data: productTypes } = useListProductTypes();
 
   React.useEffect(() => {
     if (open) setForm(bank);
@@ -223,6 +224,7 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
       executiveSummary: form.executiveSummary || undefined,
       descriptionNotes: form.descriptionNotes || undefined,
       contacts: contacts.filter(c => c.name?.trim()),
+      productTypeIds: form.productTypeIds || [],
     };
     updateBank.mutate({ id: bank.id, data: payload }, {
       onSuccess: () => {
@@ -292,6 +294,34 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
           <div className="space-y-2">
             <label className="text-sm text-white/70">ملاحظات الوصف</label>
             <Textarea value={form.descriptionNotes || ''} onChange={e => setForm({ ...form, descriptionNotes: e.target.value })} className="bg-white/5 border-white/10 h-24" />
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-white/10">
+            <label className="text-sm text-white/70">أنواع المنتجات</label>
+            <div className="flex flex-wrap gap-2">
+              {(productTypes || []).filter(pt => pt.isActive).map(pt => {
+                const selected = (form.productTypeIds || []).includes(pt.id);
+                return (
+                  <button
+                    key={pt.id}
+                    type="button"
+                    onClick={() => {
+                      const current = form.productTypeIds || [];
+                      const next = selected ? current.filter(id => id !== pt.id) : [...current, pt.id];
+                      setForm({ ...form, productTypeIds: next });
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      selected ? 'bg-primary text-white border-primary' : 'bg-white/5 text-white/60 border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    {pt.name}
+                  </button>
+                );
+              })}
+              {(!productTypes || productTypes.length === 0) && (
+                <span className="text-sm text-white/30">لا توجد أنواع منتجات معرّفة بعد (يمكن إضافتها من الإعدادات)</span>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2 pt-2 border-t border-white/10">
@@ -414,7 +444,10 @@ function CompactBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSummary
               </div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-white/30">آخر تحديث</span>
-                <span className="text-white/50 truncate max-w-[65%]">{formatDateTime(displayBank.updatedAt)}</span>
+                <span className="text-white/50 truncate max-w-[65%]">
+                  {formatDateTime(displayBank.updatedAt)}
+                  {displayBank.updatedBy && <span className="text-white/30"> · {displayBank.updatedBy}</span>}
+                </span>
               </div>
             </div>
           </div>

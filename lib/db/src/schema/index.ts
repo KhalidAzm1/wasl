@@ -5,3 +5,5 @@ export * from "./risks";
 export * from "./action-items";
 export * from "./documents";
 export * from "./settings";
+export * from "./product-catalog";
+export * from "./audit-logs";

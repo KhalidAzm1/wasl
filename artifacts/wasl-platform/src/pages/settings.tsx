@@ -9,7 +9,18 @@ import {
   useSetBankLogo, 
   useSetBankHeroImage, 
   getListBanksQueryKey,
-  useListProducts
+  useListProducts,
+  useListProductTypes,
+  useCreateProductType,
+  useUpdateProductType,
+  useDeactivateProductType,
+  getListProductTypesQueryKey,
+  useListAuditLogs,
+  useGetArchive,
+  useRestoreBank,
+  useRestoreDocument,
+  useRestoreMeeting,
+  getGetArchiveQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,8 +29,9 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Image as ImageIcon, Trash2, Edit, Plus, Save, UploadCloud, History } from 'lucide-react';
+import { Building2, Image as ImageIcon, Trash2, Edit, Plus, Save, UploadCloud, History, Archive, ScrollText, RotateCcw, Tag } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
+import { useAuth } from '@/lib/authContext';
 import type { Bank } from '@workspace/api-client-react';
 
 export default function Settings() {
@@ -36,17 +48,32 @@ export default function Settings() {
       </header>
 
       <Tabs defaultValue="banks" className="w-full">
-        <TabsList className="w-full justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8">
+        <TabsList className="w-full justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
           <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">البنوك وجهات التمويل</TabsTrigger>
+          <TabsTrigger value="productTypes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Tag className="w-4 h-4" /> أنواع المنتجات</TabsTrigger>
           <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">التحديثات الأخيرة</TabsTrigger>
+          <TabsTrigger value="activity" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><ScrollText className="w-4 h-4" /> سجل النشاطات</TabsTrigger>
+          <TabsTrigger value="archive" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Archive className="w-4 h-4" /> الأرشيف</TabsTrigger>
         </TabsList>
 
         <TabsContent value="banks">
           <BanksManager />
         </TabsContent>
 
+        <TabsContent value="productTypes">
+          <ProductTypesManager />
+        </TabsContent>
+
         <TabsContent value="updates">
           <RecentUpdates />
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <ActivityLog />
+        </TabsContent>
+
+        <TabsContent value="archive">
+          <ArchiveManager />
         </TabsContent>
       </Tabs>
     </div>
@@ -55,6 +82,7 @@ export default function Settings() {
 
 function BanksManager() {
   const { data: banks, isLoading } = useListBanks();
+  const { data: productTypes } = useListProductTypes();
   const [editingBank, setEditingBank] = useState<Partial<Bank> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
@@ -76,6 +104,7 @@ function BanksManager() {
       status: editingBank.status,
       riskLevel: editingBank.riskLevel || 'Low',
       priorityImpact: editingBank.priorityImpact || 'Unclassified',
+      productTypeIds: editingBank.productTypeIds || [],
     };
 
     if (editingBank.id) {
@@ -181,6 +210,33 @@ function BanksManager() {
                   <option value="Delayed">متأخر</option>
                   <option value="Completed">مكتمل</option>
                 </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">أنواع المنتجات</label>
+              <div className="flex flex-wrap gap-2">
+                {(productTypes || []).filter(pt => pt.isActive).map(pt => {
+                  const selected = (editingBank?.productTypeIds || []).includes(pt.id);
+                  return (
+                    <button
+                      key={pt.id}
+                      type="button"
+                      onClick={() => {
+                        const current = editingBank?.productTypeIds || [];
+                        const next = selected ? current.filter(id => id !== pt.id) : [...current, pt.id];
+                        setEditingBank({ ...editingBank, productTypeIds: next });
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        selected ? 'bg-primary text-white border-primary' : 'bg-white/5 text-white/60 border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      {pt.name}
+                    </button>
+                  );
+                })}
+                {(!productTypes || productTypes.length === 0) && (
+                  <span className="text-sm text-white/30">لا توجد أنواع منتجات بعد — أضفها من تبويب "أنواع المنتجات"</span>
+                )}
               </div>
             </div>
           </div>
@@ -303,6 +359,253 @@ function ImageUploader({ bankId, type, label, currentUrl }: { bankId: string, ty
         <UploadCloud className="w-3 h-3" />
         {label}
       </Button>
+    </div>
+  );
+}
+
+function ProductTypesManager() {
+  const { role } = useAuth();
+  const isSuperAdmin = role === 'super_admin';
+  const { data: productTypes, isLoading } = useListProductTypes({ includeInactive: true });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const createType = useCreateProductType();
+  const updateType = useUpdateProductType();
+  const deactivateType = useDeactivateProductType();
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListProductTypesQueryKey() });
+
+  if (isLoading) return <div>جاري التحميل...</div>;
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div className="flex items-center gap-3">
+        <Tag className="w-6 h-6 text-primary" />
+        <div>
+          <h2 className="text-2xl font-bold text-white">كتالوج أنواع المنتجات</h2>
+          <p className="text-sm text-white/50">القائمة المرجعية لأنواع المنتجات القابلة للربط مع كل بنك.</p>
+        </div>
+      </div>
+
+      {!isSuperAdmin && (
+        <p className="text-sm text-white/40">يمكن للمشرف العام فقط إضافة أو تعديل أنواع المنتجات.</p>
+      )}
+
+      {isSuperAdmin && (
+        <div className="flex gap-2">
+          <Input placeholder="اسم نوع المنتج الجديد" value={newName} onChange={e => setNewName(e.target.value)} className="bg-white/5 border-white/10" />
+          <Button
+            className="gap-2 shrink-0"
+            disabled={!newName.trim() || createType.isPending}
+            onClick={() => {
+              createType.mutate({ data: { name: newName.trim() } }, {
+                onSuccess: () => { setNewName(''); invalidate(); toast({ title: 'تمت الإضافة' }); },
+                onError: (err: any) => toast({ title: 'خطأ', description: err?.message || 'فشلت الإضافة', variant: 'destructive' }),
+              });
+            }}
+          >
+            <Plus className="w-4 h-4" /> إضافة
+          </Button>
+        </div>
+      )}
+
+      <Card className="bg-white/5 border-white/10">
+        <CardContent className="p-0">
+          <div className="divide-y divide-white/5">
+            {(productTypes || []).map(pt => (
+              <div key={pt.id} className="flex items-center justify-between gap-4 px-6 py-4">
+                {editingId === pt.id ? (
+                  <Input value={editingName} onChange={e => setEditingName(e.target.value)} className="bg-white/5 border-white/10 max-w-xs" />
+                ) : (
+                  <span className={`font-medium ${pt.isActive ? 'text-white' : 'text-white/30 line-through'}`}>{pt.name}</span>
+                )}
+                {isSuperAdmin && (
+                  <div className="flex gap-1 shrink-0">
+                    {editingId === pt.id ? (
+                      <Button size="sm" onClick={() => {
+                        updateType.mutate({ id: pt.id, data: { name: editingName.trim() } }, {
+                          onSuccess: () => { setEditingId(null); invalidate(); },
+                        });
+                      }}>حفظ</Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-white/50" onClick={() => { setEditingId(pt.id); setEditingName(pt.name); }}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {pt.isActive && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400/50 hover:text-red-400" onClick={() => {
+                        if (confirm('تعطيل هذا النوع؟ ستبقى الربطات الحالية لكن لن يظهر عند الإضافة.')) {
+                          deactivateType.mutate({ id: pt.id }, { onSuccess: invalidate });
+                        }
+                      }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {(!productTypes || productTypes.length === 0) && (
+              <div className="py-12 text-center text-white/30">لا توجد أنواع منتجات بعد</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ActivityLog() {
+  const { data, isLoading } = useListAuditLogs({ limit: 100 });
+
+  if (isLoading) return <div>جاري التحميل...</div>;
+
+  const actionLabel: Record<string, string> = { CREATE: 'إضافة', UPDATE: 'تعديل', ARCHIVE: 'أرشفة', RESTORE: 'استعادة' };
+  const entityLabel: Record<string, string> = { bank: 'بنك', document: 'مستند', meeting: 'اجتماع', product: 'منتج', productType: 'نوع منتج' };
+  const actionColor: Record<string, string> = {
+    CREATE: 'bg-emerald-500/20 text-emerald-400',
+    UPDATE: 'bg-primary/20 text-primary',
+    ARCHIVE: 'bg-red-500/20 text-red-400',
+    RESTORE: 'bg-yellow-500/20 text-yellow-400',
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <div className="flex items-center gap-3">
+        <ScrollText className="w-6 h-6 text-primary" />
+        <div>
+          <h2 className="text-2xl font-bold text-white">سجل النشاطات</h2>
+          <p className="text-sm text-white/50">كل عمليات الإضافة والتعديل والأرشفة والاستعادة، مرتبة من الأحدث للأقدم.</p>
+        </div>
+      </div>
+
+      <Card className="bg-white/5 border-white/10">
+        <CardContent className="p-0">
+          <div className="divide-y divide-white/5">
+            {(data?.items || []).map(entry => (
+              <div key={entry.id} className="flex items-center justify-between gap-4 px-6 py-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${actionColor[entry.action] || 'bg-white/10 text-white/60'}`}>
+                    {actionLabel[entry.action] || entry.action}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-white truncate">
+                      {entityLabel[entry.entityType] || entry.entityType}
+                      {entry.entityLabel ? ` — ${entry.entityLabel}` : ''}
+                    </p>
+                    <p className="text-sm text-white/40 truncate">{entry.userName || entry.userEmail || 'مستخدم غير معروف'}</p>
+                  </div>
+                </div>
+                <div className="shrink-0 text-sm text-white/60 font-mono">{formatDateTime(entry.createdAt)}</div>
+              </div>
+            ))}
+            {(!data?.items || data.items.length === 0) && (
+              <div className="py-12 text-center text-white/30">لا توجد نشاطات مسجلة</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ArchiveManager() {
+  const { data, isLoading } = useGetArchive();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const restoreBank = useRestoreBank();
+  const restoreDocument = useRestoreDocument();
+  const restoreMeeting = useRestoreMeeting();
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: getGetArchiveQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+  };
+
+  if (isLoading) return <div>جاري التحميل...</div>;
+
+  const banks = data?.banks || [];
+  const documents = data?.documents || [];
+  const meetings = data?.meetings || [];
+  const isEmpty = banks.length === 0 && documents.length === 0 && meetings.length === 0;
+
+  return (
+    <div className="space-y-8 max-w-4xl">
+      <div className="flex items-center gap-3">
+        <Archive className="w-6 h-6 text-primary" />
+        <div>
+          <h2 className="text-2xl font-bold text-white">الأرشيف</h2>
+          <p className="text-sm text-white/50">العناصر المؤرشفة (المحذوفة) — يمكن استعادتها في أي وقت.</p>
+        </div>
+      </div>
+
+      {isEmpty && <div className="py-12 text-center text-white/30">الأرشيف فارغ حالياً</div>}
+
+      {banks.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold text-white/80">البنوك ({banks.length})</h3>
+          <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/5">
+            {banks.map(b => (
+              <div key={b.id} className="flex items-center justify-between gap-4 px-6 py-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-white truncate">{b.nameAr} — {b.nameEn}</p>
+                  <p className="text-sm text-white/40">أُرشف بواسطة {b.archivedBy || 'غير معروف'} في {formatDateTime(b.archivedAt || '')}</p>
+                </div>
+                <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
+                  restoreBank.mutate({ id: b.id }, { onSuccess: () => { invalidate(); toast({ title: 'تمت الاستعادة' }); } });
+                }}>
+                  <RotateCcw className="w-4 h-4" /> استعادة
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {documents.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold text-white/80">المستندات ({documents.length})</h3>
+          <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/5">
+            {documents.map(d => (
+              <div key={d.id} className="flex items-center justify-between gap-4 px-6 py-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-white truncate">{d.title}</p>
+                  <p className="text-sm text-white/40">أُرشف بواسطة {d.archivedBy || 'غير معروف'} في {formatDateTime(d.archivedAt || '')}</p>
+                </div>
+                <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
+                  restoreDocument.mutate({ id: d.id }, { onSuccess: () => { invalidate(); toast({ title: 'تمت الاستعادة' }); } });
+                }}>
+                  <RotateCcw className="w-4 h-4" /> استعادة
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {meetings.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold text-white/80">الاجتماعات ({meetings.length})</h3>
+          <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/5">
+            {meetings.map(m => (
+              <div key={m.id} className="flex items-center justify-between gap-4 px-6 py-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-white truncate">{m.topic}</p>
+                  <p className="text-sm text-white/40">أُرشف بواسطة {m.archivedBy || 'غير معروف'} في {formatDateTime(m.archivedAt || '')}</p>
+                </div>
+                <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
+                  restoreMeeting.mutate({ id: m.id }, { onSuccess: () => { invalidate(); toast({ title: 'تمت الاستعادة' }); } });
+                }}>
+                  <RotateCcw className="w-4 h-4" /> استعادة
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

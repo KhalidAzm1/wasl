@@ -33,4 +33,5 @@ export interface BankUpdate {
   nextAction?: string;
   executiveSummary?: string;
   descriptionNotes?: string;
+  productTypeIds?: number[];
 }

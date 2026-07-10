@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -33,6 +33,10 @@ export const banksTable = pgTable("banks", {
   nextAction: text("next_action"),
   executiveSummary: text("executive_summary"),
   descriptionNotes: text("description_notes"),
+  updatedBy: text("updated_by"),
+  isArchived: boolean("is_archived").notNull().default(false),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  archivedBy: text("archived_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

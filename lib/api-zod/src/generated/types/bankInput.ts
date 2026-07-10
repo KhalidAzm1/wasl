@@ -33,4 +33,5 @@ export interface BankInput {
   nextAction?: string;
   executiveSummary?: string;
   descriptionNotes?: string;
+  productTypeIds?: number[];
 }

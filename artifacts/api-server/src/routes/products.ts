@@ -12,8 +12,11 @@ import {
   DeleteProductParams,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
+import { requireAuth } from "../middlewares/auth";
+import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
+router.use(requireAuth);
 
 router.get("/products", async (req, res): Promise<void> => {
   const query = ListProductsQueryParams.safeParse(req.query);
@@ -37,6 +40,12 @@ router.post("/products", async (req, res): Promise<void> => {
     return;
   }
   const [row] = await db.insert(productsTable).values(parsed.data).returning();
+  await logAudit(req, {
+    action: "CREATE",
+    entityType: "product",
+    entityId: String(row.id),
+    entityLabel: row.productCode,
+  });
   res.status(201).json(CreateProductResponse.parse(toPlain(row)));
 });
 
@@ -60,6 +69,13 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Product not found" });
     return;
   }
+  await logAudit(req, {
+    action: "UPDATE",
+    entityType: "product",
+    entityId: String(row.id),
+    entityLabel: row.productCode,
+    details: parsed.data,
+  });
   res.json(UpdateProductResponse.parse(toPlain(row)));
 });
 
@@ -77,6 +93,12 @@ router.delete("/products/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Product not found" });
     return;
   }
+  await logAudit(req, {
+    action: "ARCHIVE",
+    entityType: "product",
+    entityId: String(row.id),
+    entityLabel: row.productCode,
+  });
   res.sendStatus(204);
 });
 

@@ -24,6 +24,8 @@ import type {
   ActionItemInput,
   ActionItemUpdate,
   ActivityEvent,
+  ArchiveSummary,
+  AuditLogPage,
   Bank,
   BankDetail,
   BankInput,
@@ -31,11 +33,15 @@ import type {
   DashboardSummary,
   Document,
   DocumentInput,
+  DocumentUpdate,
+  DocumentUpload,
   HealthStatus,
   ImageUpload,
   ListActionItemsParams,
+  ListAuditLogsParams,
   ListDocumentsParams,
   ListMeetingsParams,
+  ListProductTypesParams,
   ListProductsParams,
   ListRisksParams,
   Lookups,
@@ -45,6 +51,9 @@ import type {
   MeetingUpdate,
   Product,
   ProductInput,
+  ProductType,
+  ProductTypeInput,
+  ProductTypeUpdate,
   ProductUpdate,
   Risk,
   RiskInput,
@@ -165,7 +174,7 @@ export const getListBanksUrl = () => {
 }
 
 /**
- * @summary List all banks and financing entities
+ * @summary List all active (non-archived) banks and financing entities
  */
 export const listBanks = async ( options?: RequestInit): Promise<Bank[]> => {
 
@@ -212,7 +221,7 @@ export type ListBanksQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List all banks and financing entities
+ * @summary List all active (non-archived) banks and financing entities
  */
 
 export function useListBanks<TData = Awaited<ReturnType<typeof listBanks>>, TError = ErrorType<unknown>>(
@@ -462,7 +471,7 @@ export const getDeleteBankUrl = (id: string,) => {
 }
 
 /**
- * @summary Delete a bank
+ * @summary Archive a bank (soft delete). The record is hidden from normal views but can be restored.
  */
 export const deleteBank = async (id: string, options?: RequestInit): Promise<void> => {
 
@@ -511,7 +520,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteBankMutationError = ErrorType<unknown>
 
     /**
- * @summary Delete a bank
+ * @summary Archive a bank (soft delete). The record is hidden from normal views but can be restored.
  */
 export const useDeleteBank = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBank>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -522,6 +531,77 @@ export const useDeleteBank = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteBankMutationOptions(options));
+    }
+
+export const getRestoreBankUrl = (id: string,) => {
+
+
+
+
+  return `/api/banks/${id}/restore`
+}
+
+/**
+ * @summary Restore a previously archived bank
+ */
+export const restoreBank = async (id: string, options?: RequestInit): Promise<Bank> => {
+
+  return customFetch<Bank>(getRestoreBankUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreBankMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreBank>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreBank>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['restoreBank'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreBank>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreBank(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreBankMutationResult = NonNullable<Awaited<ReturnType<typeof restoreBank>>>
+
+    export type RestoreBankMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Restore a previously archived bank
+ */
+export const useRestoreBank = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreBank>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreBank>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRestoreBankMutationOptions(options));
     }
 
 export const getSetBankLogoUrl = (id: string,) => {
@@ -966,6 +1046,304 @@ export const useDeleteProduct = <TError = ErrorType<unknown>,
       return useMutation(getDeleteProductMutationOptions(options));
     }
 
+export const getListProductTypesUrl = (params?: ListProductTypesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/product-types?${stringifiedParams}` : `/api/product-types`
+}
+
+/**
+ * @summary List the product-type catalog
+ */
+export const listProductTypes = async (params?: ListProductTypesParams, options?: RequestInit): Promise<ProductType[]> => {
+
+  return customFetch<ProductType[]>(getListProductTypesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProductTypesQueryKey = (params?: ListProductTypesParams,) => {
+    return [
+    `/api/product-types`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProductTypesQueryOptions = <TData = Awaited<ReturnType<typeof listProductTypes>>, TError = ErrorType<unknown>>(params?: ListProductTypesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProductTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProductTypesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProductTypes>>> = ({ signal }) => listProductTypes(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProductTypes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProductTypesQueryResult = NonNullable<Awaited<ReturnType<typeof listProductTypes>>>
+export type ListProductTypesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the product-type catalog
+ */
+
+export function useListProductTypes<TData = Awaited<ReturnType<typeof listProductTypes>>, TError = ErrorType<unknown>>(
+ params?: ListProductTypesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProductTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProductTypesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateProductTypeUrl = () => {
+
+
+
+
+  return `/api/product-types`
+}
+
+/**
+ * @summary Create a product type (Super Admin only)
+ */
+export const createProductType = async (productTypeInput: ProductTypeInput, options?: RequestInit): Promise<ProductType> => {
+
+  return customFetch<ProductType>(getCreateProductTypeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(productTypeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateProductTypeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProductType>>, TError,{data: BodyType<ProductTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProductType>>, TError,{data: BodyType<ProductTypeInput>}, TContext> => {
+
+const mutationKey = ['createProductType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProductType>>, {data: BodyType<ProductTypeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createProductType(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProductTypeMutationResult = NonNullable<Awaited<ReturnType<typeof createProductType>>>
+    export type CreateProductTypeMutationBody = BodyType<ProductTypeInput>
+    export type CreateProductTypeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a product type (Super Admin only)
+ */
+export const useCreateProductType = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProductType>>, TError,{data: BodyType<ProductTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProductType>>,
+        TError,
+        {data: BodyType<ProductTypeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProductTypeMutationOptions(options));
+    }
+
+export const getUpdateProductTypeUrl = (id: number,) => {
+
+
+
+
+  return `/api/product-types/${id}`
+}
+
+/**
+ * @summary Update a product type (Super Admin only)
+ */
+export const updateProductType = async (id: number,
+    productTypeUpdate: ProductTypeUpdate, options?: RequestInit): Promise<ProductType> => {
+
+  return customFetch<ProductType>(getUpdateProductTypeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(productTypeUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateProductTypeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProductType>>, TError,{id: number;data: BodyType<ProductTypeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProductType>>, TError,{id: number;data: BodyType<ProductTypeUpdate>}, TContext> => {
+
+const mutationKey = ['updateProductType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProductType>>, {id: number;data: BodyType<ProductTypeUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateProductType(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProductTypeMutationResult = NonNullable<Awaited<ReturnType<typeof updateProductType>>>
+    export type UpdateProductTypeMutationBody = BodyType<ProductTypeUpdate>
+    export type UpdateProductTypeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a product type (Super Admin only)
+ */
+export const useUpdateProductType = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProductType>>, TError,{id: number;data: BodyType<ProductTypeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProductType>>,
+        TError,
+        {id: number;data: BodyType<ProductTypeUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateProductTypeMutationOptions(options));
+    }
+
+export const getDeactivateProductTypeUrl = (id: number,) => {
+
+
+
+
+  return `/api/product-types/${id}`
+}
+
+/**
+ * @summary Deactivate a product type (Super Admin only). Existing bank assignments are kept.
+ */
+export const deactivateProductType = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeactivateProductTypeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeactivateProductTypeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateProductType>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deactivateProductType>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deactivateProductType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivateProductType>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deactivateProductType(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeactivateProductTypeMutationResult = NonNullable<Awaited<ReturnType<typeof deactivateProductType>>>
+
+    export type DeactivateProductTypeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Deactivate a product type (Super Admin only). Existing bank assignments are kept.
+ */
+export const useDeactivateProductType = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateProductType>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deactivateProductType>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeactivateProductTypeMutationOptions(options));
+    }
+
 export const getListMeetingsUrl = (params?: ListMeetingsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1202,7 +1580,7 @@ export const getDeleteMeetingUrl = (id: number,) => {
 }
 
 /**
- * @summary Delete a meeting record
+ * @summary Archive a meeting (soft delete)
  */
 export const deleteMeeting = async (id: number, options?: RequestInit): Promise<void> => {
 
@@ -1251,7 +1629,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteMeetingMutationError = ErrorType<unknown>
 
     /**
- * @summary Delete a meeting record
+ * @summary Archive a meeting (soft delete)
  */
 export const useDeleteMeeting = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMeeting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1262,6 +1640,77 @@ export const useDeleteMeeting = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteMeetingMutationOptions(options));
+    }
+
+export const getRestoreMeetingUrl = (id: number,) => {
+
+
+
+
+  return `/api/meetings/${id}/restore`
+}
+
+/**
+ * @summary Restore a previously archived meeting
+ */
+export const restoreMeeting = async (id: number, options?: RequestInit): Promise<Meeting> => {
+
+  return customFetch<Meeting>(getRestoreMeetingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreMeetingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreMeeting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreMeeting>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['restoreMeeting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreMeeting>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreMeeting(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreMeetingMutationResult = NonNullable<Awaited<ReturnType<typeof restoreMeeting>>>
+
+    export type RestoreMeetingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Restore a previously archived meeting
+ */
+export const useRestoreMeeting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreMeeting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreMeeting>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreMeetingMutationOptions(options));
     }
 
 export const getListRisksUrl = (params?: ListRisksParams,) => {
@@ -1953,7 +2402,7 @@ export const getCreateDocumentUrl = () => {
 }
 
 /**
- * @summary Create a document record
+ * @summary Register a document by external link (no file bytes stored)
  */
 export const createDocument = async (documentInput: DocumentInput, options?: RequestInit): Promise<Document> => {
 
@@ -2002,7 +2451,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateDocumentMutationError = ErrorType<unknown>
 
     /**
- * @summary Create a document record
+ * @summary Register a document by external link (no file bytes stored)
  */
 export const useCreateDocument = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDocument>>, TError,{data: BodyType<DocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -2015,6 +2464,149 @@ export const useCreateDocument = <TError = ErrorType<unknown>,
       return useMutation(getCreateDocumentMutationOptions(options));
     }
 
+export const getUploadDocumentUrl = () => {
+
+
+
+
+  return `/api/documents/upload`
+}
+
+/**
+ * @summary Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+ */
+export const uploadDocument = async (documentUpload: DocumentUpload, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getUploadDocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentUpload)
+  }
+);}
+
+
+
+
+
+export const getUploadDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<DocumentUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<DocumentUpload>}, TContext> => {
+
+const mutationKey = ['uploadDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadDocument>>, {data: BodyType<DocumentUpload>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof uploadDocument>>>
+    export type UploadDocumentMutationBody = BodyType<DocumentUpload>
+    export type UploadDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+ */
+export const useUploadDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<DocumentUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadDocument>>,
+        TError,
+        {data: BodyType<DocumentUpload>},
+        TContext
+      > => {
+      return useMutation(getUploadDocumentMutationOptions(options));
+    }
+
+export const getUpdateDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documents/${id}`
+}
+
+/**
+ * @summary Update a document's metadata
+ */
+export const updateDocument = async (id: number,
+    documentUpdate: DocumentUpdate, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getUpdateDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext> => {
+
+const mutationKey = ['updateDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDocument>>, {id: number;data: BodyType<DocumentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDocument>>>
+    export type UpdateDocumentMutationBody = BodyType<DocumentUpdate>
+    export type UpdateDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a document's metadata
+ */
+export const useUpdateDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDocument>>,
+        TError,
+        {id: number;data: BodyType<DocumentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDocumentMutationOptions(options));
+    }
+
 export const getDeleteDocumentUrl = (id: number,) => {
 
 
@@ -2024,7 +2616,7 @@ export const getDeleteDocumentUrl = (id: number,) => {
 }
 
 /**
- * @summary Delete a document record
+ * @summary Archive a document record (soft delete). The OneDrive file itself is left untouched.
  */
 export const deleteDocument = async (id: number, options?: RequestInit): Promise<void> => {
 
@@ -2073,7 +2665,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteDocumentMutationError = ErrorType<unknown>
 
     /**
- * @summary Delete a document record
+ * @summary Archive a document record (soft delete). The OneDrive file itself is left untouched.
  */
 export const useDeleteDocument = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -2084,6 +2676,77 @@ export const useDeleteDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteDocumentMutationOptions(options));
+    }
+
+export const getRestoreDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documents/${id}/restore`
+}
+
+/**
+ * @summary Restore a previously archived document
+ */
+export const restoreDocument = async (id: number, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getRestoreDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreDocument>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['restoreDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreDocument>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreDocument(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof restoreDocument>>>
+
+    export type RestoreDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Restore a previously archived document
+ */
+export const useRestoreDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreDocument>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreDocumentMutationOptions(options));
     }
 
 export const getGetDashboardSummaryUrl = () => {
@@ -2387,4 +3050,165 @@ export const useUpdateLookups = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateLookupsMutationOptions(options));
     }
+
+export const getListAuditLogsUrl = (params?: ListAuditLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/audit-logs?${stringifiedParams}` : `/api/audit-logs`
+}
+
+/**
+ * @summary List audit log entries, most recent first
+ */
+export const listAuditLogs = async (params?: ListAuditLogsParams, options?: RequestInit): Promise<AuditLogPage> => {
+
+  return customFetch<AuditLogPage>(getListAuditLogsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAuditLogsQueryKey = (params?: ListAuditLogsParams,) => {
+    return [
+    `/api/audit-logs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorType<unknown>>(params?: ListAuditLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAuditLogsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditLogs>>> = ({ signal }) => listAuditLogs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAuditLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditLogs>>>
+export type ListAuditLogsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List audit log entries, most recent first
+ */
+
+export function useListAuditLogs<TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorType<unknown>>(
+ params?: ListAuditLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAuditLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetArchiveUrl = () => {
+
+
+
+
+  return `/api/archive`
+}
+
+/**
+ * @summary List all archived (soft-deleted) banks, documents, and meetings
+ */
+export const getArchive = async ( options?: RequestInit): Promise<ArchiveSummary> => {
+
+  return customFetch<ArchiveSummary>(getGetArchiveUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetArchiveQueryKey = () => {
+    return [
+    `/api/archive`
+    ] as const;
+    }
+
+
+export const getGetArchiveQueryOptions = <TData = Awaited<ReturnType<typeof getArchive>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArchive>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetArchiveQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArchive>>> = ({ signal }) => getArchive({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArchive>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetArchiveQueryResult = NonNullable<Awaited<ReturnType<typeof getArchive>>>
+export type GetArchiveQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all archived (soft-deleted) banks, documents, and meetings
+ */
+
+export function useGetArchive<TData = Awaited<ReturnType<typeof getArchive>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArchive>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetArchiveQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

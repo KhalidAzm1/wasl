@@ -33,9 +33,9 @@ export default function Login() {
 
   return (
     <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-6">
+      <form onSubmit={handleSubmit} className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex justify-center">
-          <img src={logoUrl} alt="Wasl" className="no-mirror w-64 md:w-72 h-auto drop-shadow-lg" />
+          <img src={logoUrl} alt="Wasl" className="no-mirror w-full h-auto drop-shadow-lg" />
         </div>
         <h2 className="text-xl font-bold text-white text-center">Sign In</h2>
         <div className="space-y-2">

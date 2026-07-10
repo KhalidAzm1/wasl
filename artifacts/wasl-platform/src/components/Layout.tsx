@@ -151,7 +151,7 @@ export function Layout({ children }: LayoutProps) {
               className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-[#050816]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
             >
               <div className="flex items-center justify-between p-6 pb-5 border-b border-white/5">
-                <img src={logoUrl} alt="Wasl" className="no-mirror h-16 w-auto drop-shadow-lg" />
+                <img src={logoUrl} alt="Wasl" className="no-mirror h-24 w-auto drop-shadow-lg" />
                 <button
                   type="button"
                   aria-label="Close settings panel"

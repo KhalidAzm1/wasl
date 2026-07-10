@@ -35,7 +35,7 @@ export default function Login() {
     <div dir="rtl" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex justify-center">
-          <img src={logoUrl} alt="Wasl" className="no-mirror w-52 h-auto" />
+          <img src={logoUrl} alt="Wasl" className="no-mirror w-72 h-auto" />
         </div>
         <h1 className="text-2xl font-bold text-white text-center">تسجيل الدخول</h1>
         <div className="space-y-2">

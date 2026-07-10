@@ -71,7 +71,7 @@ export default function ChangePassword() {
     <div dir="rtl" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex justify-center">
-          <img src={logoUrl} alt="Wasl" className="no-mirror w-52 h-auto" />
+          <img src={logoUrl} alt="Wasl" className="no-mirror w-72 h-auto" />
         </div>
         <h1 className="text-2xl font-bold text-white text-center">تعيين كلمة مرور جديدة</h1>
         <p className="text-sm text-white/50 text-center">هذا أول تسجيل دخول لك، يرجى تعيين كلمة مرور جديدة قبل المتابعة.</p>

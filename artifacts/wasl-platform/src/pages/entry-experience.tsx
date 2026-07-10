@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
-import heroImageUrl from '@assets/WhatsApp_Image_2026-07-09_at_2.18.35_PM_1783595941352.jpeg';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
+import EntryCube from '@/components/EntryCube';
 
 /**
- * Entry page. Per explicit direction: the uploaded image is used EXACTLY as
- * provided -- full-bleed hero, uncropped, undistorted, centered, with
- * background-size: contain so nothing important is cut off. No stat cards,
- * no extra text, no extra logos -- only the image, one glass CTA button,
- * and a short cinematic loading transition before the dashboard.
+ * Entry page: a real interactive Three.js scene (see EntryCube) recreating the
+ * reference render -- rotating/floating cube with WASL + bank logo faces,
+ * reflective floor, ambient blue lighting -- plus glowing WASL wall marks,
+ * animated light rays, floating particles and a glass CTA button.
  */
 export default function EntryExperience() {
   const [, navigate] = useLocation();
@@ -36,22 +35,73 @@ export default function EntryExperience() {
       className="relative h-screen w-screen overflow-hidden text-white"
       style={{ backgroundColor: '#050816' }}
     >
-      {/* The uploaded image, exactly as provided: contained, centered, uncropped. */}
+      {/* Real interactive 3D scene: rotating cube + reflective floor + lighting. */}
       <motion.div
-        className="absolute inset-0 w-full h-full bg-contain bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroImageUrl})`, backgroundColor: '#050816' }}
-        initial={{ scale: 1, opacity: 0 }}
-        animate={{ scale: 1.01, opacity: 1 }}
-        transition={{ opacity: { duration: 1.2 }, scale: { duration: 20, ease: 'easeOut' } }}
-      />
-
-      {/* Subtle overlay only, per spec. */}
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'rgba(5,8,22,0.15)' }} />
+        className="absolute inset-0"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.2 }}
+      >
+        <EntryCube />
+      </motion.div>
 
       {/* Ambient blue glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse 55% 45% at 50% 45%, rgba(59,130,246,0.10), transparent 70%)' }}
+      />
+
+      {/* Animated vertical light rays, either side of the cube. */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden hidden md:block">
+        {[12, 22, 78, 88].map((leftPct, i) => (
+          <motion.div
+            key={leftPct}
+            className="absolute top-0 bottom-0"
+            style={{
+              left: `${leftPct}%`,
+              width: 2,
+              background: 'linear-gradient(to bottom, transparent, rgba(96,165,250,0.5), transparent)',
+              filter: 'blur(1px)',
+            }}
+            initial={{ opacity: 0.15 }}
+            animate={{ opacity: [0.15, 0.5, 0.15] }}
+            transition={{ duration: 4 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.6 }}
+          />
+        ))}
+      </div>
+
+      {/* Occasional ambient light flicker over the whole scene. */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none bg-white"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0, 0, 0.04, 0, 0, 0, 0.02, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+      />
+
+      {/* Glowing, pulsing WASL wall marks -- left and right, like the reference. */}
+      <motion.img
+        src={logoUrl}
+        alt="Wasl"
+        className="no-mirror absolute left-4 md:left-10 top-1/2 -translate-y-1/2 h-16 md:h-24 w-auto hidden sm:block pointer-events-none"
+        style={{ filter: 'drop-shadow(0 0 18px rgba(124,58,237,0.85)) drop-shadow(0 0 34px rgba(59,130,246,0.5))' }}
+        animate={{ filter: [
+          'drop-shadow(0 0 18px rgba(124,58,237,0.85)) drop-shadow(0 0 34px rgba(59,130,246,0.5)) brightness(1)',
+          'drop-shadow(0 0 30px rgba(124,58,237,1)) drop-shadow(0 0 54px rgba(59,130,246,0.75)) brightness(1.3)',
+          'drop-shadow(0 0 18px rgba(124,58,237,0.85)) drop-shadow(0 0 34px rgba(59,130,246,0.5)) brightness(1)',
+        ] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.img
+        src={logoUrl}
+        alt="Wasl"
+        className="no-mirror absolute right-4 md:right-10 top-1/2 -translate-y-1/2 h-16 md:h-24 w-auto hidden sm:block pointer-events-none"
+        style={{ filter: 'drop-shadow(0 0 18px rgba(124,58,237,0.85)) drop-shadow(0 0 34px rgba(59,130,246,0.5))' }}
+        animate={{ filter: [
+          'drop-shadow(0 0 18px rgba(124,58,237,0.85)) drop-shadow(0 0 34px rgba(59,130,246,0.5)) brightness(1)',
+          'drop-shadow(0 0 30px rgba(124,58,237,1)) drop-shadow(0 0 54px rgba(59,130,246,0.75)) brightness(1.3)',
+          'drop-shadow(0 0 18px rgba(124,58,237,0.85)) drop-shadow(0 0 34px rgba(59,130,246,0.5)) brightness(1)',
+        ] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
       />
 
       {/* Soft particles */}

@@ -1,0 +1,68 @@
+I uploaded a reference image. Rebuild this entire landing page as a real interactive page, not a static image.
+
+Requirements:
+
+1. Match the reference image 100%:
+- Same futuristic dark theme.
+- Same neon blue lighting.
+- Same room, reflections, floor glow, and perspective.
+- Same camera angle and composition.
+
+2. Replace the center image with a REAL 3D cube:
+- Use Three.js (preferred) or CSS 3D.
+- The cube rotates slowly on the Y axis continuously.
+- Add smooth floating movement.
+- Add subtle glow and reflections.
+- Hovering the cube slightly increases glow and speed.
+
+3. Cube faces:
+- Top face = WASL AI Banking Dashboard logo.
+- Other faces = bank logos.
+- Logos should be high quality and centered.
+
+4. WASL branding:
+- Add the WASL AI Banking Dashboard logo on the left and right walls exactly like the reference.
+- Add a neon effect.
+- The logo should softly pulse:
+  brightness 100% -> 130% -> 100%
+  every 3 seconds.
+- Add subtle bloom and glow.
+
+5. Environment effects:
+- Animated light rays.
+- Floating particles.
+- Slight fog.
+- Reflection on the floor.
+- Ambient blue lighting.
+- Light flicker effect every few seconds.
+
+6. Enter Platform button:
+- Large glassmorphism button.
+- Blue glow.
+- Hover animation.
+- Slight scale effect.
+- Clicking navigates to /portfolio.
+
+7. Performance:
+- Must run smoothly on desktop and mobile.
+- Target 60 FPS.
+- Lazy load textures.
+- Use hardware acceleration.
+
+8. Responsive:
+- Desktop identical to reference.
+- Tablet and mobile optimized.
+
+9. Do NOT use the uploaded image as a background.
+The image is only a reference.
+Everything must be recreated using HTML, CSS, JavaScript and Three.js.
+
+10. Deliver production-quality code with:
+- components separated,
+- reusable styles,
+- clean structure,
+- no placeholders,
+- no temporary assets.
+
+Goal:
+A premium, enterprise-grade AI banking portal that feels alive and cinematic, exactly like the reference image but fully interactive.

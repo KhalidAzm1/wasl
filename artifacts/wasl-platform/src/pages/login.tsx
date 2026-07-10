@@ -27,7 +27,7 @@ export default function Login() {
     if (data.session.user.user_metadata?.must_change_password) {
       navigate('/change-password');
     } else {
-      navigate('/portfolio');
+      navigate('/');
     }
   }
 

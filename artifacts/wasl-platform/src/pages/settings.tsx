@@ -9,6 +9,7 @@ import {
   useSetBankLogo, 
   useSetBankHeroImage, 
   getListBanksQueryKey,
+  getGetBankQueryKey,
   useListProductTypes,
   useCreateProductType,
   useUpdateProductType,
@@ -25,6 +26,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -99,12 +101,24 @@ function BanksManager() {
       riskLevel: editingBank.riskLevel || 'Low',
       priorityImpact: editingBank.priorityImpact || 'Unclassified',
       productTypeIds: editingBank.productTypeIds || [],
+      responsiblePerson: editingBank.responsiblePerson?.trim() ? editingBank.responsiblePerson : null,
+      relationshipManager: editingBank.relationshipManager?.trim() ? editingBank.relationshipManager : null,
+      email: editingBank.email?.trim() ? editingBank.email : null,
+      website: editingBank.website?.trim() ? editingBank.website : null,
+      executiveSummary: editingBank.executiveSummary || undefined,
+      descriptionNotes: editingBank.descriptionNotes || undefined,
+      lastMeetingDate: editingBank.lastMeetingDate || undefined,
+      lastMeetingSummary: editingBank.lastMeetingSummary || undefined,
+      nextMeetingDate: editingBank.nextMeetingDate || undefined,
+      nextMeetingTopic: editingBank.nextMeetingTopic || undefined,
+      nextAction: editingBank.nextAction || undefined,
     };
 
     if (editingBank.id) {
       updateBank.mutate({ id: editingBank.id, data: payload }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(editingBank.id!) });
           setIsModalOpen(false);
           toast({ title: 'تم الحفظ', description: 'تم تحديث بيانات البنك بنجاح' });
         }
@@ -205,6 +219,46 @@ function BanksManager() {
                   <option value="Completed">مكتمل</option>
                 </select>
               </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">المسؤول</label>
+                <Input value={editingBank?.responsiblePerson || ''} onChange={e => setEditingBank({ ...editingBank, responsiblePerson: e.target.value })} className="bg-white/5 border-white/10" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">مدير العلاقة</label>
+                <Input value={editingBank?.relationshipManager || ''} onChange={e => setEditingBank({ ...editingBank, relationshipManager: e.target.value })} className="bg-white/5 border-white/10" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">البريد الإلكتروني</label>
+                <Input value={editingBank?.email || ''} onChange={e => setEditingBank({ ...editingBank, email: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">الموقع الإلكتروني</label>
+                <Input value={editingBank?.website || ''} onChange={e => setEditingBank({ ...editingBank, website: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">تاريخ آخر اجتماع</label>
+                <Input value={editingBank?.lastMeetingDate || ''} onChange={e => setEditingBank({ ...editingBank, lastMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">تاريخ الاجتماع القادم</label>
+                <Input value={editingBank?.nextMeetingDate || ''} onChange={e => setEditingBank({ ...editingBank, nextMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">موضوع الاجتماع القادم</label>
+              <Input value={editingBank?.nextMeetingTopic || ''} onChange={e => setEditingBank({ ...editingBank, nextMeetingTopic: e.target.value })} className="bg-white/5 border-white/10" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">الخطوة القادمة</label>
+              <Input value={editingBank?.nextAction || ''} onChange={e => setEditingBank({ ...editingBank, nextAction: e.target.value })} className="bg-white/5 border-white/10" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">الملخص التنفيذي</label>
+              <Textarea value={editingBank?.executiveSummary || ''} onChange={e => setEditingBank({ ...editingBank, executiveSummary: e.target.value })} className="bg-white/5 border-white/10 h-24" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">الملاحظات</label>
+              <Textarea value={editingBank?.descriptionNotes || ''} onChange={e => setEditingBank({ ...editingBank, descriptionNotes: e.target.value })} className="bg-white/5 border-white/10 h-24" />
             </div>
             <div className="space-y-2">
               <label className="text-sm text-white/70">أنواع المنتجات</label>
@@ -393,6 +447,7 @@ function ImageUploader({ bankId, type, label, currentUrl }: { bankId: string, ty
       mutation.mutate({ id: bankId, data: { dataUrl } }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
           toast({ title: 'تم الرفع', description: `تم تحديث ${label} بنجاح` });
         },
         onError: () => {

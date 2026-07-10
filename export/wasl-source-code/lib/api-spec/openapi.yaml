@@ -1,0 +1,1275 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Wasl Executive Banking Portfolio Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: banks
+    description: Bank / financing entity relationship records
+  - name: products
+    description: Product integration stage records per bank
+  - name: productTypes
+    description: Super-admin managed catalog of product types assignable to banks
+  - name: meetings
+    description: Meetings with banks
+  - name: risks
+    description: Risk register per bank
+  - name: actionItems
+    description: Action items / follow-ups per bank
+  - name: documents
+    description: Documents / links per bank, stored in Microsoft OneDrive
+  - name: dashboard
+    description: Executive dashboard aggregates
+  - name: settings
+    description: Configurable lookups (statuses, stages, products, persons, categories)
+  - name: auditLogs
+    description: Enterprise audit trail of create/update/archive/restore actions
+  - name: archive
+    description: Archived (soft-deleted) records across entities
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /banks:
+    get:
+      operationId: listBanks
+      tags: [banks]
+      summary: List all active (non-archived) banks and financing entities
+      responses:
+        "200":
+          description: List of banks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bank"
+    post:
+      operationId: createBank
+      tags: [banks]
+      summary: Create a bank / financing entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bank"
+
+  /banks/{id}:
+    get:
+      operationId: getBank
+      tags: [banks]
+      summary: Get a bank by id, with related products
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      responses:
+        "200":
+          description: Bank detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateBank
+      tags: [banks]
+      summary: Update a bank
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bank"
+    delete:
+      operationId: deleteBank
+      tags: [banks]
+      summary: Archive a bank (soft delete). The record is hidden from normal views but can be restored.
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      responses:
+        "204":
+          description: Archived
+
+  /banks/{id}/restore:
+    post:
+      operationId: restoreBank
+      tags: [banks]
+      summary: Restore a previously archived bank
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bank"
+
+  /banks/{id}/logo:
+    put:
+      operationId: setBankLogo
+      tags: [banks]
+      summary: Upload / replace a bank's logo image
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageUpload"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bank"
+
+  /banks/{id}/hero:
+    put:
+      operationId: setBankHeroImage
+      tags: [banks]
+      summary: Upload / replace a bank's hero image
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageUpload"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bank"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List product integration records, optionally filtered by bank
+      parameters:
+        - name: bankId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product integration record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product integration record
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product integration record
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "204":
+          description: Deleted
+
+  /product-types:
+    get:
+      operationId: listProductTypes
+      tags: [productTypes]
+      summary: List the product-type catalog
+      parameters:
+        - name: includeInactive
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of product types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductType"
+    post:
+      operationId: createProductType
+      tags: [productTypes]
+      summary: Create a product type (Super Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductTypeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductType"
+
+  /product-types/{id}:
+    patch:
+      operationId: updateProductType
+      tags: [productTypes]
+      summary: Update a product type (Super Admin only)
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductTypeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductType"
+    delete:
+      operationId: deactivateProductType
+      tags: [productTypes]
+      summary: Deactivate a product type (Super Admin only). Existing bank assignments are kept.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "204":
+          description: Deactivated
+
+  /meetings:
+    get:
+      operationId: listMeetings
+      tags: [meetings]
+      summary: List meetings, optionally filtered by bank
+      parameters:
+        - name: bankId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of meetings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meeting"
+    post:
+      operationId: createMeeting
+      tags: [meetings]
+      summary: Create a meeting record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+
+  /meetings/{id}:
+    patch:
+      operationId: updateMeeting
+      tags: [meetings]
+      summary: Update a meeting record
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+    delete:
+      operationId: deleteMeeting
+      tags: [meetings]
+      summary: Archive a meeting (soft delete)
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "204":
+          description: Archived
+
+  /meetings/{id}/restore:
+    post:
+      operationId: restoreMeeting
+      tags: [meetings]
+      summary: Restore a previously archived meeting
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+
+  /risks:
+    get:
+      operationId: listRisks
+      tags: [risks]
+      summary: List risks, optionally filtered by bank
+      parameters:
+        - name: bankId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of risks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Risk"
+    post:
+      operationId: createRisk
+      tags: [risks]
+      summary: Create a risk record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Risk"
+
+  /risks/{id}:
+    patch:
+      operationId: updateRisk
+      tags: [risks]
+      summary: Update a risk record
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Risk"
+    delete:
+      operationId: deleteRisk
+      tags: [risks]
+      summary: Delete a risk record
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "204":
+          description: Deleted
+
+  /action-items:
+    get:
+      operationId: listActionItems
+      tags: [actionItems]
+      summary: List action items, optionally filtered by bank
+      parameters:
+        - name: bankId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of action items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActionItem"
+    post:
+      operationId: createActionItem
+      tags: [actionItems]
+      summary: Create an action item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionItemInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItem"
+
+  /action-items/{id}:
+    patch:
+      operationId: updateActionItem
+      tags: [actionItems]
+      summary: Update an action item
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionItemUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItem"
+    delete:
+      operationId: deleteActionItem
+      tags: [actionItems]
+      summary: Delete an action item
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "204":
+          description: Deleted
+
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List documents, optionally filtered by bank and/or entity (product, meeting)
+      parameters:
+        - name: bankId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+            description: "bank | product | meeting"
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+    post:
+      operationId: createDocument
+      tags: [documents]
+      summary: Register a document by external link (no file bytes stored)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /documents/upload:
+    post:
+      operationId: uploadDocument
+      tags: [documents]
+      summary: Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpload"
+      responses:
+        "201":
+          description: Uploaded and created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /documents/{id}:
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      summary: Update a document's metadata
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Archive a document record (soft delete). The OneDrive file itself is left untouched.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "204":
+          description: Archived
+
+  /documents/{id}/restore:
+    post:
+      operationId: restoreDocument
+      tags: [documents]
+      summary: Restore a previously archived document
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Executive dashboard KPI summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getActivityFeed
+      tags: [dashboard]
+      summary: Recent activity feed across all banks
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  /settings/lookups:
+    get:
+      operationId: getLookups
+      tags: [settings]
+      summary: Get configurable lookup lists (statuses, stages, products, responsible persons, categories)
+      responses:
+        "200":
+          description: Lookup lists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lookups"
+    patch:
+      operationId: updateLookups
+      tags: [settings]
+      summary: Update configurable lookup lists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LookupsUpdate"
+      responses:
+        "200":
+          description: Updated lookups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lookups"
+
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [auditLogs]
+      summary: List audit log entries, most recent first
+      parameters:
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit log page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogPage"
+
+  /archive:
+    get:
+      operationId: getArchive
+      tags: [archive]
+      summary: List all archived (soft-deleted) banks, documents, and meetings
+      responses:
+        "200":
+          description: Archived records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveSummary"
+
+components:
+  parameters:
+    BankId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    EntityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ImageUpload:
+      type: object
+      required: [dataUrl]
+      properties:
+        dataUrl:
+          type: string
+          description: Base64-encoded data URL of the uploaded image (e.g. data:image/png;base64,...)
+
+    Bank:
+      type: object
+      required: [id, nameEn, nameAr, category, status, riskLevel, priorityImpact, isArchived, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        nameEn: { type: string }
+        nameAr: { type: string }
+        category: { type: string, description: "Local Bank | Financing Entity" }
+        status: { type: string }
+        logoUrl: { type: ["string", "null"] }
+        heroImageUrl: { type: ["string", "null"] }
+        referenceLink: { type: ["string", "null"] }
+        contacts:
+          type: array
+          items: { $ref: "#/components/schemas/BankContact" }
+        riskLevel: { type: string, description: "Low | Medium | High" }
+        priorityImpact: { type: string, description: "HOT | Unclassified | etc" }
+        responsiblePerson: { type: ["string", "null"] }
+        relationshipManager: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
+        lastMeetingDate: { type: ["string", "null"] }
+        lastMeetingSummary: { type: ["string", "null"] }
+        nextMeetingDate: { type: ["string", "null"] }
+        nextMeetingTopic: { type: ["string", "null"] }
+        nextAction: { type: ["string", "null"] }
+        executiveSummary: { type: ["string", "null"] }
+        descriptionNotes: { type: ["string", "null"] }
+        productTypeIds:
+          type: array
+          items: { type: integer }
+          description: Ids of assigned product types from the catalog
+        isArchived: { type: boolean }
+        archivedAt: { type: ["string", "null"] }
+        archivedBy: { type: ["string", "null"], description: "Display name of the user who archived this record" }
+        updatedBy: { type: ["string", "null"], description: "Display name of the user who last updated this record" }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    BankDetail:
+      allOf:
+        - $ref: "#/components/schemas/Bank"
+        - type: object
+          properties:
+            products:
+              type: array
+              items: { $ref: "#/components/schemas/Product" }
+            meetings:
+              type: array
+              items: { $ref: "#/components/schemas/Meeting" }
+            risks:
+              type: array
+              items: { $ref: "#/components/schemas/Risk" }
+            actionItems:
+              type: array
+              items: { $ref: "#/components/schemas/ActionItem" }
+            documents:
+              type: array
+              items: { $ref: "#/components/schemas/Document" }
+
+    BankInput:
+      type: object
+      required: [nameEn, nameAr, category, status, riskLevel, priorityImpact]
+      properties:
+        nameEn: { type: string }
+        nameAr: { type: string }
+        category: { type: string }
+        status: { type: string }
+        logoUrl: { type: string }
+        heroImageUrl: { type: string }
+        referenceLink: { type: string }
+        contacts:
+          type: array
+          items: { $ref: "#/components/schemas/BankContact" }
+        riskLevel: { type: string }
+        priorityImpact: { type: string }
+        responsiblePerson: { type: ["string", "null"] }
+        relationshipManager: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
+        lastMeetingDate: { type: string }
+        lastMeetingSummary: { type: string }
+        nextMeetingDate: { type: string }
+        nextMeetingTopic: { type: string }
+        nextAction: { type: string }
+        executiveSummary: { type: string }
+        descriptionNotes: { type: string }
+        productTypeIds:
+          type: array
+          items: { type: integer }
+
+    BankUpdate:
+      type: object
+      properties:
+        nameEn: { type: string }
+        nameAr: { type: string }
+        category: { type: string }
+        status: { type: string }
+        logoUrl: { type: string }
+        heroImageUrl: { type: string }
+        referenceLink: { type: string }
+        contacts:
+          type: array
+          items: { $ref: "#/components/schemas/BankContact" }
+        riskLevel: { type: string }
+        priorityImpact: { type: string }
+        responsiblePerson: { type: ["string", "null"] }
+        relationshipManager: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
+        lastMeetingDate: { type: string }
+        lastMeetingSummary: { type: string }
+        nextMeetingDate: { type: string }
+        nextMeetingTopic: { type: string }
+        nextAction: { type: string }
+        executiveSummary: { type: string }
+        descriptionNotes: { type: string }
+        productTypeIds:
+          type: array
+          items: { type: integer }
+
+    BankContact:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        title: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+
+    Product:
+      type: object
+      required: [id, bankId, productCode, categoryStage, status, progressPercent, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        bankId: { type: string }
+        productCode: { type: string }
+        categoryStage: { type: string }
+        status: { type: string }
+        progressPercent: { type: number }
+        dateType: { type: ["string", "null"] }
+        dateValue: { type: ["string", "null"] }
+        responsiblePerson: { type: ["string", "null"] }
+        priorityImpact: { type: ["string", "null"] }
+        descriptionNotes: { type: ["string", "null"] }
+        riskLevel: { type: ["string", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    ProductInput:
+      type: object
+      required: [bankId, productCode, categoryStage, status, progressPercent]
+      properties:
+        bankId: { type: string }
+        productCode: { type: string }
+        categoryStage: { type: string }
+        status: { type: string }
+        progressPercent: { type: number }
+        dateType: { type: string }
+        dateValue: { type: string }
+        responsiblePerson: { type: string }
+        priorityImpact: { type: string }
+        descriptionNotes: { type: string }
+        riskLevel: { type: string }
+
+    ProductUpdate:
+      type: object
+      properties:
+        productCode: { type: string }
+        categoryStage: { type: string }
+        status: { type: string }
+        progressPercent: { type: number }
+        dateType: { type: string }
+        dateValue: { type: string }
+        responsiblePerson: { type: string }
+        priorityImpact: { type: string }
+        descriptionNotes: { type: string }
+        riskLevel: { type: string }
+
+    ProductType:
+      type: object
+      required: [id, name, isActive, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    ProductTypeInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    ProductTypeUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        isActive: { type: boolean }
+
+    Meeting:
+      type: object
+      required: [id, bankId, date, topic, isArchived, createdAt]
+      properties:
+        id: { type: integer }
+        bankId: { type: string }
+        date: { type: string }
+        topic: { type: string }
+        summary: { type: ["string", "null"] }
+        attendees: { type: ["string", "null"] }
+        status: { type: ["string", "null"], description: "Planned | Completed" }
+        isArchived: { type: boolean }
+        archivedAt: { type: ["string", "null"] }
+        archivedBy: { type: ["string", "null"] }
+        updatedBy: { type: ["string", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: ["string", "null"] }
+
+    MeetingInput:
+      type: object
+      required: [bankId, date, topic]
+      properties:
+        bankId: { type: string }
+        date: { type: string }
+        topic: { type: string }
+        summary: { type: string }
+        attendees: { type: string }
+        status: { type: string }
+
+    MeetingUpdate:
+      type: object
+      properties:
+        date: { type: string }
+        topic: { type: string }
+        summary: { type: string }
+        attendees: { type: string }
+        status: { type: string }
+
+    Risk:
+      type: object
+      required: [id, bankId, description, level, status, createdAt]
+      properties:
+        id: { type: integer }
+        bankId: { type: string }
+        description: { type: string }
+        level: { type: string }
+        status: { type: string }
+        createdAt: { type: string }
+
+    RiskInput:
+      type: object
+      required: [bankId, description, level, status]
+      properties:
+        bankId: { type: string }
+        description: { type: string }
+        level: { type: string }
+        status: { type: string }
+
+    RiskUpdate:
+      type: object
+      properties:
+        description: { type: string }
+        level: { type: string }
+        status: { type: string }
+
+    ActionItem:
+      type: object
+      required: [id, bankId, description, status, createdAt]
+      properties:
+        id: { type: integer }
+        bankId: { type: string }
+        description: { type: string }
+        dueDate: { type: ["string", "null"] }
+        owner: { type: ["string", "null"] }
+        status: { type: string }
+        createdAt: { type: string }
+
+    ActionItemInput:
+      type: object
+      required: [bankId, description, status]
+      properties:
+        bankId: { type: string }
+        description: { type: string }
+        dueDate: { type: string }
+        owner: { type: string }
+        status: { type: string }
+
+    ActionItemUpdate:
+      type: object
+      properties:
+        description: { type: string }
+        dueDate: { type: string }
+        owner: { type: string }
+        status: { type: string }
+
+    Document:
+      type: object
+      required: [id, entityType, entityId, title, isArchived, createdAt]
+      properties:
+        id: { type: integer }
+        entityType: { type: string, description: "bank | product | meeting" }
+        entityId: { type: string }
+        bankId: { type: ["string", "null"], description: "Deprecated alias for entityId, populated only when entityType is 'bank'. Kept for backward compatibility." }
+        title: { type: string }
+        link: { type: ["string", "null"] }
+        docType: { type: ["string", "null"] }
+        oneDriveWebUrl: { type: ["string", "null"], description: "Link to open the file in OneDrive/SharePoint" }
+        oneDriveItemId: { type: ["string", "null"] }
+        uploadedBy: { type: ["string", "null"], description: "Display name of the user who uploaded this file" }
+        uploadedAt: { type: ["string", "null"] }
+        updatedBy: { type: ["string", "null"] }
+        isArchived: { type: boolean }
+        archivedAt: { type: ["string", "null"] }
+        archivedBy: { type: ["string", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: ["string", "null"] }
+
+    DocumentInput:
+      type: object
+      required: [title]
+      properties:
+        bankId: { type: string, description: "Deprecated -- use entityType=bank + entityId instead" }
+        entityType: { type: string, description: "bank | product | meeting" }
+        entityId: { type: string }
+        title: { type: string }
+        link: { type: string }
+        docType: { type: string }
+
+    DocumentUpload:
+      type: object
+      required: [title, fileName, fileDataBase64]
+      properties:
+        bankId: { type: string, description: "Deprecated -- use entityType=bank + entityId instead" }
+        entityType: { type: string, description: "bank | product | meeting" }
+        entityId: { type: string }
+        title: { type: string }
+        docType: { type: string }
+        fileName: { type: string }
+        fileDataBase64:
+          type: string
+          description: Base64-encoded data URL of the file contents (e.g. data:application/pdf;base64,...)
+
+    DocumentUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        docType: { type: string }
+        link: { type: string }
+
+    DashboardSummary:
+      type: object
+      required:
+        - totalBanks
+        - inProgress
+        - completed
+        - delayed
+        - notStarted
+        - upcomingMeetings
+        - highRisks
+        - statusBreakdown
+        - riskBreakdown
+        - categoryBreakdown
+        - averageProgress
+      properties:
+        totalBanks: { type: integer }
+        inProgress: { type: integer }
+        completed: { type: integer }
+        delayed: { type: integer }
+        notStarted: { type: integer }
+        upcomingMeetings: { type: integer }
+        highRisks: { type: integer }
+        averageProgress: { type: number }
+        statusBreakdown:
+          type: array
+          items:
+            type: object
+            required: [label, count]
+            properties:
+              label: { type: string }
+              count: { type: integer }
+        riskBreakdown:
+          type: array
+          items:
+            type: object
+            required: [label, count]
+            properties:
+              label: { type: string }
+              count: { type: integer }
+        categoryBreakdown:
+          type: array
+          items:
+            type: object
+            required: [label, count]
+            properties:
+              label: { type: string }
+              count: { type: integer }
+
+    ActivityEvent:
+      type: object
+      required: [id, bankId, bankNameEn, bankNameAr, type, description, date]
+      properties:
+        id: { type: string }
+        bankId: { type: string }
+        bankNameEn: { type: string }
+        bankNameAr: { type: string }
+        type: { type: string, description: "meeting | risk | action | document | product" }
+        description: { type: string }
+        date: { type: string }
+
+    Lookups:
+      type: object
+      required: [statuses, stages, products, responsiblePersons, categories]
+      properties:
+        statuses:
+          type: array
+          items: { type: string }
+        stages:
+          type: array
+          items: { type: string }
+        products:
+          type: array
+          items: { type: string }
+        responsiblePersons:
+          type: array
+          items: { type: string }
+        categories:
+          type: array
+          items: { type: string }
+
+    LookupsUpdate:
+      type: object
+      properties:
+        statuses:
+          type: array
+          items: { type: string }
+        stages:
+          type: array
+          items: { type: string }
+        products:
+          type: array
+          items: { type: string }
+        responsiblePersons:
+          type: array
+          items: { type: string }
+        categories:
+          type: array
+          items: { type: string }
+
+    AuditLogEntry:
+      type: object
+      required: [id, action, entityType, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: ["string", "null"] }
+        userName: { type: ["string", "null"] }
+        userEmail: { type: ["string", "null"] }
+        action: { type: string, description: "CREATE | UPDATE | ARCHIVE | RESTORE" }
+        entityType: { type: string, description: "bank | document | meeting | product | productType" }
+        entityId: { type: ["string", "null"] }
+        entityLabel: { type: ["string", "null"] }
+        details: {}
+        createdAt: { type: string }
+
+    AuditLogPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AuditLogEntry" }
+        total: { type: integer }
+
+    ArchiveSummary:
+      type: object
+      required: [banks, documents, meetings]
+      properties:
+        banks:
+          type: array
+          items: { $ref: "#/components/schemas/Bank" }
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/Document" }
+        meetings:
+          type: array
+          items: { $ref: "#/components/schemas/Meeting" }

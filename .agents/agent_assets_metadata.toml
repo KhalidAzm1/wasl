@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "PgCl3NOjzvEMAI-qFNaP8"
+uri = "file://export/wasl-source-code.zip"
+type = "unspecified"
+title = "WASL Platform - Source Code"

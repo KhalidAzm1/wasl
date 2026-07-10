@@ -71,7 +71,7 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
 
   return (
     <>
-      <Button variant="ghost" size="icon" className="h-6 w-6 text-white/50" title="Attach file" onClick={(e) => { e.stopPropagation(); setIsOpen(true); }}>
+      <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground/50" title="Attach file" onClick={(e) => { e.stopPropagation(); setIsOpen(true); }}>
         <Paperclip className="w-3 h-3" />
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -83,8 +83,8 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
               <UploadCloud className="w-4 h-4" /> Upload to OneDrive
             </Button>
             {uploadFile && (
-              <div className="p-3 rounded-xl bg-white/5 border border-primary/30 space-y-2">
-                <span className="text-sm text-white/70">File: {uploadFile.name}</span>
+              <div className="p-3 rounded-xl bg-foreground/5 border border-primary/30 space-y-2">
+                <span className="text-sm text-foreground/70">File: {uploadFile.name}</span>
                 <Input placeholder="Title" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} />
                 <Input placeholder="Type (Contract, Report...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} />
                 <div className="flex gap-2">
@@ -95,18 +95,18 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
             )}
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {docs.map(d => (
-                <div key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                <div key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-foreground/5 border border-foreground/10">
                   <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => { const url = d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
                     <FileText className="w-5 h-5 text-primary/70 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium truncate text-sm">{d.title}</p>
-                      {d.uploadedBy && <p className="text-xs text-white/30">Uploaded by {d.uploadedBy}</p>}
+                      {d.uploadedBy && <p className="text-xs text-foreground/30">Uploaded by {d.uploadedBy}</p>}
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400/50 shrink-0" onClick={() => deleteDoc.mutate({ id: d.id }, { onSuccess: invalidate })}><Trash2 className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50 shrink-0" onClick={() => deleteDoc.mutate({ id: d.id }, { onSuccess: invalidate })}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               ))}
-              {docs.length === 0 && <div className="py-6 text-center text-white/30 text-sm">No files attached yet</div>}
+              {docs.length === 0 && <div className="py-6 text-center text-foreground/30 text-sm">No files attached yet</div>}
             </div>
           </div>
         </DialogContent>
@@ -129,7 +129,7 @@ export default function BankDetail() {
     );
   }
 
-  if (!bank) return <div className="p-8 text-center text-white/50">Bank not found</div>;
+  if (!bank) return <div className="p-8 text-center text-foreground/50">Bank not found</div>;
 
   const avgProgress = bank.products?.length 
     ? bank.products.reduce((acc, p) => acc + p.progressPercent, 0) / bank.products.length 
@@ -139,15 +139,15 @@ export default function BankDetail() {
     <div className="p-8 pb-24 max-w-7xl mx-auto w-full space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-4 text-white/50 text-sm">
-          <Link href="/portfolio" className="hover:text-white transition-colors">Portfolio</Link>
+        <div className="flex items-center gap-4 text-foreground/50 text-sm">
+          <Link href="/portfolio" className="hover:text-foreground transition-colors">Portfolio</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">{bank.nameAr}</span>
+          <span className="text-foreground">{bank.nameAr}</span>
         </div>
         <NavControls />
       </div>
 
-      <div className="relative rounded-3xl overflow-hidden glass-panel border border-white/10 p-8 flex flex-col md:flex-row gap-8 items-start md:items-center">
+      <div className="relative rounded-3xl overflow-hidden glass-panel border border-foreground/10 p-8 flex flex-col md:flex-row gap-8 items-start md:items-center">
         {bank.heroImageUrl && (
           <div className="absolute inset-0 z-[-1] opacity-20 mix-blend-luminosity">
             <img src={bank.heroImageUrl} alt="" className="w-full h-full object-cover" />
@@ -155,34 +155,34 @@ export default function BankDetail() {
           </div>
         )}
 
-        <div className="w-24 h-24 rounded-2xl bg-white/5 border border-white/10 p-2 flex items-center justify-center shadow-xl backdrop-blur-md shrink-0">
+        <div className="w-24 h-24 rounded-2xl bg-foreground/5 border border-foreground/10 p-2 flex items-center justify-center shadow-xl backdrop-blur-md shrink-0">
           <BankLogo src={bank.logoUrl} alt={bank.nameEn} />
         </div>
 
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-white">{bank.nameAr}</h1>
-            <Badge variant="outline" className="border-white/20 bg-white/5">{bank.category}</Badge>
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-xs font-semibold ${getStatusColor(bank.status).text}`}>
+            <h1 className="text-3xl font-bold text-foreground">{bank.nameAr}</h1>
+            <Badge variant="outline" className="border-foreground/20 bg-foreground/5">{bank.category}</Badge>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-foreground/10 bg-foreground/5 text-xs font-semibold ${getStatusColor(bank.status).text}`}>
               <span className={`w-2 h-2 rounded-full shrink-0 ${getStatusColor(bank.status).dot}`} />
               {bank.status}
             </span>
             {bank.riskLevel === 'High' && <Badge variant="destructive">High Risk</Badge>}
             {bank.priorityImpact === 'HOT' && <Badge variant="warning">Top Priority</Badge>}
           </div>
-          <p className="text-white/50 text-lg">{bank.nameEn}</p>
+          <p className="text-foreground/50 text-lg">{bank.nameEn}</p>
         </div>
 
         <div className="flex gap-6 text-center shrink-0">
-          <div className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <p className="text-white/40 text-sm mb-1">Completion</p>
-            <p className="text-2xl font-bold text-emerald-400 font-mono">{formatPercentage(avgProgress)}</p>
+          <div className="px-6 py-3 rounded-xl bg-foreground/5 border border-foreground/10 backdrop-blur-md">
+            <p className="text-foreground/40 text-sm mb-1">Completion</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{formatPercentage(avgProgress)}</p>
           </div>
         </div>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full flex justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
+        <TabsList className="w-full flex justify-start border-b border-foreground/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
           <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
             Overview
           </TabsTrigger>
@@ -211,7 +211,7 @@ export default function BankDetail() {
                   <CardTitle>Executive Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/80 leading-relaxed whitespace-pre-wrap text-lg">
+                  <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap text-lg">
                     {bank.executiveSummary || 'No summary available.'}
                   </p>
                 </CardContent>
@@ -222,7 +222,7 @@ export default function BankDetail() {
                   <CardTitle>Description Notes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/70 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-foreground/70 leading-relaxed whitespace-pre-wrap">
                     {bank.descriptionNotes || 'No notes available.'}
                   </p>
                 </CardContent>
@@ -236,16 +236,16 @@ export default function BankDetail() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-sm text-white/40 mb-1">Responsible Person</p>
+                    <p className="text-sm text-foreground/40 mb-1">Responsible Person</p>
                     <p className="font-medium">{bank.responsiblePerson || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-white/40 mb-1">Relationship Manager</p>
+                    <p className="text-sm text-foreground/40 mb-1">Relationship Manager</p>
                     <p className="font-medium">{bank.relationshipManager || '-'}</p>
                   </div>
                   {bank.email && (
                     <div>
-                      <p className="text-sm text-white/40 mb-1">Email</p>
+                      <p className="text-sm text-foreground/40 mb-1">Email</p>
                       <a href={`mailto:${bank.email}`} className="font-medium text-primary hover:underline" dir="ltr">
                         {bank.email}
                       </a>
@@ -253,24 +253,24 @@ export default function BankDetail() {
                   )}
                   {bank.website && (
                     <div>
-                      <p className="text-sm text-white/40 mb-1">Website</p>
+                      <p className="text-sm text-foreground/40 mb-1">Website</p>
                       <a href={bank.website} target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1" dir="ltr">
                         {bank.website} <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   )}
                   <div>
-                    <p className="text-sm text-white/40 mb-1">Last Meeting Date</p>
+                    <p className="text-sm text-foreground/40 mb-1">Last Meeting Date</p>
                     <p className="font-medium">{formatDate(bank.lastMeetingDate)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-white/40 mb-1">Next Meeting</p>
+                    <p className="text-sm text-foreground/40 mb-1">Next Meeting</p>
                     <p className="font-medium">{formatDate(bank.nextMeetingDate)}</p>
-                    {bank.nextMeetingTopic && <p className="text-sm text-white/60 mt-1">{bank.nextMeetingTopic}</p>}
+                    {bank.nextMeetingTopic && <p className="text-sm text-foreground/60 mt-1">{bank.nextMeetingTopic}</p>}
                   </div>
                   {bank.referenceLink && (
                     <div>
-                      <p className="text-sm text-white/40 mb-1">Reference Link</p>
+                      <p className="text-sm text-foreground/40 mb-1">Reference Link</p>
                       <a href={bank.referenceLink} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
                         Open Link <ExternalLink className="w-3 h-3" />
                       </a>
@@ -289,9 +289,9 @@ export default function BankDetail() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {bank.contacts.map((contact, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-white/5 border border-white/10">
+                      <div key={idx} className="p-3 rounded-xl bg-foreground/5 border border-foreground/10">
                         <p className="font-medium">{contact.name}</p>
-                        {contact.title && <p className="text-sm text-white/50">{contact.title}</p>}
+                        {contact.title && <p className="text-sm text-foreground/50">{contact.title}</p>}
                         {contact.phone && (
                           <a href={`tel:${contact.phone}`} className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline" dir="ltr">
                             <Phone className="w-3 h-3" />
@@ -386,14 +386,14 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map(p => (
-          <Card key={p.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all">
+          <Card key={p.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all">
             <CardContent className="p-5 flex flex-col h-full">
               <div className="flex justify-between items-start mb-3">
                 <Badge variant="outline">{p.productCode}</Badge>
                 <div className="flex gap-1">
                   <EntityAttachmentsButton entityType="product" entityId={p.id} label={p.productCode} />
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white/50" onClick={() => { setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400/50" onClick={() => {
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground/50" onClick={() => { setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => {
                     if (confirm('Confirm deletion?')) {
                       deleteProduct.mutate({ id: p.id }, {
                         onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) })
@@ -408,24 +408,24 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                 {p.status}
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-white/70 mb-4">
+              <div className="flex items-center gap-2 text-sm text-foreground/70 mb-4">
                 <User className="w-3.5 h-3.5 text-primary shrink-0" />
                 <span className="truncate">{p.responsiblePerson || 'Unassigned'}</span>
               </div>
 
               <div className="mt-auto pt-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-white/60">Progress</span>
+                  <span className="text-foreground/60">Progress</span>
                   <span className="font-mono">{formatPercentage(p.progressPercent)}</span>
                 </div>
-                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-foreground/10 rounded-full h-2 overflow-hidden">
                   <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${p.progressPercent * 100}%` }} />
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
-        {products.length === 0 && <div className="col-span-full py-8 text-center text-white/30">No products recorded</div>}
+        {products.length === 0 && <div className="col-span-full py-8 text-center text-foreground/30">No products recorded</div>}
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -470,20 +470,20 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
       </div>
       <div className="space-y-4">
         {meetings.map(m => (
-          <div key={m.id} className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col md:flex-row gap-4">
-            <div className="md:w-48 shrink-0 text-white/60">
+          <div key={m.id} className="p-4 rounded-xl bg-foreground/5 border border-foreground/10 flex flex-col md:flex-row gap-4">
+            <div className="md:w-48 shrink-0 text-foreground/60">
               {formatDate(m.date)}
             </div>
             <div className="flex-1">
               <h4 className="font-bold text-lg">{m.topic}</h4>
-              <p className="text-white/70 mt-1">{m.summary || 'No summary available'}</p>
+              <p className="text-foreground/70 mt-1">{m.summary || 'No summary available'}</p>
               {m.updatedBy && (
-                <p className="text-xs text-white/30 mt-2">Last updated by {m.updatedBy}{m.updatedAt ? ` — ${formatDateTime(m.updatedAt)}` : ''}</p>
+                <p className="text-xs text-foreground/30 mt-2">Last updated by {m.updatedBy}{m.updatedAt ? ` — ${formatDateTime(m.updatedAt)}` : ''}</p>
               )}
             </div>
             <div className="flex items-start gap-1 shrink-0">
               <EntityAttachmentsButton entityType="meeting" entityId={m.id} label={m.topic} />
-              <Button variant="ghost" size="icon" className="text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}>
+              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -531,17 +531,17 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {actionItems.map(a => (
-          <Card key={a.id} className="bg-white/5 border-white/10">
+          <Card key={a.id} className="bg-foreground/5 border-foreground/10">
             <CardContent className="p-5">
               <div className="flex justify-between items-start mb-2">
                 <Badge variant={a.status === 'Completed' ? 'success' : 'outline'}>{a.status}</Badge>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditing(a); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400/50" onClick={() => deleteAction.mutate({ id: a.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}><Trash2 className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => deleteAction.mutate({ id: a.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               </div>
               <p className="text-lg mb-4">{a.description}</p>
-              <div className="flex justify-between text-sm text-white/50">
+              <div className="flex justify-between text-sm text-foreground/50">
                 <span>{a.owner || 'Unassigned'}</span>
                 <span>{formatDate(a.dueDate)}</span>
               </div>
@@ -556,7 +556,7 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
             <Textarea placeholder="Description" value={editing?.description || ''} onChange={e => setEditing({...editing, description: e.target.value})} />
             <Input placeholder="Owner" value={editing?.owner || ''} onChange={e => setEditing({...editing, owner: e.target.value})} />
             <Input type="date" value={editing?.dueDate || ''} onChange={e => setEditing({...editing, dueDate: e.target.value})} />
-            <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})}>
+            <select className="flex h-10 w-full rounded-md border border-foreground/10 bg-card px-3 py-2 text-sm text-foreground" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})}>
               <option value="Pending">Pending</option>
               <option value="Completed">Completed</option>
             </select>
@@ -590,15 +590,15 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
       </div>
       <div className="space-y-4">
         {risks.map(r => (
-          <div key={r.id} className="p-4 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center">
+          <div key={r.id} className="p-4 rounded-xl bg-foreground/5 border border-foreground/10 flex justify-between items-center">
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <Badge variant={r.level === 'High' ? 'destructive' : r.level === 'Medium' ? 'warning' : 'success'}>{r.level}</Badge>
-                <span className="text-sm text-white/50">{r.status}</span>
+                <span className="text-sm text-foreground/50">{r.status}</span>
               </div>
               <p className="text-lg">{r.description}</p>
             </div>
-            <Button variant="ghost" size="icon" className="text-red-400/50" onClick={() => deleteRisk.mutate({ id: r.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={() => deleteRisk.mutate({ id: r.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}><Trash2 className="w-4 h-4" /></Button>
           </div>
         ))}
       </div>
@@ -607,7 +607,7 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
           <DialogHeader><DialogTitle>Add Risk</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <Textarea placeholder="Description" value={editing?.description || ''} onChange={e => setEditing({...editing, description: e.target.value})} />
-            <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white" value={editing?.level || 'Medium'} onChange={e => setEditing({...editing, level: e.target.value})}>
+            <select className="flex h-10 w-full rounded-md border border-foreground/10 bg-card px-3 py-2 text-sm text-foreground" value={editing?.level || 'Medium'} onChange={e => setEditing({...editing, level: e.target.value})}>
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
@@ -679,8 +679,8 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
       </div>
 
       {uploadFile && (
-        <div className="p-4 rounded-xl bg-white/5 border border-primary/30 flex flex-col md:flex-row gap-3 md:items-center">
-          <span className="text-sm text-white/70 shrink-0">File: {uploadFile.name}</span>
+        <div className="p-4 rounded-xl bg-foreground/5 border border-primary/30 flex flex-col md:flex-row gap-3 md:items-center">
+          <span className="text-sm text-foreground/70 shrink-0">File: {uploadFile.name}</span>
           <Input placeholder="Document Title" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} className="max-w-xs" />
           <Input placeholder="Document Type (Contract, Report...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} className="max-w-xs" />
           <div className="flex gap-2 md:ml-auto">
@@ -692,25 +692,25 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {documents.map(d => (
-          <Card key={d.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all cursor-pointer" onClick={() => { const url = d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
+          <Card key={d.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all cursor-pointer" onClick={() => { const url = d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
             <CardContent className="p-5 flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <FileText className="w-8 h-8 text-primary/70 shrink-0" />
                 <div className="min-w-0">
                   <h4 className="font-bold truncate">{d.title}</h4>
-                  <p className="text-sm text-white/50">{d.docType}</p>
+                  <p className="text-sm text-foreground/50">{d.docType}</p>
                   {(d.uploadedBy || d.updatedBy) && (
-                    <p className="text-xs text-white/30 mt-1">
+                    <p className="text-xs text-foreground/30 mt-1">
                       {d.oneDriveItemId ? 'Uploaded by' : 'Added by'} {d.uploadedBy || d.updatedBy}
                     </p>
                   )}
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="text-red-400/50 shrink-0" onClick={(e) => { e.stopPropagation(); deleteDoc.mutate({ id: d.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) }); }}><Trash2 className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50 shrink-0" onClick={(e) => { e.stopPropagation(); deleteDoc.mutate({ id: d.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) }); }}><Trash2 className="w-4 h-4" /></Button>
             </CardContent>
           </Card>
         ))}
-        {documents.length === 0 && <div className="col-span-full py-8 text-center text-white/30">No documents recorded</div>}
+        {documents.length === 0 && <div className="col-span-full py-8 text-center text-foreground/30">No documents recorded</div>}
       </div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent dir="ltr">

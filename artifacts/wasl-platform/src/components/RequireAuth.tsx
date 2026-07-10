@@ -19,7 +19,7 @@ export function RequireAuth({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-white/60">
+      <div className="flex items-center justify-center min-h-[60vh] text-foreground/60">
         Checking session...
       </div>
     );
@@ -35,7 +35,7 @@ export function RequireAuth({
 
   if (roles && (!role || !roles.includes(role))) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-white/60">
+      <div className="flex items-center justify-center min-h-[60vh] text-foreground/60">
         You don't have permission to access this page.
       </div>
     );

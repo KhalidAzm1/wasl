@@ -68,10 +68,10 @@ export default function Security() {
   const actionLabel: Record<string, string> = { CREATE: 'Created', UPDATE: 'Updated', ARCHIVE: 'Archived', RESTORE: 'Restored' };
   const entityLabel: Record<string, string> = { bank: 'Bank', document: 'Document', meeting: 'Meeting', product: 'Product', productType: 'Product Type', actionItem: 'Action Item', risk: 'Risk' };
   const actionColor: Record<string, string> = {
-    CREATE: 'bg-emerald-500/20 text-emerald-400',
+    CREATE: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
     UPDATE: 'bg-primary/20 text-primary',
-    ARCHIVE: 'bg-red-500/20 text-red-400',
-    RESTORE: 'bg-yellow-500/20 text-yellow-400',
+    ARCHIVE: 'bg-red-500/20 text-red-600 dark:text-red-400',
+    RESTORE: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400',
   };
 
   const items = data?.items || [];
@@ -84,7 +84,7 @@ export default function Security() {
             <ShieldCheck className="w-8 h-8 text-primary" />
             Security & Activity
           </h1>
-          <p className="text-white/50 text-lg">System-wide audit trail and security access</p>
+          <p className="text-foreground/50 text-lg">System-wide audit trail and security access</p>
         </div>
         <NavControls />
       </header>
@@ -92,8 +92,8 @@ export default function Security() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Audit Log column */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-white/5 border-white/10 overflow-hidden">
-            <CardHeader className="border-b border-white/10 bg-black/20 pb-4">
+          <Card className="bg-foreground/5 border-foreground/10 overflow-hidden">
+            <CardHeader className="border-b border-foreground/10 bg-foreground/5 pb-4">
               <CardTitle className="text-xl">Activity Audit Log</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -107,36 +107,36 @@ export default function Security() {
                     <div key={entry.id}>
                       <button
                         type="button"
-                        className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left hover:bg-white/5 transition-colors"
+                        className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left hover:bg-foreground/5 transition-colors"
                         onClick={() => hasDetails && setExpandedId(isExpanded ? null : entry.id)}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${actionColor[entry.action] || 'bg-white/10 text-white/60'}`}>
+                          <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${actionColor[entry.action] || 'bg-foreground/10 text-foreground/60'}`}>
                             {actionLabel[entry.action] || entry.action}
                           </span>
                           <div className="min-w-0">
-                            <p className="font-medium text-white truncate">
+                            <p className="font-medium text-foreground truncate">
                               {entityLabel[entry.entityType] || entry.entityType}
                               {entry.entityLabel ? ` — ${entry.entityLabel}` : ''}
                             </p>
-                            <p className="text-sm text-white/40 truncate">{entry.userName || entry.userEmail || 'Unknown user'}</p>
+                            <p className="text-sm text-foreground/40 truncate">{entry.userName || entry.userEmail || 'Unknown user'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-sm text-white/60 font-mono">{formatDateTime(entry.createdAt)}</span>
+                          <span className="text-sm text-foreground/60 font-mono">{formatDateTime(entry.createdAt)}</span>
                           {hasDetails && (
-                            <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-4 h-4 text-foreground/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                           )}
                         </div>
                       </button>
                       
                       {isExpanded && details && (
-                        <div className="px-6 pb-4 -mt-1 bg-white/[0.02]">
-                          <div className="rounded-lg bg-black/20 border border-white/10 p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-2">
+                        <div className="px-6 pb-4 -mt-1 bg-foreground/[0.02]">
+                          <div className="rounded-lg bg-foreground/5 border border-foreground/10 p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-2">
                             {Object.entries(details).map(([key, value]) => (
                               <div key={key} className="flex justify-between gap-4 text-sm">
-                                <span className="text-white/40">{FIELD_LABELS[key] || key}</span>
-                                <span className="text-white/80 truncate font-mono text-xs mt-0.5" title={String(value)}>{formatDetailValue(value)}</span>
+                                <span className="text-foreground/40">{FIELD_LABELS[key] || key}</span>
+                                <span className="text-foreground/80 truncate font-mono text-xs mt-0.5" title={String(value)}>{formatDetailValue(value)}</span>
                               </div>
                             ))}
                           </div>
@@ -146,7 +146,7 @@ export default function Security() {
                   );
                 })}
                 {items.length === 0 && (
-                  <div className="py-12 text-center text-white/30">No updates recorded yet</div>
+                  <div className="py-12 text-center text-foreground/30">No updates recorded yet</div>
                 )}
               </div>
             </CardContent>
@@ -162,14 +162,14 @@ export default function Security() {
                 Two-Factor Protection
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-white/80 leading-relaxed">
+            <CardContent className="space-y-4 text-sm text-foreground/80 leading-relaxed">
               <p>
-                Access to the <strong className="text-white">User Management</strong> portal is protected by an additional PIN-gated second factor.
+                Access to the <strong className="text-foreground">User Management</strong> portal is protected by an additional PIN-gated second factor.
               </p>
-              <p className="text-white/60">
+              <p className="text-foreground/60">
                 This ensures that even if an administrator's primary session is compromised, critical user management functions remain secure.
               </p>
-              <div className="p-3 bg-black/40 rounded-lg border border-white/10 text-white/50 text-xs">
+              <div className="p-3 bg-background/60 rounded-lg border border-foreground/10 text-foreground/50 text-xs">
                 The PIN token is short-lived and cryptographically verified on every API request. It cannot be bypassed from the client side.
               </div>
             </CardContent>

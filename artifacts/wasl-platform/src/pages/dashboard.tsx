@@ -43,7 +43,7 @@ function ProgressRing({ progress, size = 48, strokeWidth = 4 }: { progress: numb
           stroke="currentColor"
           strokeWidth={strokeWidth}
           fill="none"
-          className="text-white/10"
+          className="text-foreground/10"
         />
         <motion.circle
           cx={size / 2}
@@ -57,11 +57,11 @@ function ProgressRing({ progress, size = 48, strokeWidth = 4 }: { progress: numb
           animate={{ strokeDashoffset: offset }}
           transition={{ duration: 1.5, ease: "easeOut", delay: 0.1 }}
           strokeLinecap="round"
-          className="text-[#00e5ff] drop-shadow-[0_0_6px_rgba(0,229,255,0.6)]"
+          className="text-primary drop-shadow-[0_0_6px_rgba(79,50,214,0.6)]"
         />
       </svg>
-      <div className="absolute text-[10px] font-mono font-bold text-white drop-shadow-md flex items-baseline">
-        {Math.round(progress)}<span className="text-[8px] text-white/60 ml-[1px]">%</span>
+      <div className="absolute text-[10px] font-mono font-bold text-foreground drop-shadow-md flex items-baseline">
+        {Math.round(progress)}<span className="text-[8px] text-foreground/60 ml-[1px]">%</span>
       </div>
     </div>
   );
@@ -75,10 +75,10 @@ function CategoryFilter({ categories, value, onChange }: { categories: string[],
       <button 
         onClick={() => setOpen(!open)} 
         className={cn(
-          "flex items-center gap-2 h-[42px] px-4 rounded-xl border text-sm transition-all backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#00e5ff]/50",
+          "flex items-center gap-2 h-[42px] px-4 rounded-xl border text-sm transition-all backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-primary/50",
           open 
-            ? "bg-[#00e5ff]/10 border-[#00e5ff]/40 text-white shadow-[0_0_15px_-3px_rgba(0,229,255,0.3)]" 
-            : "bg-white/5 border-white/10 text-white/80 hover:text-white hover:bg-white/10 hover:border-white/20"
+            ? "bg-primary/10 border-primary/40 text-foreground shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
+            : "bg-foreground/5 border-foreground/10 text-foreground/80 hover:text-foreground hover:bg-foreground/10 hover:border-foreground/20"
         )}
       >
         <span className="max-w-[120px] truncate">{value === 'All' ? 'All Categories' : value}</span>
@@ -88,17 +88,17 @@ function CategoryFilter({ categories, value, onChange }: { categories: string[],
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-2 w-[260px] z-50 bg-[#050816]/95 backdrop-blur-3xl border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute top-full left-0 mt-2 w-[260px] z-50 bg-background/95 backdrop-blur-3xl border border-foreground/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
              <Command className="w-full bg-transparent flex flex-col">
-               <div className="flex items-center border-b border-white/10 px-3" cmdk-input-wrapper="">
-                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-white/50" />
+               <div className="flex items-center border-b border-foreground/10 px-3" cmdk-input-wrapper="">
+                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-foreground/50" />
                  <Command.Input 
                    placeholder="Search category..." 
-                   className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-white/40 disabled:cursor-not-allowed disabled:opacity-50 text-white" 
+                   className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-foreground/40 disabled:cursor-not-allowed disabled:opacity-50 text-foreground" 
                  />
                </div>
                <Command.List className="max-h-[240px] overflow-y-auto p-1 hide-scrollbar">
-                 <Command.Empty className="py-4 text-center text-xs text-white/40">No categories found.</Command.Empty>
+                 <Command.Empty className="py-4 text-center text-xs text-foreground/40">No categories found.</Command.Empty>
                  {categories.map(cat => (
                    <Command.Item 
                      key={cat} 
@@ -109,8 +109,8 @@ function CategoryFilter({ categories, value, onChange }: { categories: string[],
                        setOpen(false); 
                      }}
                      className={cn(
-                       "relative flex cursor-pointer select-none items-center rounded-lg px-3 py-2 text-sm outline-none aria-selected:bg-white/10 transition-colors",
-                       value === cat ? "bg-[#00e5ff]/15 text-[#00e5ff] font-medium" : "text-white/80 hover:bg-white/5 hover:text-white"
+                       "relative flex cursor-pointer select-none items-center rounded-lg px-3 py-2 text-sm outline-none aria-selected:bg-foreground/10 transition-colors",
+                       value === cat ? "bg-primary/15 text-primary font-medium" : "text-foreground/80 hover:bg-foreground/5 hover:text-foreground"
                      )}
                    >
                      {cat === 'All' ? 'All Categories' : cat}
@@ -145,11 +145,11 @@ function AdvancedFiltersPanel({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px] bg-[#050816]/90 backdrop-blur-3xl border-white/10 text-white !rounded-3xl shadow-[0_0_50px_-12px_rgba(0,229,255,0.15)]">
-        <DialogHeader className="border-b border-white/5 pb-4">
+      <DialogContent className="sm:max-w-[420px] bg-background/90 backdrop-blur-3xl border-foreground/10 text-foreground !rounded-3xl shadow-[0_0_50px_-12px_rgba(79,50,214,0.15)]">
+        <DialogHeader className="border-b border-foreground/5 pb-4">
           <DialogTitle className="text-xl font-light tracking-wide flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/20">
-              <SlidersHorizontal className="w-5 h-5 text-[#00e5ff]" />
+            <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
+              <SlidersHorizontal className="w-5 h-5 text-primary" />
             </div>
             Advanced Filters
           </DialogTitle>
@@ -159,9 +159,9 @@ function AdvancedFiltersPanel({
           {/* Category Filter */}
           <div className="space-y-3.5">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] uppercase tracking-[0.2em] text-white/50 font-bold">Category</label>
+              <label className="text-[11px] uppercase tracking-[0.2em] text-foreground/50 font-bold">Category</label>
               {filterCategory !== 'All' && (
-                <button onClick={() => setFilterCategory('All')} className="text-[10px] text-[#00e5ff] hover:text-white transition-colors">CLEAR</button>
+                <button onClick={() => setFilterCategory('All')} className="text-[10px] text-primary hover:text-foreground transition-colors">CLEAR</button>
               )}
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -172,8 +172,8 @@ function AdvancedFiltersPanel({
                    className={cn(
                      "px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-center truncate",
                      filterCategory === c 
-                       ? "bg-[#00e5ff]/15 text-[#00e5ff] border border-[#00e5ff]/30 shadow-[0_0_15px_-3px_rgba(0,229,255,0.2)]" 
-                       : "bg-white/5 text-white/70 border border-white/5 hover:bg-white/10 hover:text-white"
+                       ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_15px_-3px_rgba(79,50,214,0.2)]" 
+                       : "bg-foreground/5 text-foreground/70 border border-foreground/5 hover:bg-foreground/10 hover:text-foreground"
                    )}
                  >
                    {c === 'All' ? 'All' : c}
@@ -185,9 +185,9 @@ function AdvancedFiltersPanel({
           {/* Risk Level Filter */}
           <div className="space-y-3.5">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] uppercase tracking-[0.2em] text-white/50 font-bold">Risk Level</label>
+              <label className="text-[11px] uppercase tracking-[0.2em] text-foreground/50 font-bold">Risk Level</label>
               {filterRisk !== 'All' && (
-                <button onClick={() => setFilterRisk('All')} className="text-[10px] text-[#00e5ff] hover:text-white transition-colors">CLEAR</button>
+                <button onClick={() => setFilterRisk('All')} className="text-[10px] text-primary hover:text-foreground transition-colors">CLEAR</button>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -198,8 +198,8 @@ function AdvancedFiltersPanel({
                     className={cn(
                       "px-5 py-2.5 rounded-xl text-xs font-medium transition-all",
                       filterRisk === r 
-                        ? "bg-[#00e5ff]/15 text-[#00e5ff] border border-[#00e5ff]/30 shadow-[0_0_15px_-3px_rgba(0,229,255,0.2)]" 
-                        : "bg-white/5 text-white/70 border border-white/5 hover:bg-white/10 hover:text-white"
+                        ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_15px_-3px_rgba(79,50,214,0.2)]" 
+                        : "bg-foreground/5 text-foreground/70 border border-foreground/5 hover:bg-foreground/10 hover:text-foreground"
                     )}
                   >{r}</button>
                ))}
@@ -207,8 +207,8 @@ function AdvancedFiltersPanel({
           </div>
 
         </div>
-        <div className="pt-4 border-t border-white/5 flex justify-end">
-          <Button onClick={() => onOpenChange(false)} className="bg-[#00e5ff] text-black hover:bg-[#00e5ff]/80 font-semibold rounded-xl px-8 transition-colors shadow-[0_0_15px_-3px_rgba(0,229,255,0.4)]">
+        <div className="pt-4 border-t border-foreground/5 flex justify-end">
+          <Button onClick={() => onOpenChange(false)} className="bg-primary text-primary-foreground hover:bg-primary/80 font-semibold rounded-xl px-8 transition-colors shadow-[0_0_15px_-3px_rgba(79,50,214,0.4)]">
             Apply Filters
           </Button>
         </div>
@@ -223,14 +223,14 @@ function KpiButton({ label, value, colorClass, active, onClick }: { label: strin
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "relative overflow-hidden flex flex-col text-left rounded-2xl px-5 py-3.5 shrink-0 min-w-[140px] md:w-auto transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e5ff]/70",
+        "relative overflow-hidden flex flex-col text-left rounded-2xl px-5 py-3.5 shrink-0 min-w-[140px] md:w-auto transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
         active 
-          ? "bg-white/10 border border-[#00e5ff]/40 shadow-[0_0_30px_-5px_rgba(0,229,255,0.25)]" 
-          : "bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 backdrop-blur-xl"
+          ? "bg-foreground/10 border border-primary/40 shadow-[0_0_30px_-5px_rgba(79,50,214,0.25)]" 
+          : "bg-foreground/5 border border-foreground/5 hover:bg-foreground/10 hover:border-foreground/10 backdrop-blur-xl"
       )}
     >
       {active && <div className="absolute inset-0 bg-gradient-to-b from-[#00e5ff]/10 to-transparent pointer-events-none" />}
-      <span className="relative z-10 text-white/50 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] mb-1.5">{label}</span>
+      <span className="relative z-10 text-foreground/50 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] mb-1.5">{label}</span>
       <AnimatePresence mode="popLayout">
         <motion.span
           key={value}
@@ -240,7 +240,7 @@ function KpiButton({ label, value, colorClass, active, onClick }: { label: strin
           transition={{ duration: 0.3 }}
           className={cn(
             "relative z-10 text-2xl md:text-3xl font-mono font-light tracking-tight",
-            active ? "text-[#00e5ff] drop-shadow-[0_0_8px_rgba(0,229,255,0.6)]" : colorClass
+            active ? "text-primary drop-shadow-[0_0_8px_rgba(79,50,214,0.6)]" : colorClass
           )}
         >
           {value}
@@ -268,8 +268,8 @@ export default function Dashboard() {
   if (isLoadingSummary || isLoadingBanks || isLoadingProducts) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-6">
-        <div className="w-16 h-16 border-4 border-[#00e5ff] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_-3px_rgba(0,229,255,0.5)]"></div>
-        <div className="text-white/50 text-xl font-light tracking-widest uppercase">Initializing...</div>
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_-3px_rgba(79,50,214,0.5)]"></div>
+        <div className="text-foreground/50 text-xl font-light tracking-widest uppercase">Initializing...</div>
       </div>
     );
   }
@@ -336,37 +336,37 @@ export default function Dashboard() {
   return (
     <div className="min-h-full flex flex-col w-full overflow-x-hidden">
       
-      <div className="sticky top-0 z-40 bg-[#050816]/80 backdrop-blur-3xl border-b border-white/5 px-8 py-8 flex flex-col items-center gap-7 shadow-2xl">
+      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-3xl border-b border-foreground/5 px-8 py-8 flex flex-col items-center gap-7 shadow-2xl">
         <div className="flex flex-col items-center gap-2 text-center">
            <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto drop-shadow-md" />
-           <p className="text-[11px] text-white/40 uppercase tracking-[0.2em] font-medium">Banking Intelligence Platform</p>
+           <p className="text-[11px] text-foreground/40 uppercase tracking-[0.2em] font-medium">Banking Intelligence Platform</p>
         </div>
 
         <div className="flex md:flex-wrap items-center justify-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0 w-full">
-          <KpiButton label="Total Banks" value={summary.totalBanks} colorClass="text-white" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="In Progress" value={summary.inProgress} colorClass="text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="Completed" value={summary.completed} colorClass="text-emerald-400" active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="Delayed" value={summary.delayed} colorClass="text-red-400" active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="High Risk" value={highRiskBankCount} colorClass="text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
+          <KpiButton label="Total Banks" value={summary.totalBanks} colorClass="text-foreground" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="In Progress" value={summary.inProgress} colorClass="text-yellow-600 dark:text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="Completed" value={summary.completed} colorClass="text-emerald-600 dark:text-emerald-400" active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="Delayed" value={summary.delayed} colorClass="text-red-600 dark:text-red-400" active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="High Risk" value={highRiskBankCount} colorClass="text-red-600 dark:text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
         </div>
       </div>
 
       {(kpiFilter !== 'all' || filterCategory !== 'All' || filterRisk !== 'All' || searchQuery !== '') && (
         <div className="px-8 md:px-10 max-w-[1920px] mx-auto w-full -mb-4 pt-6">
           <div className="flex flex-wrap items-center gap-3">
-             <span className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-bold">Active Filters:</span>
-             {kpiFilter !== 'all' && <span className="text-[11px] font-medium bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(0,229,255,0.2)]">Status: {kpiFilter}</span>}
-             {filterCategory !== 'All' && <span className="text-[11px] font-medium bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(0,229,255,0.2)]">Category: {filterCategory}</span>}
-             {filterRisk !== 'All' && <span className="text-[11px] font-medium bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(0,229,255,0.2)]">Risk: {filterRisk}</span>}
-             {searchQuery !== '' && <span className="text-[11px] font-medium bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(0,229,255,0.2)]">Search: {searchQuery}</span>}
+             <span className="text-[10px] text-foreground/40 uppercase tracking-[0.2em] font-bold">Active Filters:</span>
+             {kpiFilter !== 'all' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Status: {kpiFilter}</span>}
+             {filterCategory !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Category: {filterCategory}</span>}
+             {filterRisk !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Risk: {filterRisk}</span>}
+             {searchQuery !== '' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Search: {searchQuery}</span>}
 
              <button
                onClick={() => { setKpiFilter('all'); setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); }}
-               className="text-[11px] font-medium text-white/50 hover:text-[#00e5ff] transition-colors ml-1 px-2"
+               className="text-[11px] font-medium text-foreground/50 hover:text-primary transition-colors ml-1 px-2"
              >
                Clear All
              </button>
@@ -381,13 +381,13 @@ export default function Dashboard() {
           <div className="flex flex-wrap md:flex-nowrap items-center gap-3 w-full xl:w-auto">
             {/* Search */}
             <div className="relative group w-full md:w-[320px] shrink-0">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-[#00e5ff] transition-colors" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-primary transition-colors" />
               <input 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search banks, people..."
                 aria-label="Search banks, people..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 h-[42px] text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#00e5ff]/30 focus:border-[#00e5ff]/50 transition-all backdrop-blur-md shadow-inner"
+                className="w-full bg-foreground/5 border border-foreground/10 rounded-xl pl-10 pr-4 h-[42px] text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all backdrop-blur-md shadow-inner"
               />
             </div>
 
@@ -399,20 +399,20 @@ export default function Dashboard() {
               onClick={() => setIsAdvancedFilterOpen(true)}
               aria-label="Open advanced filters"
               className={cn(
-                "flex items-center justify-center w-[42px] h-[42px] rounded-xl transition-all backdrop-blur-md shrink-0 focus:outline-none focus:ring-2 focus:ring-[#00e5ff]/50",
+                "flex items-center justify-center w-[42px] h-[42px] rounded-xl transition-all backdrop-blur-md shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50",
                 filterRisk !== 'All' 
-                  ? "bg-[#00e5ff]/20 border border-[#00e5ff]/50 text-[#00e5ff] shadow-[0_0_15px_-3px_rgba(0,229,255,0.3)]" 
-                  : "bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-[#00e5ff]/40 hover:bg-[#00e5ff]/10"
+                  ? "bg-primary/20 border border-primary/50 text-primary shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
+                  : "bg-foreground/5 border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-primary/40 hover:bg-primary/10"
               )}
             >
               <SlidersHorizontal className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex items-center p-1 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md shrink-0 w-max xl:w-auto">
-            <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-[#00e5ff]/20 text-[#00e5ff] shadow-sm" : "text-white/50 hover:text-white hover:bg-white/10")}><LayoutGrid className="w-4 h-4" /></button>
-            <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-[#00e5ff]/20 text-[#00e5ff] shadow-sm" : "text-white/50 hover:text-white hover:bg-white/10")}><List className="w-4 h-4" /></button>
-            <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'kanban' ? "bg-[#00e5ff]/20 text-[#00e5ff] shadow-sm" : "text-white/50 hover:text-white hover:bg-white/10")}><Columns3 className="w-4 h-4" /></button>
+          <div className="flex items-center p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0 w-max xl:w-auto">
+            <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary shadow-sm" : "text-foreground/50 hover:text-foreground hover:bg-foreground/10")}><LayoutGrid className="w-4 h-4" /></button>
+            <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary shadow-sm" : "text-foreground/50 hover:text-foreground hover:bg-foreground/10")}><List className="w-4 h-4" /></button>
+            <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'kanban' ? "bg-primary/20 text-primary shadow-sm" : "text-foreground/50 hover:text-foreground hover:bg-foreground/10")}><Columns3 className="w-4 h-4" /></button>
           </div>
         </div>
 
@@ -429,10 +429,10 @@ export default function Dashboard() {
         {/* Main Content Area */}
         <AnimatePresence mode="wait">
           {filteredBanks.length === 0 ? (
-            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-32 flex flex-col items-center justify-center gap-4 text-white/30 text-center">
-               <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shadow-lg"><Search className="w-6 h-6 text-white/20" /></div>
+            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-32 flex flex-col items-center justify-center gap-4 text-foreground/30 text-center">
+               <div className="w-16 h-16 rounded-full bg-foreground/5 border border-foreground/10 flex items-center justify-center shadow-lg"><Search className="w-6 h-6 text-foreground/20" /></div>
                <p className="text-xl font-light tracking-wide mt-2">No matching records found.</p>
-               <button onClick={() => { setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); setKpiFilter('all'); }} className="text-[#00e5ff] text-sm hover:underline mt-2">Clear all filters</button>
+               <button onClick={() => { setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); setKpiFilter('all'); }} className="text-primary text-sm hover:underline mt-2">Clear all filters</button>
             </motion.div>
           ) : viewMode === 'kanban' ? (
             <motion.div 
@@ -445,12 +445,12 @@ export default function Dashboard() {
                  if (columnBanks.length === 0) return null;
                  return (
                    <div key={status} className="w-[320px] xl:w-[340px] flex-shrink-0 snap-center flex flex-col gap-4">
-                     <div className="flex items-center justify-between px-2 pb-2 border-b border-white/5">
+                     <div className="flex items-center justify-between px-2 pb-2 border-b border-foreground/5">
                        <div className="flex items-center gap-2.5">
                          <span className={`w-2 h-2 rounded-full ${getStatusColor(status).dot} shadow-[0_0_8px_currentColor]`} />
-                         <h3 className="text-sm font-bold text-white tracking-wide">{status}</h3>
+                         <h3 className="text-sm font-bold text-foreground tracking-wide">{status}</h3>
                        </div>
-                       <span className="text-[10px] font-mono font-bold text-white/50 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">{columnBanks.length}</span>
+                       <span className="text-[10px] font-mono font-bold text-foreground/50 bg-foreground/5 border border-foreground/10 px-2 py-0.5 rounded-full">{columnBanks.length}</span>
                      </div>
                      <div className="flex flex-col gap-3">
                        {columnBanks.map(bank => (
@@ -539,11 +539,11 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] bg-[#050816]/95 backdrop-blur-3xl border-white/10 text-white max-h-[85vh] overflow-y-auto !rounded-3xl shadow-[0_0_50px_-12px_rgba(0,229,255,0.15)]" dir="ltr" onClick={e => e.stopPropagation()}>
-        <DialogHeader className="border-b border-white/5 pb-4">
+      <DialogContent className="sm:max-w-[650px] bg-background/95 backdrop-blur-3xl border-foreground/10 text-foreground max-h-[85vh] overflow-y-auto !rounded-3xl shadow-[0_0_50px_-12px_rgba(79,50,214,0.15)]" dir="ltr" onClick={e => e.stopPropagation()}>
+        <DialogHeader className="border-b border-foreground/5 pb-4">
           <DialogTitle className="flex items-center gap-3 text-xl font-light tracking-wide">
-             <div className="p-2 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/20">
-               <Pencil className="w-4 h-4 text-[#00e5ff]" />
+             <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
+               <Pencil className="w-4 h-4 text-primary" />
              </div>
              Edit {bank.nameAr}
           </DialogTitle>
@@ -551,56 +551,56 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
         <div className="grid gap-5 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Status</label>
-              <select className="flex h-[42px] w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00e5ff]/30 focus:border-[#00e5ff]/50 backdrop-blur-md transition-all"
+              <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Status</label>
+              <select className="flex h-[42px] w-full rounded-xl border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 backdrop-blur-md transition-all"
                 value={form.status || ''} onChange={e => setForm({ ...form, status: e.target.value })}>
-                <option value="Not Started" className="bg-[#050816]">Not Started</option>
-                <option value="In Progress" className="bg-[#050816]">In Progress</option>
-                <option value="Active - Integration In Progress" className="bg-[#050816]">Active - Integration In Progress</option>
-                <option value="Delayed" className="bg-[#050816]">Delayed</option>
-                <option value="Completed" className="bg-[#050816]">Completed</option>
+                <option value="Not Started" className="bg-background">Not Started</option>
+                <option value="In Progress" className="bg-background">In Progress</option>
+                <option value="Active - Integration In Progress" className="bg-background">Active - Integration In Progress</option>
+                <option value="Delayed" className="bg-background">Delayed</option>
+                <option value="Completed" className="bg-background">Completed</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Responsible Person</label>
-              <Input value={form.responsiblePerson || ''} onChange={e => setForm({ ...form, responsiblePerson: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" />
+              <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Responsible Person</label>
+              <Input value={form.responsiblePerson || ''} onChange={e => setForm({ ...form, responsiblePerson: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Relationship Manager</label>
-              <Input value={form.relationshipManager || ''} onChange={e => setForm({ ...form, relationshipManager: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" />
+              <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Relationship Manager</label>
+              <Input value={form.relationshipManager || ''} onChange={e => setForm({ ...form, relationshipManager: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Email</label>
-              <Input value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" dir="ltr" />
+              <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Email</label>
+              <Input value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" dir="ltr" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Website</label>
-              <Input value={form.website || ''} onChange={e => setForm({ ...form, website: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" dir="ltr" />
+              <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Website</label>
+              <Input value={form.website || ''} onChange={e => setForm({ ...form, website: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" dir="ltr" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Last Meeting Date</label>
-              <Input value={form.lastMeetingDate || ''} onChange={e => setForm({ ...form, lastMeetingDate: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" placeholder="YYYY-MM-DD" />
+              <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Last Meeting Date</label>
+              <Input value={form.lastMeetingDate || ''} onChange={e => setForm({ ...form, lastMeetingDate: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" placeholder="YYYY-MM-DD" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Next Meeting Date</label>
-              <Input value={form.nextMeetingDate || ''} onChange={e => setForm({ ...form, nextMeetingDate: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" placeholder="YYYY-MM-DD" />
+              <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Next Meeting Date</label>
+              <Input value={form.nextMeetingDate || ''} onChange={e => setForm({ ...form, nextMeetingDate: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" placeholder="YYYY-MM-DD" />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Next Meeting Topic</label>
-            <Input value={form.nextMeetingTopic || ''} onChange={e => setForm({ ...form, nextMeetingTopic: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" />
+            <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Next Meeting Topic</label>
+            <Input value={form.nextMeetingTopic || ''} onChange={e => setForm({ ...form, nextMeetingTopic: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Next Action</label>
-            <Input value={form.nextAction || ''} onChange={e => setForm({ ...form, nextAction: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-[42px] focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" />
+            <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Next Action</label>
+            <Input value={form.nextAction || ''} onChange={e => setForm({ ...form, nextAction: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-[42px] focus-visible:ring-primary/30 focus-visible:border-primary/50" />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Description Notes</label>
-            <Textarea value={form.descriptionNotes || ''} onChange={e => setForm({ ...form, descriptionNotes: e.target.value })} className="bg-white/5 border-white/10 rounded-xl h-24 focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" />
+            <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Description Notes</label>
+            <Textarea value={form.descriptionNotes || ''} onChange={e => setForm({ ...form, descriptionNotes: e.target.value })} className="bg-foreground/5 border-foreground/10 rounded-xl h-24 focus-visible:ring-primary/30 focus-visible:border-primary/50" />
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-white/5">
-            <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Product Types</label>
+          <div className="space-y-3 pt-4 border-t border-foreground/5">
+            <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Product Types</label>
             <div className="flex flex-wrap gap-2">
               {(productTypes || []).filter(pt => pt.isActive).map(pt => {
                 const selected = (form.productTypeIds || []).includes(pt.id);
@@ -615,7 +615,7 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
                     }}
                     className={cn(
                       "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all",
-                      selected ? "bg-[#00e5ff]/20 text-[#00e5ff] border-[#00e5ff]/50 shadow-[0_0_10px_-2px_rgba(0,229,255,0.3)]" : "bg-white/5 text-white/60 border-white/10 hover:border-white/30 hover:text-white"
+                      selected ? "bg-primary/20 text-primary border-primary/50 shadow-[0_0_10px_-2px_rgba(79,50,214,0.3)]" : "bg-foreground/5 text-foreground/60 border-foreground/10 hover:border-foreground/30 hover:text-foreground"
                     )}
                   >
                     {pt.name}
@@ -623,28 +623,28 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
                 );
               })}
               {(!productTypes || productTypes.length === 0) && (
-                <span className="text-sm text-white/30">No product types defined yet (you can add them in Settings)</span>
+                <span className="text-sm text-foreground/30">No product types defined yet (you can add them in Settings)</span>
               )}
             </div>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-white/5">
-            <label className="text-[11px] uppercase tracking-widest text-white/50 font-semibold">Contacts</label>
+          <div className="space-y-3 pt-4 border-t border-foreground/5">
+            <label className="text-[11px] uppercase tracking-widest text-foreground/50 font-semibold">Contacts</label>
             {contacts.map((c, idx) => (
               <div key={idx} className="grid grid-cols-3 gap-2">
-                <Input value={c.name || ''} placeholder="Name" onChange={e => updateContact(idx, 'name', e.target.value)} className="bg-white/5 border-white/10 rounded-xl focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" />
-                <Input value={c.title || ''} placeholder="Job Title" onChange={e => updateContact(idx, 'title', e.target.value)} className="bg-white/5 border-white/10 rounded-xl focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" />
-                <Input value={c.phone || ''} placeholder="Phone" onChange={e => updateContact(idx, 'phone', e.target.value)} className="bg-white/5 border-white/10 rounded-xl focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50" dir="ltr" />
-                <Input value={c.email || ''} placeholder="Email Address" onChange={e => updateContact(idx, 'email', e.target.value)} className="bg-white/5 border-white/10 rounded-xl focus-visible:ring-[#00e5ff]/30 focus-visible:border-[#00e5ff]/50 col-span-3" dir="ltr" />
+                <Input value={c.name || ''} placeholder="Name" onChange={e => updateContact(idx, 'name', e.target.value)} className="bg-foreground/5 border-foreground/10 rounded-xl focus-visible:ring-primary/30 focus-visible:border-primary/50" />
+                <Input value={c.title || ''} placeholder="Job Title" onChange={e => updateContact(idx, 'title', e.target.value)} className="bg-foreground/5 border-foreground/10 rounded-xl focus-visible:ring-primary/30 focus-visible:border-primary/50" />
+                <Input value={c.phone || ''} placeholder="Phone" onChange={e => updateContact(idx, 'phone', e.target.value)} className="bg-foreground/5 border-foreground/10 rounded-xl focus-visible:ring-primary/30 focus-visible:border-primary/50" dir="ltr" />
+                <Input value={c.email || ''} placeholder="Email Address" onChange={e => updateContact(idx, 'email', e.target.value)} className="bg-foreground/5 border-foreground/10 rounded-xl focus-visible:ring-primary/30 focus-visible:border-primary/50 col-span-3" dir="ltr" />
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={() => setForm({ ...form, contacts: [...contacts, { name: '', title: '', phone: '', email: '' }] })} className="border-white/10 bg-white/5 hover:bg-white/10 hover:text-white rounded-xl h-10 w-full mt-2 border-dashed">
+            <Button variant="outline" size="sm" onClick={() => setForm({ ...form, contacts: [...contacts, { name: '', title: '', phone: '', email: '' }] })} className="border-foreground/10 bg-foreground/5 hover:bg-foreground/10 hover:text-foreground rounded-xl h-10 w-full mt-2 border-dashed">
               + Add Contact
             </Button>
           </div>
         </div>
-        <DialogFooter className="pt-2 border-t border-white/5">
-          <Button onClick={handleSave} className="w-full gap-2 bg-[#00e5ff] text-black hover:bg-[#00e5ff]/80 font-bold rounded-xl h-[42px] transition-colors shadow-[0_0_15px_-3px_rgba(0,229,255,0.4)]" disabled={updateBank.isPending}>
+        <DialogFooter className="pt-2 border-t border-foreground/5">
+          <Button onClick={handleSave} className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/80 font-bold rounded-xl h-[42px] transition-colors shadow-[0_0_15px_-3px_rgba(79,50,214,0.4)]" disabled={updateBank.isPending}>
             <Save className="w-4 h-4" /> {updateBank.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
@@ -701,18 +701,18 @@ function CompactBankCard({
           onMouseEnter={() => setHoveredId(displayBank.id)}
           onMouseLeave={() => setHoveredId(null)}
           animate={{ scale: isHovered ? 1.01 : 1, y: isHovered ? -2 : 0 }}
-          className="flex flex-col sm:flex-row sm:items-center gap-4 w-full p-4 rounded-2xl bg-card/20 backdrop-blur-2xl border border-white/5 group hover:bg-card/40 transition-all cursor-pointer relative overflow-hidden"
+          className="flex flex-col sm:flex-row sm:items-center gap-4 w-full p-4 rounded-2xl bg-card/20 backdrop-blur-2xl border border-foreground/5 group hover:bg-card/40 transition-all cursor-pointer relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-[#00e5ff]/0 via-[#00e5ff]/0 to-transparent group-hover:from-[#00e5ff]/5 transition-all duration-500 pointer-events-none" />
-          <div className="absolute inset-0 z-10 rounded-2xl pointer-events-none group-hover:shadow-[inset_0_0_0_1px_rgba(0,229,255,0.3),0_0_20px_-5px_rgba(0,229,255,0.15)] transition-all duration-500" />
+          <div className="absolute inset-0 z-10 rounded-2xl pointer-events-none group-hover:shadow-[inset_0_0_0_1px_rgba(79,50,214,0.3),0_0_20px_-5px_rgba(79,50,214,0.15)] transition-all duration-500" />
           
           <div className="relative z-20 flex items-center justify-between sm:justify-start gap-4 sm:w-[280px] shrink-0">
-            <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-2 shrink-0 shadow-inner">
+            <div className="w-12 h-12 rounded-xl bg-foreground/5 border border-foreground/10 p-2 shrink-0 shadow-inner">
               <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-[15px] font-bold text-white truncate">{displayBank.nameAr}</h2>
-              <h3 className="text-[11px] text-white/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
+              <h2 className="text-[15px] font-bold text-foreground truncate">{displayBank.nameAr}</h2>
+              <h3 className="text-[11px] text-foreground/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
             </div>
           </div>
 
@@ -722,33 +722,33 @@ function CompactBankCard({
             </div>
             
             <div className="w-36 shrink-0">
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/5 w-max text-[11px] font-medium backdrop-blur-md">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-foreground/5 border border-foreground/5 w-max text-[11px] font-medium backdrop-blur-md">
                 <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_8px_currentColor]`} />
-                <span className="text-white/80 truncate max-w-[120px]">{displayBank.status}</span>
+                <span className="text-foreground/80 truncate max-w-[120px]">{displayBank.status}</span>
               </div>
             </div>
 
-            <div className="w-32 shrink-0 text-xs text-white/70 flex items-center gap-2 truncate">
-              <User className="w-3.5 h-3.5 text-[#00e5ff]/70 shrink-0" />
+            <div className="w-32 shrink-0 text-xs text-foreground/70 flex items-center gap-2 truncate">
+              <User className="w-3.5 h-3.5 text-primary/70 shrink-0" />
               <span className="truncate">{displayBank.responsiblePerson || '—'}</span>
             </div>
 
             <div className="w-32 shrink-0 flex items-center gap-4 text-xs">
-              <span className={`flex items-center gap-1.5 ${risksCount > 0 ? 'text-red-400' : 'text-white/40'}`}>
+              <span className={`flex items-center gap-1.5 ${risksCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground/40'}`}>
                 <AlertTriangle className="w-3.5 h-3.5" /> {risksCount}
               </span>
-              <span className="flex items-center gap-1.5 text-white/40">
+              <span className="flex items-center gap-1.5 text-foreground/40">
                 <FileText className="w-3.5 h-3.5" /> {docsCount}
               </span>
             </div>
 
-            <div className="hidden lg:block w-28 shrink-0 text-xs text-white/40 truncate">
+            <div className="hidden lg:block w-28 shrink-0 text-xs text-foreground/40 truncate">
               {formatDateTime(displayBank.updatedAt).split(',')[0]}
             </div>
           </div>
 
           <div className="relative z-20 sm:ml-auto">
-            <EditButton className="w-8 h-8 bg-white/5 text-white/40 hover:text-[#00e5ff] hover:bg-[#00e5ff]/15 hover:border hover:border-[#00e5ff]/30 text-[14px]" />
+            <EditButton className="w-8 h-8 bg-foreground/5 text-foreground/40 hover:text-primary hover:bg-primary/15 hover:border hover:border-primary/30 text-[14px]" />
           </div>
         </motion.div>
       );
@@ -760,35 +760,35 @@ function CompactBankCard({
           onMouseEnter={() => setHoveredId(displayBank.id)}
           onMouseLeave={() => setHoveredId(null)}
           animate={{ scale: isHovered ? 1.02 : 1 }}
-          className="relative w-full rounded-2xl bg-card/20 backdrop-blur-2xl border border-white/5 p-4 flex flex-col gap-4 group cursor-pointer shadow-lg"
+          className="relative w-full rounded-2xl bg-card/20 backdrop-blur-2xl border border-foreground/5 p-4 flex flex-col gap-4 group cursor-pointer shadow-lg"
         >
           <div className="absolute inset-0 bg-gradient-to-b from-[#00e5ff]/0 to-transparent group-hover:from-[#00e5ff]/5 transition-all duration-500 pointer-events-none rounded-2xl" />
-          <div className="absolute inset-0 z-10 rounded-2xl pointer-events-none group-hover:shadow-[inset_0_0_0_1px_rgba(0,229,255,0.4),0_0_20px_-5px_rgba(0,229,255,0.15)] transition-all duration-500" />
+          <div className="absolute inset-0 z-10 rounded-2xl pointer-events-none group-hover:shadow-[inset_0_0_0_1px_rgba(79,50,214,0.4),0_0_20px_-5px_rgba(79,50,214,0.15)] transition-all duration-500" />
           
           <div className="relative z-20 flex justify-between items-start gap-2">
-            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 p-1.5 shrink-0 shadow-inner">
+            <div className="w-10 h-10 rounded-xl bg-foreground/5 border border-foreground/10 p-1.5 shrink-0 shadow-inner">
                <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
             </div>
             <ProgressRing progress={avgProgress} size={36} strokeWidth={2.5} />
           </div>
           
           <div className="relative z-20 min-w-0">
-            <h2 className="text-sm font-bold text-white truncate">{displayBank.nameAr}</h2>
-            <h3 className="text-[10px] text-white/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
+            <h2 className="text-sm font-bold text-foreground truncate">{displayBank.nameAr}</h2>
+            <h3 className="text-[10px] text-foreground/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
           </div>
           
-          <div className="relative z-20 flex items-center justify-between text-[11px] mt-1 pt-3 border-t border-white/5">
-            <span className="text-white/70 flex items-center gap-1.5 truncate pr-2">
-              <User className="w-3 h-3 text-[#00e5ff]/70 shrink-0" /> 
+          <div className="relative z-20 flex items-center justify-between text-[11px] mt-1 pt-3 border-t border-foreground/5">
+            <span className="text-foreground/70 flex items-center gap-1.5 truncate pr-2">
+              <User className="w-3 h-3 text-primary/70 shrink-0" /> 
               <span className="truncate">{displayBank.responsiblePerson?.split(' ')[0] || '—'}</span>
             </span>
             <div className="flex items-center gap-3 shrink-0">
-               <span className={`flex items-center gap-1 ${risksCount > 0 ? 'text-red-400' : 'text-white/40'}`}><AlertTriangle className="w-3 h-3"/>{risksCount}</span>
-               <span className="flex items-center gap-1 text-white/40"><FileText className="w-3 h-3"/>{docsCount}</span>
+               <span className={`flex items-center gap-1 ${risksCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground/40'}`}><AlertTriangle className="w-3 h-3"/>{risksCount}</span>
+               <span className="flex items-center gap-1 text-foreground/40"><FileText className="w-3 h-3"/>{docsCount}</span>
             </div>
           </div>
           
-          <EditButton className="absolute top-3 right-3 w-7 h-7 bg-black/50 backdrop-blur-md border border-white/10 text-white/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 hover:text-[#00e5ff] hover:bg-[#00e5ff]/20 hover:border-[#00e5ff]/40 transition-all text-[12px]" />
+          <EditButton className="absolute top-3 right-3 w-7 h-7 bg-background/60 backdrop-blur-md border border-foreground/10 text-foreground/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 hover:text-primary hover:bg-primary/20 hover:border-primary/40 transition-all text-[12px]" />
         </motion.div>
       );
     }
@@ -800,10 +800,10 @@ function CompactBankCard({
         onMouseLeave={() => setHoveredId(null)}
         animate={{ scale: isHovered ? 1.02 : 1, y: isHovered ? -4 : 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full h-[280px] rounded-[24px] overflow-hidden bg-card/20 backdrop-blur-2xl border border-white/5 cursor-pointer shadow-xl group"
+        className="relative w-full h-[280px] rounded-[24px] overflow-hidden bg-card/20 backdrop-blur-2xl border border-foreground/5 cursor-pointer shadow-xl group"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-[#00e5ff]/0 to-[#00e5ff]/0 group-hover:from-[#00e5ff]/5 group-hover:to-transparent transition-all duration-700 pointer-events-none" />
-        <div className="absolute inset-0 z-10 rounded-[24px] pointer-events-none group-hover:shadow-[inset_0_0_0_1.5px_rgba(0,229,255,0.4),0_15px_40px_-10px_rgba(0,229,255,0.2)] transition-all duration-500" />
+        <div className="absolute inset-0 z-10 rounded-[24px] pointer-events-none group-hover:shadow-[inset_0_0_0_1.5px_rgba(79,50,214,0.4),0_15px_40px_-10px_rgba(79,50,214,0.2)] transition-all duration-500" />
 
         {displayBank.logoUrl && (
           <div className="absolute -right-8 -bottom-8 w-40 h-40 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none blur-[2px]">
@@ -814,54 +814,54 @@ function CompactBankCard({
         <div className="relative z-20 h-full p-5 flex flex-col">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-2 flex items-center justify-center shadow-inner backdrop-blur-md">
+              <div className="w-12 h-12 rounded-xl bg-foreground/5 border border-foreground/10 p-2 flex items-center justify-center shadow-inner backdrop-blur-md">
                  <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
               </div>
               <ProgressRing progress={avgProgress} size={44} strokeWidth={3} />
             </div>
-            <EditButton className="w-8 h-8 bg-black/40 backdrop-blur-md border border-white/10 text-white/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 hover:text-[#00e5ff] hover:bg-[#00e5ff]/15 hover:border-[#00e5ff]/40 transition-all text-[14px]" />
+            <EditButton className="w-8 h-8 bg-background/60 backdrop-blur-md border border-foreground/10 text-foreground/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 hover:text-primary hover:bg-primary/15 hover:border-primary/40 transition-all text-[14px]" />
           </div>
 
           <div className="mt-5 min-w-0">
-            <h2 className="text-lg font-bold text-white leading-tight truncate">{displayBank.nameAr}</h2>
-            <h3 className="text-[11px] text-white/50 tracking-[0.15em] uppercase truncate">{displayBank.nameEn}</h3>
+            <h2 className="text-lg font-bold text-foreground leading-tight truncate">{displayBank.nameAr}</h2>
+            <h3 className="text-[11px] text-foreground/50 tracking-[0.15em] uppercase truncate">{displayBank.nameEn}</h3>
           </div>
 
           <div className="mt-2.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/5 text-[11px] font-medium backdrop-blur-md shadow-sm">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-foreground/5 border border-foreground/5 text-[11px] font-medium backdrop-blur-md shadow-sm">
               <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_8px_currentColor]`} />
-              <span className="text-white/80">{displayBank.status}</span>
+              <span className="text-foreground/80">{displayBank.status}</span>
             </div>
           </div>
 
-          <div className="mt-auto pt-4 border-t border-white/5 grid grid-cols-2 gap-y-3 gap-x-2">
+          <div className="mt-auto pt-4 border-t border-foreground/5 grid grid-cols-2 gap-y-3 gap-x-2">
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-white/40 uppercase tracking-[0.15em] font-semibold">Owner</span>
-              <span className="text-xs text-white/90 truncate flex items-center gap-1.5">
-                <User className="w-3 h-3 text-[#00e5ff]/70 shrink-0" />
+              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Owner</span>
+              <span className="text-xs text-foreground/90 truncate flex items-center gap-1.5">
+                <User className="w-3 h-3 text-primary/70 shrink-0" />
                 <span className="truncate">{displayBank.responsiblePerson || '—'}</span>
               </span>
             </div>
             
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-white/40 uppercase tracking-[0.15em] font-semibold">Risks</span>
-              <span className={`text-xs truncate flex items-center gap-1.5 ${risksCount > 0 ? 'text-red-400' : 'text-white/60'}`}>
+              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Risks</span>
+              <span className={`text-xs truncate flex items-center gap-1.5 ${risksCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground/60'}`}>
                 <AlertTriangle className="w-3 h-3 shrink-0" />
                 <span className="truncate">{risksCount} {displayBank.riskLevel && `· ${displayBank.riskLevel}`}</span>
               </span>
             </div>
             
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-white/40 uppercase tracking-[0.15em] font-semibold">Docs</span>
-              <span className="text-xs text-white/60 truncate flex items-center gap-1.5">
+              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Docs</span>
+              <span className="text-xs text-foreground/60 truncate flex items-center gap-1.5">
                 <FileText className="w-3 h-3 shrink-0" />
                 <span className="truncate">{docsCount} files</span>
               </span>
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-white/40 uppercase tracking-[0.15em] font-semibold">Updated</span>
-              <span className="text-xs text-white/60 truncate flex items-center gap-1.5">
+              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Updated</span>
+              <span className="text-xs text-foreground/60 truncate flex items-center gap-1.5">
                 <Clock className="w-3 h-3 shrink-0" />
                 <span className="truncate">{formatDateTime(displayBank.updatedAt).split(',')[0]}</span>
               </span>
@@ -877,7 +877,7 @@ function CompactBankCard({
       <EditBankDialog bank={displayBank} open={isEditOpen} onOpenChange={setIsEditOpen} />
       <Link
         href={`/bank/${displayBank.id}`}
-        className="block w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e5ff] rounded-[24px]"
+        className="block w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-[24px]"
         onFocus={() => setHoveredId(displayBank.id)}
         onBlur={() => { if (hoveredId === displayBank.id) setHoveredId(null); }}
       >

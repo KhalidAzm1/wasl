@@ -34,7 +34,7 @@ export default function Documents() {
             <FileText className="w-8 h-8 text-primary" />
             Global Documents
           </h1>
-          <p className="text-white/50 text-lg">Central repository of all uploaded documents</p>
+          <p className="text-foreground/50 text-lg">Central repository of all uploaded documents</p>
         </div>
         <NavControls />
       </header>
@@ -44,10 +44,10 @@ export default function Documents() {
           const bank = banks?.find(b => b.id === doc.bankId);
           const docUrl = doc.oneDriveWebUrl || doc.link;
           return (
-            <Card key={doc.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all flex flex-col h-full">
+            <Card key={doc.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all flex flex-col h-full">
               <CardContent className="p-6 flex flex-col h-full">
                 <div className="flex justify-between items-start mb-4">
-                  <Badge variant="outline" className="bg-white/5 border-white/10 text-white/70">
+                  <Badge variant="outline" className="bg-foreground/5 border-foreground/10 text-foreground/70">
                     {bank?.nameEn || 'Unknown Bank'}
                   </Badge>
                   {doc.docType && (
@@ -57,22 +57,22 @@ export default function Documents() {
                   )}
                 </div>
                 
-                <h3 className="text-xl font-bold text-white mb-2 line-clamp-2">{doc.title}</h3>
+                <h3 className="text-xl font-bold text-foreground mb-2 line-clamp-2">{doc.title}</h3>
                 
-                <div className="text-sm text-white/50 space-y-1 mb-6">
+                <div className="text-sm text-foreground/50 space-y-1 mb-6">
                   {doc.uploadedBy && <p>Uploaded by {doc.uploadedBy}</p>}
                   <p>{formatDateTime(doc.createdAt)}</p>
                 </div>
                 
-                <div className="mt-auto pt-4 border-t border-white/10">
+                <div className="mt-auto pt-4 border-t border-foreground/10">
                   {docUrl ? (
-                    <Button asChild variant="outline" className="w-full gap-2 border-white/10 bg-white/5 hover:bg-white/10 hover:text-white">
+                    <Button asChild variant="outline" className="w-full gap-2 border-foreground/10 bg-foreground/5 hover:bg-foreground/10 hover:text-foreground">
                       <a href={docUrl} target="_blank" rel="noreferrer">
                         Open Document <ExternalLink className="w-4 h-4" />
                       </a>
                     </Button>
                   ) : (
-                    <Button disabled variant="outline" className="w-full gap-2 border-white/5 bg-transparent text-white/30">
+                    <Button disabled variant="outline" className="w-full gap-2 border-foreground/5 bg-transparent text-foreground/30">
                       No link available
                     </Button>
                   )}
@@ -82,7 +82,7 @@ export default function Documents() {
           );
         })}
         {sortedDocs.length === 0 && (
-          <div className="col-span-full py-12 text-center text-white/30 border border-dashed border-white/10 rounded-xl">
+          <div className="col-span-full py-12 text-center text-foreground/30 border border-dashed border-foreground/10 rounded-xl">
             No documents found
           </div>
         )}

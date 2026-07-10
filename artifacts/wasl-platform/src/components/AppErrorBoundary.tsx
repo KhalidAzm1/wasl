@@ -34,12 +34,12 @@ export class AppErrorBoundary extends React.Component<Props, State> {
         >
           <div className="max-w-md text-center space-y-4">
             <h1 className="text-xl font-bold">An unexpected error occurred</h1>
-            <p className="text-white/60">
+            <p className="text-foreground/60">
               Something went wrong while loading the page. Try refreshing, and let us know if the problem persists.
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 rounded-lg bg-primary text-white font-semibold"
+              className="px-4 py-2 rounded-lg bg-primary text-foreground font-semibold"
             >
               Refresh page
             </button>

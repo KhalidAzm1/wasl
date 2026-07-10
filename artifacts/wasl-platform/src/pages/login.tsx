@@ -36,15 +36,15 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex flex-col items-center gap-3 pb-2">
           <img src={logoUrl} alt="Wasl" className="no-mirror w-full h-auto drop-shadow-lg" />
-          <p className="text-[11px] text-white/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
+          <p className="text-[11px] text-foreground/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
         </div>
-        <h2 className="text-xl font-bold text-white text-center">Sign In</h2>
+        <h2 className="text-xl font-bold text-foreground text-center">Sign In</h2>
         <div className="space-y-2">
-          <label htmlFor="login-email" className="text-sm text-white/60">Email</label>
+          <label htmlFor="login-email" className="text-sm text-foreground/60">Email</label>
           <Input id="login-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" dir="ltr" autoComplete="username" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="login-password" className="text-sm text-white/60">Password</label>
+          <label htmlFor="login-password" className="text-sm text-foreground/60">Password</label>
           <Input id="login-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" autoComplete="current-password" />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>

@@ -73,14 +73,14 @@ export default function ChangePassword() {
         <div className="flex justify-center">
           <img src={logoUrl} alt="Wasl" className="no-mirror w-72 h-auto" />
         </div>
-        <h1 className="text-2xl font-bold text-white text-center">Set a New Password</h1>
-        <p className="text-sm text-white/50 text-center">This is your first sign-in. Please set a new password before continuing.</p>
+        <h1 className="text-2xl font-bold text-foreground text-center">Set a New Password</h1>
+        <p className="text-sm text-foreground/50 text-center">This is your first sign-in. Please set a new password before continuing.</p>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">New Password</label>
+          <label className="text-sm text-foreground/60">New Password</label>
           <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">Confirm Password</label>
+          <label className="text-sm text-foreground/60">Confirm Password</label>
           <Input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} dir="ltr" />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>

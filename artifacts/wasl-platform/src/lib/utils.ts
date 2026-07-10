@@ -34,17 +34,17 @@ export function formatPercentage(val: number) {
 export function getStatusColor(status: string | null | undefined): { text: string; dot: string } {
   const s = (status || '').toLowerCase();
   if (s.includes('complete')) {
-    return { text: 'text-emerald-400', dot: 'bg-emerald-400' };
+    return { text: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-600 dark:bg-emerald-400' };
   }
   if (s.includes('delay') || s.includes('blocked')) {
-    return { text: 'text-red-400', dot: 'bg-red-400' };
+    return { text: 'text-red-600 dark:text-red-400', dot: 'bg-red-600 dark:bg-red-400' };
   }
   if (
     s.includes('not started') ||
     s.includes('not yet') ||
     s.includes('none')
   ) {
-    return { text: 'text-slate-300', dot: 'bg-slate-300' };
+    return { text: 'text-muted-foreground', dot: 'bg-muted-foreground' };
   }
-  return { text: 'text-yellow-400', dot: 'bg-yellow-400' };
+  return { text: 'text-yellow-600 dark:text-yellow-400', dot: 'bg-yellow-600 dark:bg-yellow-400' };
 }

@@ -62,9 +62,9 @@ export function AdminPinGate({ children }: { children: React.ReactNode }) {
     <div className="flex items-center justify-center min-h-[60vh] p-8">
       <Card className="w-full max-w-sm p-8 space-y-6">
         <div className="text-center space-y-2">
-          <ShieldCheck className="w-8 h-8 mx-auto text-white/60" />
-          <h2 className="text-xl font-bold text-white">Protected Access</h2>
-          <p className="text-white/50 text-sm">Enter the PIN to access User Management</p>
+          <ShieldCheck className="w-8 h-8 mx-auto text-foreground/60" />
+          <h2 className="text-xl font-bold text-foreground">Protected Access</h2>
+          <p className="text-foreground/50 text-sm">Enter the PIN to access User Management</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

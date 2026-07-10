@@ -32,7 +32,7 @@ export default function Meetings() {
             <Calendar className="w-8 h-8 text-primary" />
             All Meetings
           </h1>
-          <p className="text-white/50 text-lg">Global view of all planned and completed meetings</p>
+          <p className="text-foreground/50 text-lg">Global view of all planned and completed meetings</p>
         </div>
         <NavControls />
       </header>
@@ -41,28 +41,28 @@ export default function Meetings() {
         {sortedMeetings.map(m => {
           const bank = banks?.find(b => b.id === m.bankId);
           return (
-            <Card key={m.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all">
+            <Card key={m.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all">
               <CardContent className="p-6 flex flex-col md:flex-row gap-6 items-start md:items-center">
                 <div className="md:w-48 shrink-0">
-                  <div className="text-white/80 font-mono text-sm mb-1">{formatDate(m.date)}</div>
-                  <Badge variant="outline" className="bg-white/5 border-white/10 text-white/70">
+                  <div className="text-foreground/80 font-mono text-sm mb-1">{formatDate(m.date)}</div>
+                  <Badge variant="outline" className="bg-foreground/5 border-foreground/10 text-foreground/70">
                     {bank?.nameEn || 'Unknown Bank'}
                   </Badge>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-white truncate">{m.topic}</h3>
+                    <h3 className="text-xl font-bold text-foreground truncate">{m.topic}</h3>
                     {m.status && (
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-xs font-semibold shrink-0 ${getStatusColor(m.status).text}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-foreground/10 bg-foreground/5 text-xs font-semibold shrink-0 ${getStatusColor(m.status).text}`}>
                         {m.status}
                       </span>
                     )}
                   </div>
-                  <p className="text-white/60 leading-relaxed whitespace-pre-wrap text-sm">
+                  <p className="text-foreground/60 leading-relaxed whitespace-pre-wrap text-sm">
                     {m.summary || 'No summary available.'}
                   </p>
                   {m.attendees && (
-                    <div className="mt-3 text-xs text-white/40">
+                    <div className="mt-3 text-xs text-foreground/40">
                       <span className="font-semibold">Attendees:</span> {m.attendees}
                     </div>
                   )}
@@ -72,7 +72,7 @@ export default function Meetings() {
           );
         })}
         {sortedMeetings.length === 0 && (
-          <div className="py-12 text-center text-white/30 border border-dashed border-white/10 rounded-xl">
+          <div className="py-12 text-center text-foreground/30 border border-dashed border-foreground/10 rounded-xl">
             No meetings found
           </div>
         )}

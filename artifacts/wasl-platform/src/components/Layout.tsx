@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X } from 'lucide-react';
+import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X, Sun, Moon } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import { useTheme } from './ThemeProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LayoutProps {
@@ -36,6 +37,7 @@ export function Layout({ children }: LayoutProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const { role } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   // Close panel on route change
   useEffect(() => {
@@ -76,7 +78,7 @@ export function Layout({ children }: LayoutProps) {
     return (
       <div className="flex flex-col gap-1 mb-6">
         {title && (
-          <div className="px-4 py-2 text-xs font-semibold text-white/40 uppercase tracking-wider">
+          <div className="px-4 py-2 text-xs font-semibold text-foreground/40 uppercase tracking-wider">
             {title}
           </div>
         )}
@@ -90,11 +92,11 @@ export function Layout({ children }: LayoutProps) {
                 className={cn(
                   'flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all cursor-pointer group',
                   isActive
-                    ? 'bg-primary/20 text-white border border-primary/30 shadow-[0_0_15px_rgba(124,58,237,0.15)]'
-                    : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+                    ? 'bg-primary/20 text-foreground border border-primary/30 shadow-[0_0_15px_rgba(124,58,237,0.15)]'
+                    : 'text-foreground/60 hover:text-foreground hover:bg-foreground/5 border border-transparent'
                 )}
               >
-                <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "group-hover:text-white")} />
+                <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "group-hover:text-foreground")} />
                 <span className="font-medium text-[15px]">{item.label}</span>
               </div>
             </Link>
@@ -117,12 +119,21 @@ export function Layout({ children }: LayoutProps) {
       />
 
       {/* Floating Settings Button */}
-      <div className="fixed top-6 right-6 z-40 safe-area-top">
+      <div className="fixed top-6 right-6 z-40 safe-area-top flex gap-2">
+        <button
+          type="button"
+          aria-label="Toggle theme"
+          aria-pressed={theme === 'light'}
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="w-12 h-12 rounded-full bg-card/60 backdrop-blur-xl border border-foreground/10 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-foreground/10 transition-all shadow-xl hover:shadow-primary/20 hover:scale-105 hover:border-foreground/20"
+        >
+          {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
         <button
           type="button"
           aria-label="Open settings panel"
           onClick={() => setPanelOpen(true)}
-          className="w-12 h-12 rounded-full bg-card/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-all shadow-xl hover:shadow-primary/20 hover:scale-105 hover:border-white/20"
+          className="w-12 h-12 rounded-full bg-card/60 backdrop-blur-xl border border-foreground/10 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-foreground/10 transition-all shadow-xl hover:shadow-primary/20 hover:scale-105 hover:border-foreground/20"
         >
           <Settings className="w-5 h-5" />
         </button>
@@ -137,7 +148,7 @@ export function Layout({ children }: LayoutProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
               onClick={() => setPanelOpen(false)}
               aria-hidden="true"
             />
@@ -151,16 +162,16 @@ export function Layout({ children }: LayoutProps) {
               role="dialog"
               aria-modal="true"
               aria-label="Settings panel"
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-[#050816]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-background/95 backdrop-blur-2xl border-l border-foreground/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
             >
-              <div className="relative flex flex-col items-center justify-center gap-2 px-12 pt-10 pb-8 border-b border-white/5">
+              <div className="relative flex flex-col items-center justify-center gap-2 px-12 pt-10 pb-8 border-b border-foreground/5">
                 <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto max-w-full drop-shadow-lg" />
-                <p className="text-[11px] text-white/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
+                <p className="text-[11px] text-foreground/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
                 <button
                   type="button"
                   aria-label="Close settings panel"
                   onClick={() => setPanelOpen(false)}
-                  className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-foreground/60 hover:text-foreground hover:bg-foreground/10 transition-colors shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -172,12 +183,12 @@ export function Layout({ children }: LayoutProps) {
                 {renderNavSection(systemNavItems, 'System')}
               </div>
 
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-foreground/5">
                 <button
                   type="button"
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-red-400/80 hover:text-red-400 hover:bg-red-400/10 border border-transparent disabled:opacity-50 group"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-red-600 dark:text-red-400/80 hover:text-red-600 dark:text-red-400 hover:bg-red-600 dark:bg-red-400/10 border border-transparent disabled:opacity-50 group"
                 >
                   <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
                   <span className="font-medium text-[15px]">{signingOut ? 'Signing out...' : 'Sign out'}</span>

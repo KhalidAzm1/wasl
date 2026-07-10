@@ -14,9 +14,9 @@ export function BankLogo({ src, alt, fallbackText, className }: BankLogoProps) {
 
   if (!src || failed) {
     return fallbackText ? (
-      <span className="text-2xl font-bold text-white/20">{fallbackText}</span>
+      <span className="text-2xl font-bold text-foreground/20">{fallbackText}</span>
     ) : (
-      <Building2 className="w-1/2 h-1/2 text-white/30" />
+      <Building2 className="w-1/2 h-1/2 text-foreground/30" />
     );
   }
 

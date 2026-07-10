@@ -144,7 +144,7 @@ export default function AdminUsers() {
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-white to-white/60 mb-2">
             Admin User Management
           </h1>
-          <p className="text-white/50 text-lg">Create, edit, and deactivate administrator accounts</p>
+          <p className="text-foreground/50 text-lg">Create, edit, and deactivate administrator accounts</p>
         </div>
         <NavControls />
       </header>
@@ -157,10 +157,10 @@ export default function AdminUsers() {
 
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-white/50">Loading...</div>
+          <div className="p-8 text-center text-foreground/50">Loading...</div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-white/60 text-left">
+            <thead className="bg-foreground/5 text-foreground/60 text-left">
               <tr>
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
@@ -172,25 +172,25 @@ export default function AdminUsers() {
             </thead>
             <tbody>
               {users?.map((user) => (
-                <tr key={user.id} className="border-t border-white/5">
-                  <td className="p-4 text-white">{user.name}</td>
-                  <td className="p-4 text-white/70" dir="ltr">{user.email}</td>
-                  <td className="p-4 text-white/70">{roleLabel[user.role]}</td>
+                <tr key={user.id} className="border-t border-foreground/5">
+                  <td className="p-4 text-foreground">{user.name}</td>
+                  <td className="p-4 text-foreground/70" dir="ltr">{user.email}</td>
+                  <td className="p-4 text-foreground/70">{roleLabel[user.role]}</td>
                   <td className="p-4">
                     {user.deleted_at ? (
-                      <span className="text-red-400">Inactive</span>
+                      <span className="text-red-600 dark:text-red-400">Inactive</span>
                     ) : (
-                      <span className="text-emerald-400">Active</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">Active</span>
                     )}
                   </td>
-                  <td className="p-4 text-white/50">{formatDateTime(user.updated_at)}</td>
+                  <td className="p-4 text-foreground/50">{formatDateTime(user.updated_at)}</td>
                   <td className="p-4">
                     <div className="flex gap-2">
                       <Button size="icon" variant="ghost" onClick={() => openEdit(user)} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
                       {user.id === currentUserId ? (
-                        <span className="text-white/30 text-xs px-2 py-1">Your Account</span>
+                        <span className="text-foreground/30 text-xs px-2 py-1">Your Account</span>
                       ) : (
                         <>
                           {user.deleted_at ? (
@@ -203,7 +203,7 @@ export default function AdminUsers() {
                             </Button>
                           )}
                           <Button size="icon" variant="ghost" onClick={() => handleDelete(user)} title="Delete Permanently">
-                            <Trash2 className="w-4 h-4 text-red-400" />
+                            <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                           </Button>
                         </>
                       )}
@@ -213,7 +213,7 @@ export default function AdminUsers() {
               ))}
               {users?.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-white/40">No users found</td>
+                  <td colSpan={6} className="p-8 text-center text-foreground/40">No users found</td>
                 </tr>
               )}
             </tbody>
@@ -228,11 +228,11 @@ export default function AdminUsers() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-white/60">Full Name</label>
+              <label className="text-sm text-foreground/60">Full Name</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/60">Email Address</label>
+              <label className="text-sm text-foreground/60">Email Address</label>
               <Input
                 type="email"
                 dir="ltr"
@@ -243,20 +243,20 @@ export default function AdminUsers() {
             </div>
             {!editing && (
               <div className="space-y-2">
-                <label className="text-sm text-white/60">Temporary Password</label>
+                <label className="text-sm text-foreground/60">Temporary Password</label>
                 <Input
                   type="password"
                   dir="ltr"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                 />
-                <p className="text-xs text-white/40">The user will be required to change this on first login.</p>
+                <p className="text-xs text-foreground/40">The user will be required to change this on first login.</p>
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-sm text-white/60">Role</label>
+              <label className="text-sm text-foreground/60">Role</label>
               <select
-                className="w-full bg-white/5 border border-white/10 rounded-md p-2 text-white"
+                className="w-full bg-foreground/5 border border-foreground/10 rounded-md p-2 text-foreground"
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
               >

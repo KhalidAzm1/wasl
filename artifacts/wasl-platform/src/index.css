@@ -69,18 +69,18 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 248 45% 94%; /* Lavender-tinted canvas, not flat white */
+  --background: 240 12% 88%; /* Cool grey canvas — clearly distinct from card white */
   --foreground: 255 45% 14%; /* Deep violet/dark grey */
 
-  --border: 252 30% 82%;
+  --border: 250 15% 78%;
 
-  --card: 250 55% 98%; /* Soft violet-white surface, lifted above the canvas */
+  --card: 0 0% 100%; /* White cards, standing out against the grey canvas */
   --card-foreground: 255 45% 14%;
-  --card-border: 252 30% 82%;
+  --card-border: 250 15% 80%;
 
-  --popover: 250 55% 98%;
+  --popover: 0 0% 100%;
   --popover-foreground: 255 45% 14%;
-  --popover-border: 252 30% 82%;
+  --popover-border: 250 15% 80%;
 
   --primary: 255 78% 52%; /* #4F32D6 — matches Wasl logo deep violet */
   --primary-foreground: 0 0% 100%;
@@ -88,7 +88,7 @@
   --secondary: 258 80% 68%; /* #A48CF2 — matches Wasl logo lavender */
   --secondary-foreground: 255 45% 14%;
 
-  --muted: 250 35% 90%;
+  --muted: 240 10% 84%;
   --muted-foreground: 253 15% 38%;
 
   --accent: 255 78% 52%;

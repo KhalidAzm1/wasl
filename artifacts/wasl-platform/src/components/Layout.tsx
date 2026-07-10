@@ -5,21 +5,24 @@ import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/authContext';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const navItems = [
-  { href: '/portfolio', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)' },
-  { href: '/admin/users', icon: Users, label: 'إدارة المستخدمين' },
-  { href: '/settings', icon: Settings, label: 'الإعدادات (Settings)' },
+  { href: '/portfolio', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)', roles: null },
+  { href: '/admin/users', icon: Users, label: 'إدارة المستخدمين', roles: ['super_admin'] as const },
+  { href: '/settings', icon: Settings, label: 'الإعدادات (Settings)', roles: null },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [location, navigate] = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const { role } = useAuth();
+  const visibleNavItems = navItems.filter((item) => !item.roles || (role && (item.roles as readonly string[]).includes(role)));
 
   // Close the mobile drawer on route change so it never lingers open.
   useEffect(() => {
@@ -109,7 +112,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         <nav className="w-full flex flex-col gap-3 shrink-0">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = location === item.href;
             const Icon = item.icon;
             return (

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Menu, X, Users } from 'lucide-react';
+import { LayoutDashboard, Settings, Menu, X, Users, LogOut } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
+import { supabase } from '@/lib/supabaseClient';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,13 +17,28 @@ const navItems = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Close the mobile drawer on route change so it never lingers open.
   useEffect(() => {
     setDrawerOpen(false);
   }, [location]);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      // Clear any verified admin-panel PIN token so it can't be reused
+      // after logout (e.g. by another person sharing the device).
+      sessionStorage.removeItem('wasl_admin_pin_token');
+      sessionStorage.removeItem('wasl_admin_pin_token_expires');
+      await supabase.auth.signOut();
+      navigate('/login');
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   return (
     <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans flex overflow-x-hidden" dir="rtl">
@@ -40,14 +56,25 @@ export function Layout({ children }: LayoutProps) {
           above safe-area insets (notch / Dynamic Island). */}
       <div className="md:hidden fixed top-0 inset-x-0 z-40 safe-area-top flex items-center justify-between px-4 py-3 bg-background/85 backdrop-blur-xl border-b border-white/5">
         <img src={logoUrl} alt="Wasl" className="no-mirror h-8 w-auto" />
-        <button
-          type="button"
-          aria-label={drawerOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
-          onClick={() => setDrawerOpen((v) => !v)}
-          className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-        >
-          {drawerOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="تسجيل الخروج"
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            aria-label={drawerOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+            onClick={() => setDrawerOpen((v) => !v)}
+            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            {drawerOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Backdrop, mobile drawer mode only. */}
@@ -103,6 +130,16 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Remaining space intentionally left empty. */}
         <div className="flex-1 w-full min-h-0" />
+
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer text-white/60 hover:text-white hover:bg-white/5 border border-transparent shrink-0 disabled:opacity-50"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-semibold text-[15px]">{signingOut ? 'جارٍ تسجيل الخروج...' : 'تسجيل الخروج'}</span>
+        </button>
       </aside>
 
       {/* Main Content. Top padding on mobile clears the fixed hamburger bar. */}

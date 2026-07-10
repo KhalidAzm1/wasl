@@ -32,7 +32,7 @@ function AppRoutes() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/change-password">
-        <RequireAuth>
+        <RequireAuth allowMustChangePassword>
           <ChangePassword />
         </RequireAuth>
       </Route>

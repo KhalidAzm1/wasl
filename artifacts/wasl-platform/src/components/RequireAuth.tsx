@@ -6,9 +6,14 @@ import type { AppRole } from '@/lib/supabaseClient';
 export function RequireAuth({
   children,
   roles,
+  allowMustChangePassword,
 }: {
   children: React.ReactNode;
   roles?: AppRole[];
+  // The /change-password route itself must render even while
+  // mustChangePassword is true — otherwise RequireAuth redirects it to
+  // itself in an infinite loop that renders nothing (a blank/black screen).
+  allowMustChangePassword?: boolean;
 }) {
   const { session, loading, mustChangePassword, role } = useAuth();
 
@@ -24,7 +29,7 @@ export function RequireAuth({
     return <Redirect to="/login" />;
   }
 
-  if (mustChangePassword) {
+  if (mustChangePassword && !allowMustChangePassword) {
     return <Redirect to="/change-password" />;
   }
 

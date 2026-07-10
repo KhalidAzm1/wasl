@@ -27,7 +27,7 @@ const contentNavItems = [
 ];
 
 const systemNavItems = [
-  { href: '/security', icon: ShieldCheck, label: 'Security', roles: null },
+  { href: '/security', icon: ShieldCheck, label: 'Security & Activity', roles: null },
   { href: '/settings', icon: Settings, label: 'Settings', roles: null },
 ];
 

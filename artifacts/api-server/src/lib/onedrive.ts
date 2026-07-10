@@ -102,11 +102,15 @@ export async function uploadFileToOneDrive(
  */
 export async function moveOneDriveItem(itemId: string, toFolder: OneDriveFolder): Promise<void> {
   const connectors = new ReplitConnectors();
+  // parentReference.path is a plain JSON body value, not a URL -- unlike the
+  // path-addressing endpoints elsewhere in this file, it must NOT be
+  // percent-encoded, or Graph looks for a folder literally named
+  // "Wasl%20Documents" and rejects the move with a generic 400.
   const response = await connectors.proxy("onedrive", `/v1.0/me/drive/items/${encodeURIComponent(itemId)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      parentReference: { path: `/drive/root:/${encodePath([ROOT_FOLDER, toFolder])}` },
+      parentReference: { path: `/drive/root:/${ROOT_FOLDER}/${toFolder}` },
     }),
   });
   if (!response.ok) {

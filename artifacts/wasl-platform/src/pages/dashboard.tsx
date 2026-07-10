@@ -336,14 +336,13 @@ export default function Dashboard() {
   return (
     <div className="min-h-full flex flex-col w-full overflow-x-hidden">
       
-      <div className="sticky top-0 z-40 bg-[#050816]/80 backdrop-blur-3xl border-b border-white/5 px-8 py-7 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-2xl">
-        <div className="flex items-center gap-5">
-           <img src={logoUrl} alt="Wasl" style={{ height: '120px' }} className="no-mirror w-auto drop-shadow-md" />
-           <div className="hidden sm:block h-12 w-px bg-white/10" />
-           <p className="hidden sm:block text-[11px] text-white/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
+      <div className="sticky top-0 z-40 bg-[#050816]/80 backdrop-blur-3xl border-b border-white/5 px-8 py-8 flex flex-col items-center gap-7 shadow-2xl">
+        <div className="flex flex-col items-center gap-2 text-center">
+           <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto drop-shadow-md" />
+           <p className="text-[11px] text-white/40 uppercase tracking-[0.2em] font-medium">Banking Intelligence Platform</p>
         </div>
-        
-        <div className="flex md:flex-wrap items-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0">
+
+        <div className="flex md:flex-wrap items-center justify-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0 w-full">
           <KpiButton label="Total Banks" value={summary.totalBanks} colorClass="text-white" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
           <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
           <KpiButton label="In Progress" value={summary.inProgress} colorClass="text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />

@@ -17,7 +17,7 @@ export function NavControls({ variant = 'default' }: { variant?: 'default' | 'ov
         <ArrowRight className="w-4 h-4 rotate-180" />
         Back
       </button>
-      <button onClick={() => setLocation('/')} className={style}>
+      <button onClick={() => setLocation('/portfolio')} className={style}>
         <Home className="w-4 h-4" />
         Home
       </button>

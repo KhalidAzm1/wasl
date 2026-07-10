@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, Tag, Archive, ShieldCheck, X } from 'lucide-react';
+import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
@@ -16,12 +16,14 @@ const mainNavItems = [
   { href: '/portfolio', icon: LayoutDashboard, label: 'Dashboard', roles: null },
 ];
 
+// Note: "Product Types" and "Archive" live as tabs inside the Settings page
+// itself — they are intentionally NOT duplicated here as separate entries,
+// since both used to point at the same /settings route with no tab
+// differentiation, which read as a duplicate menu item.
 const contentNavItems = [
   { href: '/admin/users', icon: Users, label: 'User Management', roles: ['super_admin'] },
   { href: '/meetings', icon: Calendar, label: 'Meetings', roles: null },
   { href: '/documents', icon: FileText, label: 'Documents', roles: null },
-  { href: '/settings', icon: Tag, label: 'Product Types', roles: null },
-  { href: '/settings', icon: Archive, label: 'Archive', roles: null },
 ];
 
 const systemNavItems = [
@@ -148,8 +150,10 @@ export function Layout({ children }: LayoutProps) {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-[#050816]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
             >
-              <div className="flex items-center justify-between p-6 pb-4 border-b border-white/5">
-                <img src={logoUrl} alt="Wasl" className="no-mirror h-10 w-auto opacity-90 drop-shadow-md" />
+              <div className="flex items-center justify-between p-6 pb-5 border-b border-white/5">
+                <h2 className="text-2xl font-bold text-white tracking-tight drop-shadow-md">
+                  WASL <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-[#00e5ff] to-secondary">AI HUB</span>
+                </h2>
                 <button
                   type="button"
                   aria-label="Close settings panel"

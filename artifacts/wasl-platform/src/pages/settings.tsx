@@ -15,7 +15,6 @@ import {
   useUpdateProductType,
   useDeactivateProductType,
   getListProductTypesQueryKey,
-  useListAuditLogs,
   useGetArchive,
   useRestoreBank,
   useRestoreDocument,
@@ -30,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Image as ImageIcon, Trash2, Edit, Plus, Save, UploadCloud, History, Archive, ScrollText, RotateCcw, Tag, ChevronDown } from 'lucide-react';
+import { Trash2, Edit, Plus, Save, UploadCloud, Archive, RotateCcw, Tag } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 import { useAuth } from '@/lib/authContext';
 import type { Bank } from '@workspace/api-client-react';
@@ -52,7 +51,6 @@ export default function Settings() {
         <TabsList className="w-full justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
           <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">Banks &amp; Financing Entities</TabsTrigger>
           <TabsTrigger value="productTypes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Tag className="w-4 h-4" /> Product Types</TabsTrigger>
-          <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><ScrollText className="w-4 h-4" /> Recent Updates</TabsTrigger>
           <TabsTrigger value="archive" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Archive className="w-4 h-4" /> Archive</TabsTrigger>
         </TabsList>
 
@@ -62,10 +60,6 @@ export default function Settings() {
 
         <TabsContent value="productTypes">
           <ProductTypesManager />
-        </TabsContent>
-
-        <TabsContent value="updates">
-          <RecentUpdates />
         </TabsContent>
 
         <TabsContent value="archive">
@@ -293,137 +287,6 @@ function BanksManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-const FIELD_LABELS: Record<string, string> = {
-  nameEn: 'Name (English)',
-  nameAr: 'Name (Arabic)',
-  category: 'Category',
-  status: 'Status',
-  logoUrl: 'Logo',
-  heroImageUrl: 'Hero Image',
-  referenceLink: 'Reference Link',
-  contacts: 'Contact Details',
-  productTypeIds: 'Product Types',
-  productCode: 'Product Code',
-  categoryStage: 'Stage',
-  progressPercent: 'Progress (%)',
-  dateType: 'Date Type',
-  dateValue: 'Date',
-  responsiblePerson: 'Responsible Person',
-  priorityImpact: 'Priority',
-  descriptionNotes: 'Notes',
-  riskLevel: 'Risk Level',
-  name: 'Name',
-  isActive: 'Active',
-  date: 'Date',
-  topic: 'Topic',
-  summary: 'Meeting Summary',
-  attendees: 'Attendees',
-  description: 'Description',
-  level: 'Level',
-  dueDate: 'Due Date',
-  owner: 'Owner',
-  title: 'Title',
-  docType: 'Document Type',
-  link: 'Link',
-};
-
-function formatDetailValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') return '—';
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '—';
-    if (typeof value[0] === 'object') return `${value.length} item(s)`;
-    return value.join(', ');
-  }
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-}
-
-function RecentUpdates() {
-  const { data, isLoading } = useListAuditLogs({ limit: 100 });
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-
-  if (isLoading) return <div>Loading...</div>;
-
-  const actionLabel: Record<string, string> = { CREATE: 'Created', UPDATE: 'Updated', ARCHIVE: 'Archived', RESTORE: 'Restored' };
-  const entityLabel: Record<string, string> = { bank: 'Bank', document: 'Document', meeting: 'Meeting', product: 'Product', productType: 'Product Type', actionItem: 'Action Item', risk: 'Risk' };
-  const actionColor: Record<string, string> = {
-    CREATE: 'bg-emerald-500/20 text-emerald-400',
-    UPDATE: 'bg-primary/20 text-primary',
-    ARCHIVE: 'bg-red-500/20 text-red-400',
-    RESTORE: 'bg-yellow-500/20 text-yellow-400',
-  };
-
-  const items = data?.items || [];
-
-  return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-3">
-        <History className="w-6 h-6 text-primary" />
-        <div>
-          <h2 className="text-2xl font-bold text-white">Recent Updates</h2>
-          <p className="text-sm text-white/50">All create, update, archive, and restore operations — sorted newest first. Click the arrow to view details.</p>
-        </div>
-      </div>
-
-      <Card className="bg-white/5 border-white/10">
-        <CardContent className="p-0">
-          <div className="divide-y divide-white/5">
-            {items.map(entry => {
-              const details = entry.details && typeof entry.details === 'object' ? entry.details as Record<string, unknown> : null;
-              const hasDetails = !!details && Object.keys(details).length > 0;
-              const isExpanded = expandedId === entry.id;
-              return (
-                <div key={entry.id}>
-                  <button
-                    type="button"
-                    className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left hover:bg-white/5 transition-colors"
-                    onClick={() => hasDetails && setExpandedId(isExpanded ? null : entry.id)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${actionColor[entry.action] || 'bg-white/10 text-white/60'}`}>
-                        {actionLabel[entry.action] || entry.action}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="font-medium text-white truncate">
-                          {entityLabel[entry.entityType] || entry.entityType}
-                          {entry.entityLabel ? ` — ${entry.entityLabel}` : ''}
-                        </p>
-                        <p className="text-sm text-white/40 truncate">{entry.userName || entry.userEmail || 'Unknown user'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm text-white/60 font-mono">{formatDateTime(entry.createdAt)}</span>
-                      {hasDetails && (
-                        <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                      )}
-                    </div>
-                  </button>
-                  {isExpanded && details && (
-                    <div className="px-6 pb-4 -mt-1">
-                      <div className="rounded-lg bg-black/20 border border-white/10 p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                        {Object.entries(details).map(([key, value]) => (
-                          <div key={key} className="flex justify-between gap-4 text-sm">
-                            <span className="text-white/40">{FIELD_LABELS[key] || key}</span>
-                            <span className="text-white/80 truncate">{formatDetailValue(value)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {items.length === 0 && (
-              <div className="py-12 text-center text-white/30">No updates recorded yet</div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

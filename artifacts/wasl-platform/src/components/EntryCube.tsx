@@ -202,8 +202,30 @@ function Floor() {
   );
 }
 
-/** Interactive Three.js hero cube: continuous Y rotation, gentle float, glow that intensifies on hover. */
+/**
+ * Interactive Three.js hero cube: continuous Y rotation, gentle float, glow
+ * that intensifies on hover. GPU context loss (real driver crash, throttled
+ * background tab, unsupported headless browser) fires asynchronously and
+ * cannot be caught by a React error boundary, so it's handled here directly:
+ * on `webglcontextlost` we swap to the same static glowing mark the boundary
+ * uses, instead of leaving a dead/blank canvas on screen.
+ */
 export default function EntryCube() {
+  const [contextLost, setContextLost] = useState(false);
+
+  if (contextLost) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: '#050816' }}>
+        <img
+          src={wasLogoUrl}
+          alt="Wasl"
+          className="no-mirror h-40 md:h-56 w-auto"
+          style={{ filter: 'drop-shadow(0 0 30px rgba(124,58,237,0.8)) drop-shadow(0 0 55px rgba(59,130,246,0.5))' }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0">
       <Canvas
@@ -211,6 +233,12 @@ export default function EntryCube() {
         dpr={isMobileViewport ? [1, 1] : [1, 1.5]}
         camera={{ position: [3.2, 1.1, 5.2], fov: 38 }}
         gl={{ antialias: !isMobileViewport, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => {
+          gl.domElement.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            setContextLost(true);
+          });
+        }}
       >
         <color attach="background" args={['#050816']} />
         <fog attach="fog" args={['#050816', 6, 16]} />

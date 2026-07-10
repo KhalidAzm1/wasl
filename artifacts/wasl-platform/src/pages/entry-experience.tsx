@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import EntryCube from '@/components/EntryCube';
+import { EntryCubeBoundary } from '@/components/EntryCubeBoundary';
 
 /**
  * Entry page: a real interactive Three.js scene (see EntryCube) recreating the
@@ -42,7 +43,9 @@ export default function EntryExperience() {
         animate={{ opacity: 1 }}
         transition={{ duration: 1.2 }}
       >
-        <EntryCube />
+        <EntryCubeBoundary>
+          <EntryCube />
+        </EntryCubeBoundary>
       </motion.div>
 
       {/* Ambient blue glow */}

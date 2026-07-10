@@ -198,9 +198,13 @@ drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
   for select using (id = auth.uid() or public.is_admin_or_super());
 
-drop policy if exists profiles_update_self on public.profiles;
-create policy profiles_update_self on public.profiles
-  for update using (id = auth.uid() or public.is_super_admin());
+-- No client-side (anon-key) updates are permitted on profiles at all — not even
+-- self-updates — because `role`/`deleted_at` live on this same row and a
+-- same-row `USING (id = auth.uid())` policy without a column-aware `WITH CHECK`
+-- would let a user silently promote themselves to super_admin. All profile
+-- writes (including by super_admins, via the Admin Panel) go through the
+-- backend's service-role client, which bypasses RLS entirely. Intentionally no
+-- update policy is created here.
 
 -- activity_logs: readable by admins/super_admins only; no direct client writes
 -- (writes happen via the trigger, which runs as security definer).

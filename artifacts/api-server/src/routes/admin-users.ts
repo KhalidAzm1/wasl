@@ -62,8 +62,16 @@ router.post("/admin/users", async (req, res): Promise<void> => {
     .single();
 
   if (profileError) {
-    // Roll back the auth user so we don't leave an orphaned account.
-    await supabase.auth.admin.deleteUser(created.user.id);
+    // Roll back the auth user so we don't leave an orphaned account. If the
+    // rollback itself fails, surface both errors so an operator can clean up
+    // the orphaned auth user manually instead of the failure going silent.
+    const { error: rollbackError } = await supabase.auth.admin.deleteUser(created.user.id);
+    if (rollbackError) {
+      res.status(500).json({
+        error: `Failed to create profile (${profileError.message}); rollback of auth user ${created.user.id} also failed (${rollbackError.message}). Manual cleanup required.`,
+      });
+      return;
+    }
     res.status(500).json({ error: profileError.message });
     return;
   }
@@ -116,6 +124,11 @@ router.post("/admin/users/:id/deactivate", async (req, res): Promise<void> => {
     .single();
 
   if (error) {
+    // The auth account is already banned but the profile wasn't marked
+    // deleted — undo the ban so the two stores don't diverge (a banned user
+    // with deleted_at null would otherwise be unable to log in while still
+    // showing as "active" in the Admin Panel).
+    await supabase.auth.admin.updateUserById(req.params.id, { ban_duration: "none" });
     res.status(500).json({ error: error.message });
     return;
   }
@@ -141,6 +154,9 @@ router.post("/admin/users/:id/reactivate", async (req, res): Promise<void> => {
     .single();
 
   if (error) {
+    // Re-ban to keep Auth and profiles in sync (see deactivate's symmetric
+    // compensation above).
+    await supabase.auth.admin.updateUserById(req.params.id, { ban_duration: "876000h" });
     res.status(500).json({ error: error.message });
     return;
   }

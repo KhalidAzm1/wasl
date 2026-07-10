@@ -4,3 +4,4 @@
 - [PATCH routes must re-validate image fields](patch-image-validation-bypass.md) — a dedicated validated upload endpoint (e.g. PUT /logo) does not protect a general PATCH endpoint that also accepts the same field; validate on every write path that can set it.
 - [WebGL unavailable in headless preview](webgl-headless-preview.md) — canvas.getContext('webgl') can lie in this sandbox; pair feature detection with an error boundary + contextlost fallback for any Three.js/R3F canvas.
 - [Wasl sidebar cube widget — no-logo invariant](wasl-cube-widget-branding.md) — a "never show X" requirement must be grepped across every fallback/error-boundary branch, not just the main render path.
+- [Supabase RLS self-update escalation](supabase-rls-self-update-escalation.md) — a self-update RLS policy without a column-aware WITH CHECK lets users self-promote role; omit it and route writes through service-role backend instead.

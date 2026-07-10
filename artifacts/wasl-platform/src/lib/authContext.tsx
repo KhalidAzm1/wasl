@@ -21,15 +21,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadRole(userId: string) {
-    const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
-    setRole((data?.role as AppRole | undefined) ?? null);
-  }
-
   useEffect(() => {
+    // Guards against a stale response overwriting a newer one when auth state
+    // changes rapidly (e.g. sign-out fired while a role fetch is in flight).
+    let requestId = 0;
+
+    async function loadRole(userId: string) {
+      const myRequestId = ++requestId;
+      try {
+        const { data, error } = await supabase.from('profiles').select('role').eq('id', userId).single();
+        if (myRequestId !== requestId) return;
+        if (error) {
+          setRole(null);
+          return;
+        }
+        setRole((data?.role as AppRole | undefined) ?? null);
+      } catch {
+        if (myRequestId === requestId) setRole(null);
+      }
+    }
+
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      if (data.session) await loadRole(data.session.user.id);
+      if (data.session) {
+        await loadRole(data.session.user.id);
+      } else {
+        requestId += 1;
+        setRole(null);
+      }
       setLoading(false);
     });
 
@@ -38,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (newSession) {
         loadRole(newSession.user.id);
       } else {
+        requestId += 1;
         setRole(null);
       }
     });

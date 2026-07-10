@@ -223,7 +223,9 @@ export const GetBankResponse = zod.object({
 })).optional(),
   "documents": zod.array(zod.object({
   "id": zod.number(),
-  "bankId": zod.string(),
+  "entityType": zod.string().describe('bank | product | meeting'),
+  "entityId": zod.string(),
+  "bankId": zod.string().nullish().describe('Deprecated alias for entityId, populated only when entityType is \'bank\'. Kept for backward compatibility.'),
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
@@ -910,15 +912,19 @@ export const DeleteActionItemResponse = zod.void()
 
 
 /**
- * @summary List documents, optionally filtered by bank
+ * @summary List documents, optionally filtered by bank and/or entity (product, meeting)
  */
 export const ListDocumentsQueryParams = zod.object({
-  "bankId": zod.coerce.string().optional()
+  "bankId": zod.coerce.string().optional(),
+  "entityType": zod.coerce.string().optional(),
+  "entityId": zod.coerce.string().optional()
 })
 
 export const ListDocumentsResponseItem = zod.object({
   "id": zod.number(),
-  "bankId": zod.string(),
+  "entityType": zod.string().describe('bank | product | meeting'),
+  "entityId": zod.string(),
+  "bankId": zod.string().nullish().describe('Deprecated alias for entityId, populated only when entityType is \'bank\'. Kept for backward compatibility.'),
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
@@ -940,7 +946,9 @@ export const ListDocumentsResponse = zod.array(ListDocumentsResponseItem)
  * @summary Register a document by external link (no file bytes stored)
  */
 export const CreateDocumentBody = zod.object({
-  "bankId": zod.string(),
+  "bankId": zod.string().optional().describe('Deprecated -- use entityType=bank + entityId instead'),
+  "entityType": zod.string().optional().describe('bank | product | meeting'),
+  "entityId": zod.string().optional(),
   "title": zod.string(),
   "link": zod.string().optional(),
   "docType": zod.string().optional()
@@ -948,7 +956,9 @@ export const CreateDocumentBody = zod.object({
 
 export const CreateDocumentResponse = zod.object({
   "id": zod.number(),
-  "bankId": zod.string(),
+  "entityType": zod.string().describe('bank | product | meeting'),
+  "entityId": zod.string(),
+  "bankId": zod.string().nullish().describe('Deprecated alias for entityId, populated only when entityType is \'bank\'. Kept for backward compatibility.'),
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
@@ -969,7 +979,9 @@ export const CreateDocumentResponse = zod.object({
  * @summary Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
  */
 export const UploadDocumentBody = zod.object({
-  "bankId": zod.string(),
+  "bankId": zod.string().optional().describe('Deprecated -- use entityType=bank + entityId instead'),
+  "entityType": zod.string().optional().describe('bank | product | meeting'),
+  "entityId": zod.string().optional(),
   "title": zod.string(),
   "docType": zod.string().optional(),
   "fileName": zod.string(),
@@ -978,7 +990,9 @@ export const UploadDocumentBody = zod.object({
 
 export const UploadDocumentResponse = zod.object({
   "id": zod.number(),
-  "bankId": zod.string(),
+  "entityType": zod.string().describe('bank | product | meeting'),
+  "entityId": zod.string(),
+  "bankId": zod.string().nullish().describe('Deprecated alias for entityId, populated only when entityType is \'bank\'. Kept for backward compatibility.'),
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
@@ -1010,7 +1024,9 @@ export const UpdateDocumentBody = zod.object({
 
 export const UpdateDocumentResponse = zod.object({
   "id": zod.number(),
-  "bankId": zod.string(),
+  "entityType": zod.string().describe('bank | product | meeting'),
+  "entityId": zod.string(),
+  "bankId": zod.string().nullish().describe('Deprecated alias for entityId, populated only when entityType is \'bank\'. Kept for backward compatibility.'),
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
@@ -1046,7 +1062,9 @@ export const RestoreDocumentParams = zod.object({
 
 export const RestoreDocumentResponse = zod.object({
   "id": zod.number(),
-  "bankId": zod.string(),
+  "entityType": zod.string().describe('bank | product | meeting'),
+  "entityId": zod.string(),
+  "bankId": zod.string().nullish().describe('Deprecated alias for entityId, populated only when entityType is \'bank\'. Kept for backward compatibility.'),
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
@@ -1206,7 +1224,9 @@ export const GetArchiveResponse = zod.object({
 })),
   "documents": zod.array(zod.object({
   "id": zod.number(),
-  "bankId": zod.string(),
+  "entityType": zod.string().describe('bank | product | meeting'),
+  "entityId": zod.string(),
+  "bankId": zod.string().nullish().describe('Deprecated alias for entityId, populated only when entityType is \'bank\'. Kept for backward compatibility.'),
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),

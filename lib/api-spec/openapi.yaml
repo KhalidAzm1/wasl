@@ -541,9 +541,20 @@ paths:
     get:
       operationId: listDocuments
       tags: [documents]
-      summary: List documents, optionally filtered by bank
+      summary: List documents, optionally filtered by bank and/or entity (product, meeting)
       parameters:
         - name: bankId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+            description: "bank | product | meeting"
+        - name: entityId
           in: query
           required: false
           schema:
@@ -1074,10 +1085,12 @@ components:
 
     Document:
       type: object
-      required: [id, bankId, title, isArchived, createdAt]
+      required: [id, entityType, entityId, title, isArchived, createdAt]
       properties:
         id: { type: integer }
-        bankId: { type: string }
+        entityType: { type: string, description: "bank | product | meeting" }
+        entityId: { type: string }
+        bankId: { type: ["string", "null"], description: "Deprecated alias for entityId, populated only when entityType is 'bank'. Kept for backward compatibility." }
         title: { type: string }
         link: { type: ["string", "null"] }
         docType: { type: ["string", "null"] }
@@ -1094,18 +1107,22 @@ components:
 
     DocumentInput:
       type: object
-      required: [bankId, title]
+      required: [title]
       properties:
-        bankId: { type: string }
+        bankId: { type: string, description: "Deprecated -- use entityType=bank + entityId instead" }
+        entityType: { type: string, description: "bank | product | meeting" }
+        entityId: { type: string }
         title: { type: string }
         link: { type: string }
         docType: { type: string }
 
     DocumentUpload:
       type: object
-      required: [bankId, title, fileName, fileDataBase64]
+      required: [title, fileName, fileDataBase64]
       properties:
-        bankId: { type: string }
+        bankId: { type: string, description: "Deprecated -- use entityType=bank + entityId instead" }
+        entityType: { type: string, description: "bank | product | meeting" }
+        entityId: { type: string }
         title: { type: string }
         docType: { type: string }
         fileName: { type: string }

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, filesTable, banksTable } from "@workspace/db";
+import { db, filesTable, banksTable, productsTable, meetingsTable } from "@workspace/db";
 import {
   ListDocumentsQueryParams,
   ListDocumentsResponse,
@@ -26,13 +26,56 @@ router.use(requireAuth);
 
 const DEFAULT_FOLDER: OneDriveFolder = "Banks";
 
-// Bank documents are the only "entity type" with an upload UI today, so this
-// router keeps talking about `bankId` on the wire -- underneath, rows are
-// stored in the generic `files` table as entityType="bank".
+// entityType -> OneDrive subfolder + the DB table/column used to verify the
+// parent record exists before we ever touch OneDrive or write a files row.
+const ENTITY_CONFIG = {
+  bank: { folder: "Banks" as OneDriveFolder, table: banksTable, idColumn: banksTable.id },
+  product: { folder: "Products" as OneDriveFolder, table: productsTable, idColumn: productsTable.id },
+  meeting: { folder: "Meetings" as OneDriveFolder, table: meetingsTable, idColumn: meetingsTable.id },
+} as const;
+type EntityType = keyof typeof ENTITY_CONFIG;
+
+function isEntityType(value: unknown): value is EntityType {
+  return typeof value === "string" && value in ENTITY_CONFIG;
+}
+
+async function resolveEntity(
+  entityType: string | undefined,
+  entityId: string | undefined,
+  bankId: string | undefined,
+): Promise<{ entityType: EntityType; entityId: string } | { error: string }> {
+  // bankId is a deprecated alias kept for older clients -- treat it as
+  // entityType="bank" when no explicit entityType/entityId is given.
+  const resolvedType = entityType ?? (bankId ? "bank" : undefined);
+  const resolvedId = entityId ?? bankId;
+  if (!resolvedType || !resolvedId) {
+    return { error: "entityType and entityId are required" };
+  }
+  if (!isEntityType(resolvedType)) {
+    return { error: `Unsupported entityType "${resolvedType}"` };
+  }
+  const config = ENTITY_CONFIG[resolvedType];
+  const idValue = resolvedType === "bank" ? resolvedId : Number(resolvedId);
+  if (resolvedType !== "bank" && Number.isNaN(idValue as number)) {
+    return { error: `Invalid entityId for entityType "${resolvedType}"` };
+  }
+  const [record] = await db
+    .select({ id: config.idColumn })
+    .from(config.table as any)
+    .where(eq(config.idColumn as any, idValue as any));
+  if (!record) {
+    return { error: `${resolvedType} not found` };
+  }
+  return { entityType: resolvedType, entityId: String(resolvedId) };
+}
+
+// Bank documents were the only "entity type" with an upload UI originally,
+// so the wire format keeps exposing `bankId` (only populated for bank docs)
+// for backward compatibility, alongside the generic entityType/entityId.
 function toWire(row: typeof filesTable.$inferSelect) {
   return {
     ...row,
-    bankId: row.entityId,
+    bankId: row.entityType === "bank" ? row.entityId : null,
     oneDriveItemId: row.onedriveFileId,
     oneDriveWebUrl: resignFileUrl(row.onedriveUrl),
   };
@@ -44,21 +87,15 @@ router.get("/documents", async (req, res): Promise<void> => {
     res.status(400).json({ error: query.error.message });
     return;
   }
-  const rows = query.data.bankId
-    ? await db
-        .select()
-        .from(filesTable)
-        .where(
-          and(
-            eq(filesTable.entityType, "bank"),
-            eq(filesTable.entityId, query.data.bankId),
-            eq(filesTable.isArchived, false),
-          ),
-        )
-    : await db
-        .select()
-        .from(filesTable)
-        .where(and(eq(filesTable.entityType, "bank"), eq(filesTable.isArchived, false)));
+  const entityType = query.data.entityType ?? (query.data.bankId ? "bank" : undefined);
+  const entityId = query.data.entityId ?? query.data.bankId;
+  const conditions = [eq(filesTable.isArchived, false)];
+  if (entityType) conditions.push(eq(filesTable.entityType, entityType));
+  if (entityId) conditions.push(eq(filesTable.entityId, entityId));
+  const rows = await db
+    .select()
+    .from(filesTable)
+    .where(and(...conditions));
   res.json(ListDocumentsResponse.parse(toPlain(rows.map(toWire))));
 });
 
@@ -68,16 +105,16 @@ router.post("/documents", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [bank] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, parsed.data.bankId));
-  if (!bank) {
-    res.status(404).json({ error: "Bank not found" });
+  const resolved = await resolveEntity(parsed.data.entityType, parsed.data.entityId, parsed.data.bankId);
+  if ("error" in resolved) {
+    res.status(404).json({ error: resolved.error });
     return;
   }
   const [row] = await db
     .insert(filesTable)
     .values({
-      entityType: "bank",
-      entityId: parsed.data.bankId,
+      entityType: resolved.entityType,
+      entityId: resolved.entityId,
       title: parsed.data.title,
       link: parsed.data.link,
       docType: parsed.data.docType,
@@ -100,18 +137,19 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [bank] = await db.select().from(banksTable).where(eq(banksTable.id, parsed.data.bankId));
-  if (!bank) {
-    res.status(404).json({ error: "Bank not found" });
+  const resolved = await resolveEntity(parsed.data.entityType, parsed.data.entityId, parsed.data.bankId);
+  if ("error" in resolved) {
+    res.status(404).json({ error: resolved.error });
     return;
   }
-  // Files live directly under /Wasl Documents/Banks (not per-bank folders);
-  // (bank existence is checked above, before we ever touch OneDrive)
-  // prefix with the bank id so identically-named uploads never collide.
-  const safeFileName = `${bank.id}_${Date.now()}_${parsed.data.fileName}`;
+  const folder = ENTITY_CONFIG[resolved.entityType].folder;
+  // Files live directly under /Wasl Documents/<folder> (not per-entity
+  // folders); prefix with the entity type + id so identically-named uploads
+  // across different banks/products/meetings never collide.
+  const safeFileName = `${resolved.entityType}-${resolved.entityId}_${Date.now()}_${parsed.data.fileName}`;
   let uploadResult;
   try {
-    uploadResult = await uploadFileToOneDrive("Banks", safeFileName, parsed.data.fileDataBase64);
+    uploadResult = await uploadFileToOneDrive(folder, safeFileName, parsed.data.fileDataBase64);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Upload failed" });
     return;
@@ -119,11 +157,11 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
   const [row] = await db
     .insert(filesTable)
     .values({
-      entityType: "bank",
-      entityId: parsed.data.bankId,
+      entityType: resolved.entityType,
+      entityId: resolved.entityId,
       title: parsed.data.title,
       docType: parsed.data.docType,
-      folder: "Banks",
+      folder,
       fileName: parsed.data.fileName,
       fileType: uploadResult.contentType,
       fileSize: uploadResult.size,

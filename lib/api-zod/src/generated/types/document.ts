@@ -8,7 +8,14 @@
 
 export interface Document {
   id: number;
-  bankId: string;
+  /** bank | product | meeting */
+  entityType: string;
+  entityId: string;
+  /**
+     * Deprecated alias for entityId, populated only when entityType is 'bank'. Kept for backward compatibility.
+     * @nullable
+     */
+  bankId?: string | null;
   title: string;
   /** @nullable */
   link?: string | null;

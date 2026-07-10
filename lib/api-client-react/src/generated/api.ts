@@ -2325,7 +2325,7 @@ export const getListDocumentsUrl = (params?: ListDocumentsParams,) => {
 }
 
 /**
- * @summary List documents, optionally filtered by bank
+ * @summary List documents, optionally filtered by bank and/or entity (product, meeting)
  */
 export const listDocuments = async (params?: ListDocumentsParams, options?: RequestInit): Promise<Document[]> => {
 
@@ -2372,7 +2372,7 @@ export type ListDocumentsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List documents, optionally filtered by bank
+ * @summary List documents, optionally filtered by bank and/or entity (product, meeting)
  */
 
 export function useListDocuments<TData = Awaited<ReturnType<typeof listDocuments>>, TError = ErrorType<unknown>>(

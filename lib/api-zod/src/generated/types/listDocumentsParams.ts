@@ -8,4 +8,9 @@
 
 export type ListDocumentsParams = {
 bankId?: string;
+/**
+ * bank | product | meeting
+ */
+entityType?: string;
+entityId?: string;
 };

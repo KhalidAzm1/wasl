@@ -7,7 +7,11 @@
  */
 
 export interface DocumentInput {
-  bankId: string;
+  /** Deprecated -- use entityType=bank + entityId instead */
+  bankId?: string;
+  /** bank | product | meeting */
+  entityType?: string;
+  entityId?: string;
   title: string;
   link?: string;
   docType?: string;

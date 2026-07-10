@@ -9,7 +9,7 @@ import {
   useCreateRisk, useUpdateRisk, useDeleteRisk,
   useCreateActionItem, useUpdateActionItem, useDeleteActionItem,
   useCreateDocument, useUploadDocument, useDeleteDocument,
-  getGetBankQueryKey
+  useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,8 +23,97 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDate, formatDateTime, formatPercentage, getStatusColor } from '@/lib/utils';
 import { 
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
-  CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud
+  CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip
 } from 'lucide-react';
+
+// Generic attachment button + dialog for entities other than banks (products,
+// meetings). Mirrors the bank Documents tab but scoped to a single
+// entityType/entityId pair, since products/meetings don't have their own tab.
+function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 'product' | 'meeting', entityId: number, label: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<{ name: string, title: string, docType: string, dataUrl: string } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const params = { entityType, entityId: String(entityId) };
+  const { data: files } = useListDocuments(params, { query: { enabled: isOpen, queryKey: getListDocumentsQueryKey(params) } });
+  const uploadDoc = useUploadDocument();
+  const deleteDoc = useDeleteDocument();
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey(params) });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUploadFile({ name: file.name, title: file.name, docType: '', dataUrl: event.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpload = () => {
+    if (!uploadFile) return;
+    uploadDoc.mutate({ data: { entityType, entityId: String(entityId), title: uploadFile.title, fileName: uploadFile.name, docType: uploadFile.docType, fileDataBase64: uploadFile.dataUrl } }, {
+      onSuccess: () => {
+        invalidate();
+        setUploadFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        toast({ title: 'Upload Successful', description: 'The file has been uploaded to OneDrive.' });
+      },
+      onError: (err: any) => {
+        toast({ title: 'Upload Failed', description: err?.message || 'Failed to upload the file.', variant: 'destructive' });
+      }
+    });
+  };
+
+  const docs = files || [];
+
+  return (
+    <>
+      <Button variant="ghost" size="icon" className="h-6 w-6 text-white/50" title="Attach file" onClick={(e) => { e.stopPropagation(); setIsOpen(true); }}>
+        <Paperclip className="w-3 h-3" />
+      </Button>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent dir="ltr">
+          <DialogHeader><DialogTitle>Attachments — {label}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+            <Button variant="outline" size="sm" className="gap-2 w-full" onClick={() => fileInputRef.current?.click()}>
+              <UploadCloud className="w-4 h-4" /> Upload to OneDrive
+            </Button>
+            {uploadFile && (
+              <div className="p-3 rounded-xl bg-white/5 border border-primary/30 space-y-2">
+                <span className="text-sm text-white/70">File: {uploadFile.name}</span>
+                <Input placeholder="Title" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} />
+                <Input placeholder="Type (Contract, Report...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleUpload} disabled={uploadDoc.isPending}>{uploadDoc.isPending ? 'Uploading...' : 'Confirm Upload'}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Cancel</Button>
+                </div>
+              </div>
+            )}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {docs.map(d => (
+                <div key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => { const url = d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
+                    <FileText className="w-5 h-5 text-primary/70 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium truncate text-sm">{d.title}</p>
+                      {d.uploadedBy && <p className="text-xs text-white/30">Uploaded by {d.uploadedBy}</p>}
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400/50 shrink-0" onClick={() => deleteDoc.mutate({ id: d.id }, { onSuccess: invalidate })}><Trash2 className="w-3 h-3" /></Button>
+                </div>
+              ))}
+              {docs.length === 0 && <div className="py-6 text-center text-white/30 text-sm">No files attached yet</div>}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 export default function BankDetail() {
   const { id } = useParams<{ id: string }>();
@@ -302,6 +391,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
               <div className="flex justify-between items-start mb-3">
                 <Badge variant="outline">{p.productCode}</Badge>
                 <div className="flex gap-1">
+                  <EntityAttachmentsButton entityType="product" entityId={p.id} label={p.productCode} />
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-white/50" onClick={() => { setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400/50" onClick={() => {
                     if (confirm('Confirm deletion?')) {
@@ -391,9 +481,12 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
                 <p className="text-xs text-white/30 mt-2">Last updated by {m.updatedBy}{m.updatedAt ? ` — ${formatDateTime(m.updatedAt)}` : ''}</p>
               )}
             </div>
-            <Button variant="ghost" size="icon" className="text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <div className="flex items-start gap-1 shrink-0">
+              <EntityAttachmentsButton entityType="meeting" entityId={m.id} label={m.topic} />
+              <Button variant="ghost" size="icon" className="text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         ))}
       </div>

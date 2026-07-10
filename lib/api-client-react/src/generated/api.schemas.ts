@@ -155,7 +155,14 @@ export interface ActionItem {
 
 export interface Document {
   id: number;
-  bankId: string;
+  /** bank | product | meeting */
+  entityType: string;
+  entityId: string;
+  /**
+     * Deprecated alias for entityId, populated only when entityType is 'bank'. Kept for backward compatibility.
+     * @nullable
+     */
+  bankId?: string | null;
   title: string;
   /** @nullable */
   link?: string | null;
@@ -343,14 +350,22 @@ export interface ActionItemUpdate {
 }
 
 export interface DocumentInput {
-  bankId: string;
+  /** Deprecated -- use entityType=bank + entityId instead */
+  bankId?: string;
+  /** bank | product | meeting */
+  entityType?: string;
+  entityId?: string;
   title: string;
   link?: string;
   docType?: string;
 }
 
 export interface DocumentUpload {
-  bankId: string;
+  /** Deprecated -- use entityType=bank + entityId instead */
+  bankId?: string;
+  /** bank | product | meeting */
+  entityType?: string;
+  entityId?: string;
   title: string;
   docType?: string;
   fileName: string;
@@ -473,6 +488,11 @@ bankId?: string;
 
 export type ListDocumentsParams = {
 bankId?: string;
+/**
+ * bank | product | meeting
+ */
+entityType?: string;
+entityId?: string;
 };
 
 export type ListAuditLogsParams = {

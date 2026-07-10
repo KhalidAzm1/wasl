@@ -58,7 +58,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Mobile-only top bar: hamburger toggle for the drawer sidebar. Sits
           above safe-area insets (notch / Dynamic Island). */}
       <div className="md:hidden fixed top-0 inset-x-0 z-40 safe-area-top flex items-center justify-between px-4 py-3 bg-background/85 backdrop-blur-xl border-b border-white/5">
-        <img src={logoUrl} alt="Wasl" className="no-mirror h-8 w-auto" />
+        <img src={logoUrl} alt="Wasl" className="no-mirror h-12 w-auto" />
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -108,7 +108,7 @@ export function Layout({ children }: LayoutProps) {
         )}
       >
         <div className="w-full flex items-center justify-center shrink-0">
-          <img src={logoUrl} alt="Wasl" className="no-mirror w-48 max-w-full h-auto drop-shadow-lg" />
+          <img src={logoUrl} alt="Wasl" className="no-mirror w-64 max-w-full h-auto drop-shadow-lg" />
         </div>
 
         <nav className="w-full flex flex-col gap-3 shrink-0">

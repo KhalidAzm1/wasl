@@ -1,12 +1,76 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { getSupabaseAdmin } from "@workspace/supabase";
 import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
-// All user-management endpoints require a valid session and super_admin role.
-router.use("/admin/users", requireAuth, requireRole("super_admin"));
+// All user-management endpoints require a valid session, super_admin role,
+// and a verified PIN token (see requirePinToken below).
+router.use("/admin/users", requireAuth, requireRole("super_admin"), requirePinToken);
+
+// --- Admin panel PIN (second factor) ---------------------------------------
+//
+// Verifying the PIN issues a short-lived signed token bound to the caller's
+// user id. The token itself (not just a client-side flag) is required on
+// every /admin/users/* request below, so a super_admin who only has a valid
+// login session — but hasn't entered the PIN — cannot reach these routes by
+// calling the API directly or by faking client state.
+const PIN_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+// Fail closed: a missing SESSION_SECRET must never silently downgrade to an
+// empty/known signing key (which would make PIN tokens trivially forgeable).
+function getPinSigningSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error("SESSION_SECRET is not configured; cannot sign/verify admin PIN tokens");
+  }
+  return secret;
+}
+
+function signPinToken(userId: string, expiresAt: number): string {
+  const secret = getPinSigningSecret();
+  const payload = `${userId}.${expiresAt}`;
+  const sig = createHmac("sha256", secret).update(payload).digest("hex");
+  return Buffer.from(`${payload}.${sig}`).toString("base64url");
+}
+
+function verifyPinToken(token: string, userId: string): boolean {
+  try {
+    const secret = getPinSigningSecret();
+    const decoded = Buffer.from(token, "base64url").toString("utf8");
+    const [tokenUserId, expiresAtStr, sig] = decoded.split(".");
+    if (!tokenUserId || !expiresAtStr || !sig) return false;
+    if (tokenUserId !== userId) return false;
+    const expiresAt = Number(expiresAtStr);
+    if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
+
+    const payload = `${tokenUserId}.${expiresAtStr}`;
+    const expectedSig = createHmac("sha256", secret).update(payload).digest("hex");
+    const a = Buffer.from(sig, "hex");
+    const b = Buffer.from(expectedSig, "hex");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function requirePinToken(req: Request, res: Response, next: NextFunction): void {
+  const token = req.headers["x-admin-pin-token"];
+  let valid = false;
+  try {
+    valid = typeof token === "string" && Boolean(req.authUser) && verifyPinToken(token, req.authUser!.id);
+  } catch {
+    valid = false; // fail closed (e.g. SESSION_SECRET misconfigured)
+  }
+  if (!valid) {
+    res.status(403).json({ error: "يلزم إدخال الرقم السري لهذه الصفحة" });
+    return;
+  }
+  next();
+}
 
 const createUserBody = z.object({
   name: z.string().min(1),
@@ -105,7 +169,71 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
   res.json({ user: profile });
 });
 
+const verifyPinBody = z.object({
+  pin: z.string().min(1),
+});
+
+// Basic in-memory rate limit on PIN attempts per user, to slow down online
+// guessing. Resets on process restart; acceptable for a single-instance API
+// server protecting a low-volume internal admin panel.
+const PIN_ATTEMPT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const PIN_ATTEMPT_MAX = 5;
+const pinAttempts = new Map<string, { count: number; windowStart: number }>();
+
+function isPinRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = pinAttempts.get(userId);
+  if (!entry || now - entry.windowStart > PIN_ATTEMPT_WINDOW_MS) {
+    pinAttempts.set(userId, { count: 0, windowStart: now });
+    return false;
+  }
+  return entry.count >= PIN_ATTEMPT_MAX;
+}
+
+function recordPinAttempt(userId: string): void {
+  const entry = pinAttempts.get(userId);
+  if (entry) entry.count += 1;
+}
+
+// A second factor gating access to the Admin Panel itself, on top of
+// super_admin auth. Kept separate from Supabase auth so a leaked/guessed
+// login alone can't reach user management.
+router.post("/admin/verify-pin", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
+  const parsed = verifyPinBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Missing PIN" });
+    return;
+  }
+  const userId = req.authUser!.id;
+  if (isPinRateLimited(userId)) {
+    res.status(429).json({ error: "محاولات كثيرة جدًا، حاول لاحقًا" });
+    return;
+  }
+  const expected = process.env.ADMIN_PANEL_PIN;
+  if (!expected) {
+    res.status(500).json({ error: "Admin panel PIN is not configured" });
+    return;
+  }
+  if (parsed.data.pin !== expected) {
+    recordPinAttempt(userId);
+    res.status(403).json({ error: "رقم سري غير صحيح" });
+    return;
+  }
+
+  try {
+    const expiresAt = Date.now() + PIN_TOKEN_TTL_MS;
+    const token = signPinToken(userId, expiresAt);
+    res.json({ ok: true, token, expiresAt });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 router.post("/admin/users/:id/deactivate", async (req, res): Promise<void> => {
+  if (req.authUser?.id === req.params.id) {
+    res.status(400).json({ error: "لا يمكنك تعطيل حسابك الخاص" });
+    return;
+  }
   const supabase = getSupabaseAdmin();
 
   const { error: banError } = await supabase.auth.admin.updateUserById(req.params.id, {
@@ -164,6 +292,10 @@ router.post("/admin/users/:id/reactivate", async (req, res): Promise<void> => {
 });
 
 router.delete("/admin/users/:id", async (req, res): Promise<void> => {
+  if (req.authUser?.id === req.params.id) {
+    res.status(400).json({ error: "لا يمكنك حذف حسابك الخاص" });
+    return;
+  }
   const supabase = getSupabaseAdmin();
 
   const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(req.params.id);

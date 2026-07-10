@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { formatDateTime } from '@/lib/utils';
 import { Plus, Pencil, UserX, UserCheck, Trash2 } from 'lucide-react';
+import { useAuth } from '@/lib/authContext';
+import { getAdminPinToken } from '@/components/AdminPinGate';
 
 type Role = 'super_admin' | 'admin';
 
@@ -24,11 +26,13 @@ interface AdminUser {
 async function authedFetch(path: string, options: RequestInit = {}) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
+  const pinToken = getAdminPinToken();
   const res = await fetch(path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(pinToken ? { 'X-Admin-Pin-Token': pinToken } : {}),
       ...(options.headers ?? {}),
     },
   });
@@ -51,6 +55,8 @@ export default function AdminUsers() {
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'admin' as Role });
   const { toast } = useToast();
+  const { session } = useAuth();
+  const currentUserId = session?.user.id;
 
   async function loadUsers() {
     setLoading(true);
@@ -183,18 +189,24 @@ export default function AdminUsers() {
                       <Button size="icon" variant="ghost" onClick={() => openEdit(user)} title="تعديل">
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      {user.deleted_at ? (
-                        <Button size="icon" variant="ghost" onClick={() => handleReactivate(user)} title="إعادة تفعيل">
-                          <UserCheck className="w-4 h-4" />
-                        </Button>
+                      {user.id === currentUserId ? (
+                        <span className="text-white/30 text-xs px-2 py-1">حسابك الحالي</span>
                       ) : (
-                        <Button size="icon" variant="ghost" onClick={() => handleDeactivate(user)} title="تعطيل">
-                          <UserX className="w-4 h-4" />
-                        </Button>
+                        <>
+                          {user.deleted_at ? (
+                            <Button size="icon" variant="ghost" onClick={() => handleReactivate(user)} title="إعادة تفعيل">
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button size="icon" variant="ghost" onClick={() => handleDeactivate(user)} title="تعطيل">
+                              <UserX className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button size="icon" variant="ghost" onClick={() => handleDelete(user)} title="حذف نهائي">
+                            <Trash2 className="w-4 h-4 text-red-400" />
+                          </Button>
+                        </>
                       )}
-                      <Button size="icon" variant="ghost" onClick={() => handleDelete(user)} title="حذف نهائي">
-                        <Trash2 className="w-4 h-4 text-red-400" />
-                      </Button>
                     </div>
                   </td>
                 </tr>

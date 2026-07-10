@@ -5,3 +5,4 @@
 - [WebGL unavailable in headless preview](webgl-headless-preview.md) — canvas.getContext('webgl') can lie in this sandbox; pair feature detection with an error boundary + contextlost fallback for any Three.js/R3F canvas.
 - [Wasl sidebar cube widget — no-logo invariant](wasl-cube-widget-branding.md) — a "never show X" requirement must be grepped across every fallback/error-boundary branch, not just the main render path.
 - [Supabase RLS self-update escalation](supabase-rls-self-update-escalation.md) — a self-update RLS policy without a column-aware WITH CHECK lets users self-promote role; omit it and route writes through service-role backend instead.
+- [Client-side-only PIN/2FA gates](client-side-only-gates.md) — a frontend-only PIN gate (sessionStorage flag) protects nothing; the backend must issue and verify a signed token on every protected route.

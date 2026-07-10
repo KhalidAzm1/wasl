@@ -14,6 +14,7 @@ import Settings from '@/pages/settings';
 import Login from '@/pages/login';
 import ChangePassword from '@/pages/change-password';
 import AdminUsers from '@/pages/admin-users';
+import { AdminPinGate } from '@/components/AdminPinGate';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,24 +30,40 @@ const queryClient = new QueryClient({
 function AppRoutes() {
   return (
     <Switch>
-      <Route path="/" component={EntryExperience} />
+      <Route path="/login" component={Login} />
+      <Route path="/change-password">
+        <RequireAuth>
+          <ChangePassword />
+        </RequireAuth>
+      </Route>
+      <Route path="/">
+        <RequireAuth>
+          <EntryExperience />
+        </RequireAuth>
+      </Route>
       <Route path="/portfolio">
-        <Layout><Dashboard /></Layout>
+        <RequireAuth>
+          <Layout><Dashboard /></Layout>
+        </RequireAuth>
       </Route>
       <Route path="/bank/:id">
-        <Layout><BankDetail /></Layout>
+        <RequireAuth>
+          <Layout><BankDetail /></Layout>
+        </RequireAuth>
       </Route>
       <Route path="/settings">
-        <Layout><Settings /></Layout>
+        <RequireAuth>
+          <Layout><Settings /></Layout>
+        </RequireAuth>
       </Route>
-      <Route path="/login" component={Login} />
-      <Route path="/change-password" component={ChangePassword} />
       <Route path="/admin/users">
-        <Layout>
-          <RequireAuth roles={['super_admin']}>
-            <AdminUsers />
-          </RequireAuth>
-        </Layout>
+        <RequireAuth roles={['super_admin']}>
+          <Layout>
+            <AdminPinGate>
+              <AdminUsers />
+            </AdminPinGate>
+          </Layout>
+        </RequireAuth>
       </Route>
       <Route>
         <Layout><NotFound /></Layout>

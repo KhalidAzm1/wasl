@@ -30,13 +30,13 @@ import {
   SetBankHeroImageResponse,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 import { uploadFileToOneDrive } from "../lib/onedrive";
 import { resignFileUrl } from "../lib/file-tokens";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("dashboard_access"));
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const DATA_URL_PATTERN = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,([A-Za-z0-9+/=]+)$/;

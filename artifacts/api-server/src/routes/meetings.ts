@@ -14,11 +14,11 @@ import {
   RestoreMeetingResponse,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("meetings"));
 
 router.get("/meetings", async (req, res): Promise<void> => {
   const query = ListMeetingsQueryParams.safeParse(req.query);

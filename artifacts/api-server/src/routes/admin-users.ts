@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { getSupabaseAdmin } from "@workspace/supabase";
+import { getSupabaseAdmin, DEFAULT_PERMISSIONS, type UserRole, type UserPermissions } from "@workspace/supabase";
 import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -72,23 +72,48 @@ function requirePinToken(req: Request, res: Response, next: NextFunction): void 
   next();
 }
 
+const permissionsSchema = z
+  .object({
+    user_management: z.boolean(),
+    documents: z.boolean(),
+    meetings: z.boolean(),
+    security: z.boolean(),
+    dashboard_access: z.boolean(),
+  })
+  .partial();
+
+const ROLE_VALUES = ["super_admin", "admin", "manager", "editor", "viewer"] as const;
+
 const createUserBody = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(["super_admin", "admin"]),
+  role: z.enum(ROLE_VALUES),
+  permissions: permissionsSchema.optional(),
 });
 
 const updateUserBody = z.object({
   name: z.string().min(1).optional(),
-  role: z.enum(["super_admin", "admin"]).optional(),
+  role: z.enum(ROLE_VALUES).optional(),
+  permissions: permissionsSchema.optional(),
 });
+
+const PROFILE_COLUMNS = "id, name, email, role, permissions, created_at, updated_at, deleted_at";
+
+// A partial/missing permissions payload is always merged onto the target
+// role's default grant -- never persisted as-is -- so a client can only ever
+// widen or narrow specific flags, not silently end up with an incomplete
+// permissions object that other code (nav gating, requirePermission) would
+// have to guess how to interpret.
+function normalizePermissions(role: UserRole, partial?: Partial<UserPermissions>): UserPermissions {
+  return { ...DEFAULT_PERMISSIONS[role], ...(partial ?? {}) };
+}
 
 router.get("/admin/users", async (_req, res): Promise<void> => {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, email, role, created_at, updated_at, deleted_at")
+    .select(PROFILE_COLUMNS)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -104,7 +129,7 @@ router.post("/admin/users", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { name, email, password, role } = parsed.data;
+  const { name, email, password, role, permissions } = parsed.data;
   const supabase = getSupabaseAdmin();
 
   const { data: created, error: createError } = await supabase.auth.admin.createUser({
@@ -119,10 +144,18 @@ router.post("/admin/users", async (req, res): Promise<void> => {
     return;
   }
 
+  const insertRow: Record<string, unknown> = {
+    id: created.user.id,
+    name,
+    email,
+    role,
+    permissions: normalizePermissions(role, permissions),
+  };
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .insert({ id: created.user.id, name, email, role })
-    .select("id, name, email, role, created_at, updated_at, deleted_at")
+    .insert(insertRow)
+    .select(PROFILE_COLUMNS)
     .single();
 
   if (profileError) {
@@ -155,11 +188,68 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
   }
 
   const supabase = getSupabaseAdmin();
+
+  const updateRow: Record<string, unknown> = { ...parsed.data };
+  if (parsed.data.role || parsed.data.permissions) {
+    // Merging permissions requires knowing the current row: a role change
+    // without an explicit permissions payload should re-baseline to the new
+    // role's defaults, while a permissions-only change should layer onto
+    // whatever the row already has (not silently reset unrelated flags).
+    // The existing side is itself normalized against its own role's
+    // defaults first, so a previously-partial/malformed stored object can
+    // never survive another merge still partial.
+    const { data: existing, error: existingError } = await supabase
+      .from("profiles")
+      .select("role, permissions")
+      .eq("id", req.params.id)
+      .single();
+    if (existingError || !existing) {
+      res.status(404).json({ error: existingError?.message ?? "User not found" });
+      return;
+    }
+    const existingRole = existing.role as UserRole;
+    const targetRole = (parsed.data.role ?? existingRole) as UserRole;
+    const base = parsed.data.role
+      ? DEFAULT_PERMISSIONS[targetRole]
+      : normalizePermissions(existingRole, existing.permissions ?? undefined);
+    const nextPermissions = { ...base, ...(parsed.data.permissions ?? {}) };
+
+    // Guardrail: never let a write strip `user_management` from the last
+    // active (non-deactivated) super_admin/admin with it enabled -- that's
+    // the only door back into this page, so losing it here is unrecoverable
+    // without direct DB access.
+    if (existing.role === "super_admin" && req.authUser?.id === req.params.id && !nextPermissions.user_management) {
+      res.status(400).json({ error: "لا يمكنك إزالة صلاحية إدارة المستخدمين عن حسابك الخاص" });
+      return;
+    }
+    if (!nextPermissions.user_management) {
+      const { data: otherAdmins, error: otherAdminsError } = await supabase
+        .from("profiles")
+        .select("id, permissions")
+        .in("role", ["super_admin", "admin"])
+        .is("deleted_at", null)
+        .neq("id", req.params.id);
+      if (otherAdminsError) {
+        res.status(500).json({ error: otherAdminsError.message });
+        return;
+      }
+      const anotherHasUserManagement = (otherAdmins ?? []).some((row) => row.permissions?.user_management === true);
+      if (!anotherHasUserManagement) {
+        res.status(400).json({
+          error: "لا يمكن إزالة صلاحية إدارة المستخدمين من آخر مسؤول يملكها في النظام",
+        });
+        return;
+      }
+    }
+
+    updateRow.permissions = nextPermissions;
+  }
+
   const { data: profile, error } = await supabase
     .from("profiles")
-    .update(parsed.data)
+    .update(updateRow)
     .eq("id", req.params.id)
-    .select("id, name, email, role, created_at, updated_at, deleted_at")
+    .select(PROFILE_COLUMNS)
     .single();
 
   if (error) {
@@ -248,7 +338,7 @@ router.post("/admin/users/:id/deactivate", async (req, res): Promise<void> => {
     .from("profiles")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", req.params.id)
-    .select("id, name, email, role, created_at, updated_at, deleted_at")
+    .select(PROFILE_COLUMNS)
     .single();
 
   if (error) {
@@ -278,7 +368,7 @@ router.post("/admin/users/:id/reactivate", async (req, res): Promise<void> => {
     .from("profiles")
     .update({ deleted_at: null })
     .eq("id", req.params.id)
-    .select("id, name, email, role, created_at, updated_at, deleted_at")
+    .select(PROFILE_COLUMNS)
     .single();
 
   if (error) {

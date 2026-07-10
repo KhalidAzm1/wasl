@@ -3,11 +3,11 @@ import { eq } from "drizzle-orm";
 import { db, banksTable, filesTable, meetingsTable, bankProductTypesTable } from "@workspace/db";
 import { GetArchiveResponse } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { resignFileUrl } from "../lib/file-tokens";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("dashboard_access"));
 
 router.get("/archive", async (_req, res): Promise<void> => {
   const [banks, documents, meetings] = await Promise.all([

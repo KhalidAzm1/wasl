@@ -12,11 +12,11 @@ import {
   DeactivateProductTypeParams,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireRole, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("dashboard_access"));
 
 router.get("/product-types", async (req, res): Promise<void> => {
   const query = ListProductTypesQueryParams.safeParse(req.query);

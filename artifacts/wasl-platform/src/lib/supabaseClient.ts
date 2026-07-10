@@ -9,4 +9,12 @@ if (!url || !anonKey) {
 
 export const supabase = createClient(url, anonKey);
 
-export type AppRole = 'super_admin' | 'admin';
+export type AppRole = 'super_admin' | 'admin' | 'manager' | 'editor' | 'viewer';
+
+export interface AppPermissions {
+  user_management: boolean;
+  documents: boolean;
+  meetings: boolean;
+  security: boolean;
+  dashboard_access: boolean;
+}

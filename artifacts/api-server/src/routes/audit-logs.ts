@@ -3,10 +3,10 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db, auditLogsTable } from "@workspace/db";
 import { ListAuditLogsQueryParams, ListAuditLogsResponse } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("security"));
 
 router.get("/audit-logs", async (req, res): Promise<void> => {
   const query = ListAuditLogsQueryParams.safeParse(req.query);

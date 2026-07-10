@@ -1,12 +1,37 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export type UserRole = "super_admin" | "admin";
+export type UserRole = "super_admin" | "admin" | "manager" | "editor" | "viewer";
+
+export interface UserPermissions {
+  user_management: boolean;
+  documents: boolean;
+  meetings: boolean;
+  security: boolean;
+  dashboard_access: boolean;
+}
+
+export const PERMISSION_KEYS: (keyof UserPermissions)[] = [
+  "user_management",
+  "documents",
+  "meetings",
+  "security",
+  "dashboard_access",
+];
+
+export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
+  super_admin: { user_management: true, documents: true, meetings: true, security: true, dashboard_access: true },
+  admin: { user_management: true, documents: true, meetings: true, security: true, dashboard_access: true },
+  manager: { user_management: false, documents: true, meetings: true, security: false, dashboard_access: true },
+  editor: { user_management: false, documents: true, meetings: true, security: false, dashboard_access: true },
+  viewer: { user_management: false, documents: false, meetings: false, security: false, dashboard_access: true },
+};
 
 export interface Profile {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  permissions: UserPermissions;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

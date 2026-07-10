@@ -44,37 +44,37 @@ function AppRoutes() {
         </RequireAuth>
       </Route>
       <Route path="/portfolio">
-        <RequireAuth>
+        <RequireAuth permission="dashboard_access">
           <Layout><Dashboard /></Layout>
         </RequireAuth>
       </Route>
       <Route path="/bank/:id">
-        <RequireAuth>
+        <RequireAuth permission="dashboard_access">
           <Layout><BankDetail /></Layout>
         </RequireAuth>
       </Route>
       <Route path="/settings">
-        <RequireAuth>
+        <RequireAuth permission="dashboard_access">
           <Layout><Settings /></Layout>
         </RequireAuth>
       </Route>
       <Route path="/meetings">
-        <RequireAuth>
+        <RequireAuth permission="meetings">
           <Layout><Meetings /></Layout>
         </RequireAuth>
       </Route>
       <Route path="/documents">
-        <RequireAuth>
+        <RequireAuth permission="documents">
           <Layout><Documents /></Layout>
         </RequireAuth>
       </Route>
       <Route path="/security">
-        <RequireAuth>
+        <RequireAuth permission="security">
           <Layout><Security /></Layout>
         </RequireAuth>
       </Route>
       <Route path="/admin/users">
-        <RequireAuth roles={['super_admin']}>
+        <RequireAuth roles={['super_admin']} permission="user_management">
           <Layout>
             <AdminPinGate>
               <AdminUsers />

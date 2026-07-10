@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db, lookupsTable } from "@workspace/db";
 import { GetLookupsResponse, UpdateLookupsBody, UpdateLookupsResponse } from "@workspace/api-zod";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("dashboard_access"));
 
 const KEYS = [
   "statuses",

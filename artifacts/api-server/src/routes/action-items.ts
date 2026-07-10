@@ -12,11 +12,11 @@ import {
   DeleteActionItemParams,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("dashboard_access"));
 
 router.get("/action-items", async (req, res): Promise<void> => {
   const query = ListActionItemsQueryParams.safeParse(req.query);

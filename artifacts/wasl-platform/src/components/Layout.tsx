@@ -14,7 +14,7 @@ interface LayoutProps {
 }
 
 const mainNavItems = [
-  { href: '/portfolio', icon: LayoutDashboard, label: 'Dashboard', roles: null },
+  { href: '/portfolio', icon: LayoutDashboard, label: 'Dashboard', roles: null, permission: 'dashboard_access' as const },
 ];
 
 // Note: "Product Types" and "Archive" live as tabs inside the Settings page
@@ -22,21 +22,21 @@ const mainNavItems = [
 // since both used to point at the same /settings route with no tab
 // differentiation, which read as a duplicate menu item.
 const contentNavItems = [
-  { href: '/admin/users', icon: Users, label: 'User Management', roles: ['super_admin'] },
-  { href: '/meetings', icon: Calendar, label: 'Meetings', roles: null },
-  { href: '/documents', icon: FileText, label: 'Documents', roles: null },
+  { href: '/admin/users', icon: Users, label: 'User Management', roles: ['super_admin'], permission: 'user_management' as const },
+  { href: '/meetings', icon: Calendar, label: 'Meetings', roles: null, permission: 'meetings' as const },
+  { href: '/documents', icon: FileText, label: 'Documents', roles: null, permission: 'documents' as const },
 ];
 
 const systemNavItems = [
-  { href: '/security', icon: ShieldCheck, label: 'Security & Activity', roles: null },
-  { href: '/settings', icon: Settings, label: 'Settings', roles: null },
+  { href: '/security', icon: ShieldCheck, label: 'Security & Activity', roles: null, permission: 'security' as const },
+  { href: '/settings', icon: Settings, label: 'Settings', roles: null, permission: null },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [location, navigate] = useLocation();
   const [panelOpen, setPanelOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const { role } = useAuth();
+  const { role, permissions } = useAuth();
   const { theme, setTheme } = useTheme();
 
   // Close panel on route change
@@ -69,7 +69,15 @@ export function Layout({ children }: LayoutProps) {
   }
 
   const filterNavItems = (items: any[]) =>
-    items.filter((item) => !item.roles || (role && item.roles.includes(role)));
+    items.filter((item) => {
+      const roleOk = !item.roles || (role && item.roles.includes(role));
+      // Permissions are optional metadata on older/legacy profiles — only a
+      // profile with permissions loaded and the flag explicitly disabled is
+      // hidden, so a null/undefined permissions map (e.g. still loading)
+      // doesn't flash-hide every nav item.
+      const permissionOk = !item.permission || !permissions || permissions[item.permission as keyof typeof permissions] !== false;
+      return roleOk && permissionOk;
+    });
 
   const renderNavSection = (items: any[], title?: string) => {
     const filtered = filterNavItems(items);

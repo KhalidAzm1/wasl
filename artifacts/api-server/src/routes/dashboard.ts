@@ -13,10 +13,10 @@ import {
   GetDashboardSummaryResponse,
   GetActivityFeedResponse,
 } from "@workspace/api-zod";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 
 const router: IRouter = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePermission("dashboard_access"));
 
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   const banks = await db.select().from(banksTable).where(eq(banksTable.isArchived, false));

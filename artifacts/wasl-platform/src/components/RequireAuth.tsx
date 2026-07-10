@@ -20,7 +20,7 @@ export function RequireAuth({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-white/60">
-        جارٍ التحقق من الجلسة...
+        Checking session...
       </div>
     );
   }
@@ -36,7 +36,7 @@ export function RequireAuth({
   if (roles && (!role || !roles.includes(role))) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-white/60">
-        ليس لديك صلاحية الوصول إلى هذه الصفحة.
+        You don't have permission to access this page.
       </div>
     );
   }

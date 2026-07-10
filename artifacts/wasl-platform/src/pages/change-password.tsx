@@ -16,11 +16,11 @@ export default function ChangePassword() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 8) {
-      toast({ title: 'خطأ', description: 'يجب ألا تقل كلمة المرور عن 8 أحرف', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Password must be at least 8 characters', variant: 'destructive' });
       return;
     }
     if (password !== confirm) {
-      toast({ title: 'خطأ', description: 'كلمتا المرور غير متطابقتين', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
       return;
     }
 
@@ -34,8 +34,8 @@ export default function ChangePassword() {
     if (!sessionData.session) {
       setLoading(false);
       toast({
-        title: 'انتهت الجلسة',
-        description: 'انتهت صلاحية جلستك، يرجى تسجيل الدخول مجددًا لتعيين كلمة المرور.',
+        title: 'Session expired',
+        description: 'Your session has expired, please sign in again to set your password.',
         variant: 'destructive',
       });
       navigate('/login');
@@ -51,9 +51,9 @@ export default function ChangePassword() {
     if (error) {
       const sessionExpired = /session/i.test(error.message);
       toast({
-        title: 'خطأ',
+        title: 'Error',
         description: sessionExpired
-          ? 'انتهت صلاحية جلستك، يرجى تسجيل الدخول مجددًا لتعيين كلمة المرور.'
+          ? 'Your session has expired, please sign in again to set your password.'
           : error.message,
         variant: 'destructive',
       });
@@ -63,28 +63,28 @@ export default function ChangePassword() {
       return;
     }
 
-    toast({ title: 'تم', description: 'تم تحديث كلمة المرور بنجاح' });
+    toast({ title: 'Success', description: 'Password updated successfully' });
     navigate('/portfolio');
   }
 
   return (
-    <div dir="rtl" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
+    <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex justify-center">
           <img src={logoUrl} alt="Wasl" className="no-mirror w-72 h-auto" />
         </div>
-        <h1 className="text-2xl font-bold text-white text-center">تعيين كلمة مرور جديدة</h1>
-        <p className="text-sm text-white/50 text-center">هذا أول تسجيل دخول لك، يرجى تعيين كلمة مرور جديدة قبل المتابعة.</p>
+        <h1 className="text-2xl font-bold text-white text-center">Set a New Password</h1>
+        <p className="text-sm text-white/50 text-center">This is your first sign-in. Please set a new password before continuing.</p>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">كلمة المرور الجديدة</label>
+          <label className="text-sm text-white/60">New Password</label>
           <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">تأكيد كلمة المرور</label>
+          <label className="text-sm text-white/60">Confirm Password</label>
           <Input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} dir="ltr" />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'جارٍ الحفظ...' : 'حفظ ومتابعة'}
+          {loading ? 'Saving...' : 'Save and Continue'}
         </Button>
       </form>
     </div>

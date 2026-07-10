@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(dateString: string | null | undefined, locale = 'ar-SA') {
-  if (!dateString) return 'غير محدد';
+export function formatDate(dateString: string | null | undefined, locale = 'en-US') {
+  if (!dateString) return 'Not specified';
   const date = new Date(dateString);
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
@@ -15,8 +15,8 @@ export function formatDate(dateString: string | null | undefined, locale = 'ar-S
   }).format(date);
 }
 
-export function formatDateTime(dateString: string | null | undefined, locale = 'ar-SA') {
-  if (!dateString) return 'غير محدد';
+export function formatDateTime(dateString: string | null | undefined, locale = 'en-US') {
+  if (!dateString) return 'Not specified';
   const date = new Date(dateString);
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
@@ -33,19 +33,16 @@ export function formatPercentage(val: number) {
 
 export function getStatusColor(status: string | null | undefined): { text: string; dot: string } {
   const s = (status || '').toLowerCase();
-  if (s.includes('complete') || s.includes('مكتمل')) {
+  if (s.includes('complete')) {
     return { text: 'text-emerald-400', dot: 'bg-emerald-400' };
   }
-  if (s.includes('delay') || s.includes('متأخر') || s.includes('blocked') || s.includes('متوقف')) {
+  if (s.includes('delay') || s.includes('blocked')) {
     return { text: 'text-red-400', dot: 'bg-red-400' };
   }
   if (
     s.includes('not started') ||
     s.includes('not yet') ||
-    s.includes('لم يبدأ') ||
-    s.includes('لم يتم التواصل') ||
-    s.includes('لا يوجد') ||
-    s.includes('لايوجد')
+    s.includes('none')
   ) {
     return { text: 'text-slate-300', dot: 'bg-slate-300' };
   }

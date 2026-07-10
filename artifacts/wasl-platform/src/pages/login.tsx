@@ -20,7 +20,7 @@ export default function Login() {
     setLoading(false);
 
     if (error || !data.session) {
-      toast({ title: 'خطأ في تسجيل الدخول', description: error?.message ?? 'بيانات الدخول غير صحيحة', variant: 'destructive' });
+      toast({ title: 'Login error', description: error?.message ?? 'Invalid login credentials', variant: 'destructive' });
       return;
     }
 
@@ -32,22 +32,22 @@ export default function Login() {
   }
 
   return (
-    <div dir="rtl" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
+    <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex justify-center">
           <img src={logoUrl} alt="Wasl" className="no-mirror w-72 h-auto" />
         </div>
-        <h1 className="text-2xl font-bold text-white text-center">تسجيل الدخول</h1>
+        <h1 className="text-2xl font-bold text-white text-center">Sign In</h1>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">البريد الإلكتروني</label>
+          <label className="text-sm text-white/60">Email</label>
           <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" dir="ltr" />
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">كلمة المرور</label>
+          <label className="text-sm text-white/60">Password</label>
           <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'جارٍ الدخول...' : 'دخول'}
+          {loading ? 'Signing in...' : 'Sign In'}
         </Button>
       </form>
     </div>

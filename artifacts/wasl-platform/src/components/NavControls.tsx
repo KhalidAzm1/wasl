@@ -14,12 +14,12 @@ export function NavControls({ variant = 'default' }: { variant?: 'default' | 'ov
   return (
     <div className="flex items-center gap-3">
       <button onClick={() => window.history.back()} className={style}>
-        <ArrowRight className="w-4 h-4" />
-        رجوع
+        <ArrowRight className="w-4 h-4 rotate-180" />
+        Back
       </button>
       <button onClick={() => setLocation('/')} className={style}>
         <Home className="w-4 h-4" />
-        الرئيسية
+        Home
       </button>
     </div>
   );

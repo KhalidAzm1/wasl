@@ -43,14 +43,14 @@ export function AdminPinGate({ children }: { children: React.ReactNode }) {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast({ title: 'خطأ', description: body.error ?? 'رقم سري غير صحيح', variant: 'destructive' });
+        toast({ title: 'Error', description: body.error ?? 'Incorrect PIN', variant: 'destructive' });
         return;
       }
       sessionStorage.setItem(TOKEN_KEY, body.token);
       sessionStorage.setItem(EXPIRES_KEY, String(body.expiresAt));
       setVerified(true);
     } catch (err) {
-      toast({ title: 'خطأ', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setChecking(false);
     }
@@ -63,8 +63,8 @@ export function AdminPinGate({ children }: { children: React.ReactNode }) {
       <Card className="w-full max-w-sm p-8 space-y-6">
         <div className="text-center space-y-2">
           <ShieldCheck className="w-8 h-8 mx-auto text-white/60" />
-          <h2 className="text-xl font-bold text-white">دخول محمي</h2>
-          <p className="text-white/50 text-sm">أدخل الرقم السري للوصول إلى إدارة المستخدمين</p>
+          <h2 className="text-xl font-bold text-white">Protected Access</h2>
+          <p className="text-white/50 text-sm">Enter the PIN to access User Management</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -76,7 +76,7 @@ export function AdminPinGate({ children }: { children: React.ReactNode }) {
             placeholder="••••••"
           />
           <Button type="submit" className="w-full" disabled={checking || !pin}>
-            {checking ? 'جارٍ التحقق...' : 'دخول'}
+            {checking ? 'Verifying...' : 'Enter'}
           </Button>
         </form>
       </Card>

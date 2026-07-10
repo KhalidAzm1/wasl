@@ -44,8 +44,8 @@ async function authedFetch(path: string, options: RequestInit = {}) {
 }
 
 const roleLabel: Record<Role, string> = {
-  super_admin: 'مشرف عام (Super Admin)',
-  admin: 'مشرف (Admin)',
+  super_admin: 'Super Admin',
+  admin: 'Admin',
 };
 
 export default function AdminUsers() {
@@ -64,7 +64,7 @@ export default function AdminUsers() {
       const data = await authedFetch('/api/admin/users');
       setUsers(data.users);
     } catch (err) {
-      toast({ title: 'خطأ', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -93,19 +93,19 @@ export default function AdminUsers() {
           method: 'PATCH',
           body: JSON.stringify({ name: form.name, role: form.role }),
         });
-        toast({ title: 'تم', description: 'تم تحديث المستخدم بنجاح' });
+        toast({ title: 'Success', description: 'User updated successfully.' });
       } else {
         if (form.password.length < 8) {
-          toast({ title: 'خطأ', description: 'يجب ألا تقل كلمة المرور المؤقتة عن 8 أحرف', variant: 'destructive' });
+          toast({ title: 'Error', description: 'Temporary password must be at least 8 characters.', variant: 'destructive' });
           return;
         }
         await authedFetch('/api/admin/users', { method: 'POST', body: JSON.stringify(form) });
-        toast({ title: 'تم', description: 'تم إنشاء المستخدم بنجاح' });
+        toast({ title: 'Success', description: 'User created successfully.' });
       }
       setDialogOpen(false);
       loadUsers();
     } catch (err) {
-      toast({ title: 'خطأ', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
   }
 
@@ -114,7 +114,7 @@ export default function AdminUsers() {
       await authedFetch(`/api/admin/users/${user.id}/deactivate`, { method: 'POST' });
       loadUsers();
     } catch (err) {
-      toast({ title: 'خطأ', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
   }
 
@@ -123,17 +123,17 @@ export default function AdminUsers() {
       await authedFetch(`/api/admin/users/${user.id}/reactivate`, { method: 'POST' });
       loadUsers();
     } catch (err) {
-      toast({ title: 'خطأ', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
   }
 
   async function handleDelete(user: AdminUser) {
-    if (!confirm(`سيتم حذف المستخدم ${user.name} نهائيًا. هل أنت متأكد؟`)) return;
+    if (!confirm(`User "${user.name}" will be permanently deleted. Are you sure?`)) return;
     try {
       await authedFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
       loadUsers();
     } catch (err) {
-      toast({ title: 'خطأ', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
   }
 
@@ -142,32 +142,32 @@ export default function AdminUsers() {
       <header className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-white to-white/60 mb-2">
-            إدارة المستخدمين
+            Admin User Management
           </h1>
-          <p className="text-white/50 text-lg">إنشاء وتعديل وتعطيل حسابات المشرفين</p>
+          <p className="text-white/50 text-lg">Create, edit, and deactivate administrator accounts</p>
         </div>
         <NavControls />
       </header>
 
       <div className="flex justify-end">
         <Button onClick={openCreate} className="gap-2">
-          <Plus className="w-4 h-4" /> مستخدم جديد
+          <Plus className="w-4 h-4" /> New User
         </Button>
       </div>
 
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-white/50">جارٍ التحميل...</div>
+          <div className="p-8 text-center text-white/50">Loading...</div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-white/60 text-right">
+            <thead className="bg-white/5 text-white/60 text-left">
               <tr>
-                <th className="p-4 font-medium">الاسم</th>
-                <th className="p-4 font-medium">البريد الإلكتروني</th>
-                <th className="p-4 font-medium">الدور</th>
-                <th className="p-4 font-medium">الحالة</th>
-                <th className="p-4 font-medium">آخر تحديث</th>
-                <th className="p-4 font-medium">إجراءات</th>
+                <th className="p-4 font-medium">Name</th>
+                <th className="p-4 font-medium">Email</th>
+                <th className="p-4 font-medium">Role</th>
+                <th className="p-4 font-medium">Status</th>
+                <th className="p-4 font-medium">Last Updated</th>
+                <th className="p-4 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -178,31 +178,31 @@ export default function AdminUsers() {
                   <td className="p-4 text-white/70">{roleLabel[user.role]}</td>
                   <td className="p-4">
                     {user.deleted_at ? (
-                      <span className="text-red-400">معطل</span>
+                      <span className="text-red-400">Inactive</span>
                     ) : (
-                      <span className="text-emerald-400">نشط</span>
+                      <span className="text-emerald-400">Active</span>
                     )}
                   </td>
                   <td className="p-4 text-white/50">{formatDateTime(user.updated_at)}</td>
                   <td className="p-4">
                     <div className="flex gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(user)} title="تعديل">
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(user)} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
                       {user.id === currentUserId ? (
-                        <span className="text-white/30 text-xs px-2 py-1">حسابك الحالي</span>
+                        <span className="text-white/30 text-xs px-2 py-1">Your Account</span>
                       ) : (
                         <>
                           {user.deleted_at ? (
-                            <Button size="icon" variant="ghost" onClick={() => handleReactivate(user)} title="إعادة تفعيل">
+                            <Button size="icon" variant="ghost" onClick={() => handleReactivate(user)} title="Reactivate">
                               <UserCheck className="w-4 h-4" />
                             </Button>
                           ) : (
-                            <Button size="icon" variant="ghost" onClick={() => handleDeactivate(user)} title="تعطيل">
+                            <Button size="icon" variant="ghost" onClick={() => handleDeactivate(user)} title="Deactivate">
                               <UserX className="w-4 h-4" />
                             </Button>
                           )}
-                          <Button size="icon" variant="ghost" onClick={() => handleDelete(user)} title="حذف نهائي">
+                          <Button size="icon" variant="ghost" onClick={() => handleDelete(user)} title="Delete Permanently">
                             <Trash2 className="w-4 h-4 text-red-400" />
                           </Button>
                         </>
@@ -213,7 +213,7 @@ export default function AdminUsers() {
               ))}
               {users?.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-white/40">لا يوجد مستخدمون بعد</td>
+                  <td colSpan={6} className="p-8 text-center text-white/40">No users found</td>
                 </tr>
               )}
             </tbody>
@@ -224,15 +224,15 @@ export default function AdminUsers() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? 'تعديل مستخدم' : 'مستخدم جديد'}</DialogTitle>
+            <DialogTitle>{editing ? 'Edit User' : 'New User'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-white/60">الاسم الكامل</label>
+              <label className="text-sm text-white/60">Full Name</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/60">البريد الإلكتروني</label>
+              <label className="text-sm text-white/60">Email Address</label>
               <Input
                 type="email"
                 dir="ltr"
@@ -243,30 +243,30 @@ export default function AdminUsers() {
             </div>
             {!editing && (
               <div className="space-y-2">
-                <label className="text-sm text-white/60">كلمة مرور مؤقتة</label>
+                <label className="text-sm text-white/60">Temporary Password</label>
                 <Input
                   type="password"
                   dir="ltr"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                 />
-                <p className="text-xs text-white/40">سيُطلب من المستخدم تغييرها عند أول تسجيل دخول.</p>
+                <p className="text-xs text-white/40">The user will be required to change this on first login.</p>
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-sm text-white/60">الدور</label>
+              <label className="text-sm text-white/60">Role</label>
               <select
                 className="w-full bg-white/5 border border-white/10 rounded-md p-2 text-white"
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
               >
-                <option value="admin">مشرف (Admin)</option>
-                <option value="super_admin">مشرف عام (Super Admin)</option>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
               </select>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSave}>{editing ? 'حفظ التغييرات' : 'إنشاء المستخدم'}</Button>
+            <Button onClick={handleSave}>{editing ? 'Save Changes' : 'Create User'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

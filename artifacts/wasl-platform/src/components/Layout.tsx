@@ -12,9 +12,9 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { href: '/portfolio', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)', roles: null },
-  { href: '/admin/users', icon: Users, label: 'إدارة المستخدمين', roles: ['super_admin'] as const },
-  { href: '/settings', icon: Settings, label: 'الإعدادات (Settings)', roles: null },
+  { href: '/portfolio', icon: LayoutDashboard, label: 'Dashboard', roles: null },
+  { href: '/admin/users', icon: Users, label: 'User Management', roles: ['super_admin'] as const },
+  { href: '/settings', icon: Settings, label: 'Settings', roles: null },
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -44,7 +44,7 @@ export function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans flex overflow-x-hidden" dir="rtl">
+    <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans flex overflow-x-hidden" dir="ltr">
       <AnimatedBackground />
 
       {/* Brand watermark, present behind all page content */}
@@ -52,7 +52,7 @@ export function Layout({ children }: LayoutProps) {
         src={logoUrl}
         alt=""
         aria-hidden="true"
-        className="no-mirror pointer-events-none select-none fixed bottom-[-6%] left-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
+        className="no-mirror pointer-events-none select-none fixed bottom-[-6%] right-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
       />
 
       {/* Mobile-only top bar: hamburger toggle for the drawer sidebar. Sits
@@ -62,7 +62,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-label="تسجيل الخروج"
+            aria-label="Sign out"
             onClick={handleSignOut}
             disabled={signingOut}
             className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
@@ -71,7 +71,7 @@ export function Layout({ children }: LayoutProps) {
           </button>
           <button
             type="button"
-            aria-label={drawerOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+            aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setDrawerOpen((v) => !v)}
             className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors"
           >
@@ -95,16 +95,16 @@ export function Layout({ children }: LayoutProps) {
           Responsive behavior:
           - Desktop (xl, >=1280px): static 340px panel, always visible.
           - Tablet (md-lg, 768-1279px): static 280px panel, always visible.
-          - Mobile (<768px): collapses into a right-side slide-in drawer,
+          - Mobile (<768px): collapses into a left-side slide-in drawer,
             toggled by the hamburger button above; hidden off-canvas by
             default and never overlaps page content. */}
       <aside
         className={cn(
-          'glass-panel border-l border-r-0 flex flex-col items-center py-8 px-4 gap-8 overflow-hidden',
-          'fixed md:static inset-y-0 right-0 z-50 md:z-20 w-[82vw] max-w-[300px] md:w-[280px] xl:w-[340px]',
+          'glass-panel border-r border-l-0 flex flex-col items-center py-8 px-4 gap-8 overflow-hidden',
+          'fixed md:static inset-y-0 left-0 z-50 md:z-20 w-[82vw] max-w-[300px] md:w-[280px] xl:w-[340px]',
           'transition-transform duration-300 ease-out',
           'safe-area-top safe-area-bottom',
-          drawerOpen ? 'translate-x-0' : 'max-md:translate-x-full'
+          drawerOpen ? 'translate-x-0' : 'max-md:-translate-x-full'
         )}
       >
         <div className="w-full flex items-center justify-center shrink-0">
@@ -141,7 +141,7 @@ export function Layout({ children }: LayoutProps) {
           className="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer text-white/60 hover:text-white hover:bg-white/5 border border-transparent shrink-0 disabled:opacity-50"
         >
           <LogOut className="w-5 h-5" />
-          <span className="font-semibold text-[15px]">{signingOut ? 'جارٍ تسجيل الخروج...' : 'تسجيل الخروج'}</span>
+          <span className="font-semibold text-[15px]">{signingOut ? 'Signing out...' : 'Sign out'}</span>
         </button>
       </aside>
 

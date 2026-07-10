@@ -41,19 +41,19 @@ export default function Settings() {
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-white to-white/60 mb-2">
-            إعدادات النظام
+            System Settings
           </h1>
-          <p className="text-white/50 text-lg">إدارة البنوك والصور</p>
+          <p className="text-white/50 text-lg">Manage banks and images</p>
         </div>
         <NavControls />
       </header>
 
       <Tabs defaultValue="banks" className="w-full">
         <TabsList className="w-full justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
-          <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">البنوك وجهات التمويل</TabsTrigger>
-          <TabsTrigger value="productTypes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Tag className="w-4 h-4" /> أنواع المنتجات</TabsTrigger>
-          <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><ScrollText className="w-4 h-4" /> التحديثات الأخيرة</TabsTrigger>
-          <TabsTrigger value="archive" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Archive className="w-4 h-4" /> الأرشيف</TabsTrigger>
+          <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">Banks &amp; Financing Entities</TabsTrigger>
+          <TabsTrigger value="productTypes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Tag className="w-4 h-4" /> Product Types</TabsTrigger>
+          <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><ScrollText className="w-4 h-4" /> Recent Updates</TabsTrigger>
+          <TabsTrigger value="archive" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Archive className="w-4 h-4" /> Archive</TabsTrigger>
         </TabsList>
 
         <TabsContent value="banks">
@@ -89,7 +89,7 @@ function BanksManager() {
 
   const handleSave = () => {
     if (!editingBank?.nameEn || !editingBank?.nameAr || !editingBank?.category || !editingBank?.status) {
-      toast({ title: 'خطأ', description: 'يرجى تعبئة الحقول الأساسية (الاسم، التصنيف، الحالة)', variant: 'destructive' });
+      toast({ title: 'Validation Error', description: 'Please fill in the required fields (name, category, status)', variant: 'destructive' });
       return;
     }
 
@@ -120,7 +120,7 @@ function BanksManager() {
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(editingBank.id!) });
           setIsModalOpen(false);
-          toast({ title: 'تم الحفظ', description: 'تم تحديث بيانات البنك بنجاح' });
+          toast({ title: 'Saved', description: 'Bank data updated successfully' });
         }
       });
     } else {
@@ -128,21 +128,21 @@ function BanksManager() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
           setIsModalOpen(false);
-          toast({ title: 'تم الإضافة', description: 'تم إضافة البنك بنجاح' });
+          toast({ title: 'Added', description: 'Bank added successfully' });
         }
       });
     }
   };
 
-  if (isLoading) return <div>جاري التحميل...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">إدارة الجهات</h2>
+        <h2 className="text-2xl font-bold text-white">Manage Entities</h2>
         <Button onClick={() => { setEditingBank({ riskLevel: 'Low', priorityImpact: 'Unclassified' }); setIsModalOpen(true); }} className="gap-2">
           <Plus className="w-4 h-4" />
-          إضافة جهة جديدة
+          Add New Bank
         </Button>
       </div>
 
@@ -159,11 +159,11 @@ function BanksManager() {
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400/50 hover:text-red-400" onClick={() => {
-                    if (confirm('هل أنت متأكد من الحذف؟')) {
+                    if (confirm('Are you sure you want to delete this bank?')) {
                       deleteBank.mutate({ id: bank.id }, {
                         onSuccess: () => {
                           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
-                          toast({ title: 'تم الحذف', description: 'تم حذف البنك بنجاح' });
+                          toast({ title: 'Deleted', description: 'Bank deleted successfully' });
                         }
                       });
                     }
@@ -176,8 +176,8 @@ function BanksManager() {
               <p className="text-sm text-white/50 mb-6">{bank.nameEn}</p>
 
               <div className="mt-auto pt-4 border-t border-white/10 grid grid-cols-2 gap-2">
-                <ImageUploader bankId={bank.id} type="logo" label="الشعار" currentUrl={bank.logoUrl} />
-                <ImageUploader bankId={bank.id} type="hero" label="صورة العرض" currentUrl={bank.heroImageUrl} />
+                <ImageUploader bankId={bank.id} type="logo" label="Logo" currentUrl={bank.logoUrl} />
+                <ImageUploader bankId={bank.id} type="hero" label="Hero Image" currentUrl={bank.heroImageUrl} />
               </div>
             </CardContent>
           </Card>
@@ -185,83 +185,83 @@ function BanksManager() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-card border-white/10 text-white" dir="rtl">
+        <DialogContent className="sm:max-w-[600px] bg-card border-white/10 text-white" dir="ltr">
           <DialogHeader>
-            <DialogTitle>{editingBank?.id ? 'تعديل جهة' : 'إضافة جهة جديدة'}</DialogTitle>
+            <DialogTitle>{editingBank?.id ? 'Edit Bank' : 'Add New Bank'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm text-white/70">الاسم (عربي)</label>
+                <label className="text-sm text-white/70">Name (Arabic)</label>
                 <Input value={editingBank?.nameAr || ''} onChange={e => setEditingBank({ ...editingBank, nameAr: e.target.value })} className="bg-white/5 border-white/10" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">الاسم (انجليزي)</label>
+                <label className="text-sm text-white/70">Name (English)</label>
                 <Input value={editingBank?.nameEn || ''} onChange={e => setEditingBank({ ...editingBank, nameEn: e.target.value })} className="bg-white/5 border-white/10" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">التصنيف</label>
+                <label className="text-sm text-white/70">Category</label>
                 <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary"
                   value={editingBank?.category || ''} onChange={e => setEditingBank({ ...editingBank, category: e.target.value })}>
-                  <option value="">اختر...</option>
-                  <option value="Local Bank">بنك محلي (Local Bank)</option>
-                  <option value="Financing Entity">جهة تمويل (Financing Entity)</option>
+                  <option value="">Select...</option>
+                  <option value="Local Bank">Local Bank</option>
+                  <option value="Financing Entity">Financing Entity</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">الحالة</label>
+                <label className="text-sm text-white/70">Status</label>
                 <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary"
                   value={editingBank?.status || ''} onChange={e => setEditingBank({ ...editingBank, status: e.target.value })}>
-                  <option value="">اختر...</option>
-                  <option value="Not Started">لم يبدأ</option>
-                  <option value="In Progress">قيد التنفيذ</option>
-                  <option value="Delayed">متأخر</option>
-                  <option value="Completed">مكتمل</option>
+                  <option value="">Select...</option>
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Delayed">Delayed</option>
+                  <option value="Completed">Completed</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">المسؤول</label>
+                <label className="text-sm text-white/70">Responsible Person</label>
                 <Input value={editingBank?.responsiblePerson || ''} onChange={e => setEditingBank({ ...editingBank, responsiblePerson: e.target.value })} className="bg-white/5 border-white/10" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">مدير العلاقة</label>
+                <label className="text-sm text-white/70">Relationship Manager</label>
                 <Input value={editingBank?.relationshipManager || ''} onChange={e => setEditingBank({ ...editingBank, relationshipManager: e.target.value })} className="bg-white/5 border-white/10" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">البريد الإلكتروني</label>
+                <label className="text-sm text-white/70">Email Address</label>
                 <Input value={editingBank?.email || ''} onChange={e => setEditingBank({ ...editingBank, email: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">الموقع الإلكتروني</label>
+                <label className="text-sm text-white/70">Website</label>
                 <Input value={editingBank?.website || ''} onChange={e => setEditingBank({ ...editingBank, website: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">تاريخ آخر اجتماع</label>
+                <label className="text-sm text-white/70">Last Meeting Date</label>
                 <Input value={editingBank?.lastMeetingDate || ''} onChange={e => setEditingBank({ ...editingBank, lastMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/70">تاريخ الاجتماع القادم</label>
+                <label className="text-sm text-white/70">Next Meeting Date</label>
                 <Input value={editingBank?.nextMeetingDate || ''} onChange={e => setEditingBank({ ...editingBank, nextMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">موضوع الاجتماع القادم</label>
+              <label className="text-sm text-white/70">Next Meeting Topic</label>
               <Input value={editingBank?.nextMeetingTopic || ''} onChange={e => setEditingBank({ ...editingBank, nextMeetingTopic: e.target.value })} className="bg-white/5 border-white/10" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">الخطوة القادمة</label>
+              <label className="text-sm text-white/70">Next Action</label>
               <Input value={editingBank?.nextAction || ''} onChange={e => setEditingBank({ ...editingBank, nextAction: e.target.value })} className="bg-white/5 border-white/10" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">الملخص التنفيذي</label>
+              <label className="text-sm text-white/70">Executive Summary</label>
               <Textarea value={editingBank?.executiveSummary || ''} onChange={e => setEditingBank({ ...editingBank, executiveSummary: e.target.value })} className="bg-white/5 border-white/10 h-24" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">الملاحظات</label>
+              <label className="text-sm text-white/70">Notes</label>
               <Textarea value={editingBank?.descriptionNotes || ''} onChange={e => setEditingBank({ ...editingBank, descriptionNotes: e.target.value })} className="bg-white/5 border-white/10 h-24" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">أنواع المنتجات</label>
+              <label className="text-sm text-white/70">Product Types</label>
               <div className="flex flex-wrap gap-2">
                 {(productTypes || []).filter(pt => pt.isActive).map(pt => {
                   const selected = (editingBank?.productTypeIds || []).includes(pt.id);
@@ -283,13 +283,13 @@ function BanksManager() {
                   );
                 })}
                 {(!productTypes || productTypes.length === 0) && (
-                  <span className="text-sm text-white/30">لا توجد أنواع منتجات بعد — أضفها من تبويب "أنواع المنتجات"</span>
+                  <span className="text-sm text-white/30">No product types yet — add them from the "Product Types" tab</span>
                 )}
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSave} className="w-full gap-2"><Save className="w-4 h-4" /> حفظ البيانات</Button>
+            <Button onClick={handleSave} className="w-full gap-2"><Save className="w-4 h-4" /> Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -298,46 +298,46 @@ function BanksManager() {
 }
 
 const FIELD_LABELS: Record<string, string> = {
-  nameEn: 'الاسم (انجليزي)',
-  nameAr: 'الاسم (عربي)',
-  category: 'التصنيف',
-  status: 'الحالة',
-  logoUrl: 'الشعار',
-  heroImageUrl: 'صورة العرض',
-  referenceLink: 'رابط مرجعي',
-  contacts: 'بيانات التواصل',
-  productTypeIds: 'أنواع المنتجات',
-  productCode: 'رمز المنتج',
-  categoryStage: 'المرحلة',
-  progressPercent: 'نسبة الإنجاز',
-  dateType: 'نوع التاريخ',
-  dateValue: 'التاريخ',
-  responsiblePerson: 'المسؤول',
-  priorityImpact: 'الأولوية',
-  descriptionNotes: 'ملاحظات',
-  riskLevel: 'مستوى الخطورة',
-  name: 'الاسم',
-  isActive: 'نشط',
-  date: 'التاريخ',
-  topic: 'الموضوع',
-  summary: 'ملخص الاجتماع',
-  attendees: 'الحضور',
-  description: 'الوصف',
-  level: 'المستوى',
-  dueDate: 'تاريخ الاستحقاق',
-  owner: 'المسؤول',
-  title: 'العنوان',
-  docType: 'نوع المستند',
-  link: 'الرابط',
+  nameEn: 'Name (English)',
+  nameAr: 'Name (Arabic)',
+  category: 'Category',
+  status: 'Status',
+  logoUrl: 'Logo',
+  heroImageUrl: 'Hero Image',
+  referenceLink: 'Reference Link',
+  contacts: 'Contact Details',
+  productTypeIds: 'Product Types',
+  productCode: 'Product Code',
+  categoryStage: 'Stage',
+  progressPercent: 'Progress (%)',
+  dateType: 'Date Type',
+  dateValue: 'Date',
+  responsiblePerson: 'Responsible Person',
+  priorityImpact: 'Priority',
+  descriptionNotes: 'Notes',
+  riskLevel: 'Risk Level',
+  name: 'Name',
+  isActive: 'Active',
+  date: 'Date',
+  topic: 'Topic',
+  summary: 'Meeting Summary',
+  attendees: 'Attendees',
+  description: 'Description',
+  level: 'Level',
+  dueDate: 'Due Date',
+  owner: 'Owner',
+  title: 'Title',
+  docType: 'Document Type',
+  link: 'Link',
 };
 
 function formatDetailValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
-  if (typeof value === 'boolean') return value ? 'نعم' : 'لا';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (Array.isArray(value)) {
     if (value.length === 0) return '—';
-    if (typeof value[0] === 'object') return `${value.length} عنصر`;
-    return value.join('، ');
+    if (typeof value[0] === 'object') return `${value.length} item(s)`;
+    return value.join(', ');
   }
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -347,10 +347,10 @@ function RecentUpdates() {
   const { data, isLoading } = useListAuditLogs({ limit: 100 });
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  if (isLoading) return <div>جاري التحميل...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
-  const actionLabel: Record<string, string> = { CREATE: 'إضافة', UPDATE: 'تعديل', ARCHIVE: 'أرشفة', RESTORE: 'استعادة' };
-  const entityLabel: Record<string, string> = { bank: 'بنك', document: 'مستند', meeting: 'اجتماع', product: 'منتج', productType: 'نوع منتج', actionItem: 'إجراء', risk: 'مخاطرة' };
+  const actionLabel: Record<string, string> = { CREATE: 'Created', UPDATE: 'Updated', ARCHIVE: 'Archived', RESTORE: 'Restored' };
+  const entityLabel: Record<string, string> = { bank: 'Bank', document: 'Document', meeting: 'Meeting', product: 'Product', productType: 'Product Type', actionItem: 'Action Item', risk: 'Risk' };
   const actionColor: Record<string, string> = {
     CREATE: 'bg-emerald-500/20 text-emerald-400',
     UPDATE: 'bg-primary/20 text-primary',
@@ -365,8 +365,8 @@ function RecentUpdates() {
       <div className="flex items-center gap-3">
         <History className="w-6 h-6 text-primary" />
         <div>
-          <h2 className="text-2xl font-bold text-white">التحديثات الأخيرة</h2>
-          <p className="text-sm text-white/50">كل عمليات الإضافة والتعديل والأرشفة والاستعادة، مرتبة من الأحدث للأقدم. اضغط السهم لعرض التفاصيل.</p>
+          <h2 className="text-2xl font-bold text-white">Recent Updates</h2>
+          <p className="text-sm text-white/50">All create, update, archive, and restore operations — sorted newest first. Click the arrow to view details.</p>
         </div>
       </div>
 
@@ -381,7 +381,7 @@ function RecentUpdates() {
                 <div key={entry.id}>
                   <button
                     type="button"
-                    className="w-full flex items-center justify-between gap-4 px-6 py-4 text-right hover:bg-white/5 transition-colors"
+                    className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left hover:bg-white/5 transition-colors"
                     onClick={() => hasDetails && setExpandedId(isExpanded ? null : entry.id)}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -393,7 +393,7 @@ function RecentUpdates() {
                           {entityLabel[entry.entityType] || entry.entityType}
                           {entry.entityLabel ? ` — ${entry.entityLabel}` : ''}
                         </p>
-                        <p className="text-sm text-white/40 truncate">{entry.userName || entry.userEmail || 'مستخدم غير معروف'}</p>
+                        <p className="text-sm text-white/40 truncate">{entry.userName || entry.userEmail || 'Unknown user'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
@@ -419,7 +419,7 @@ function RecentUpdates() {
               );
             })}
             {items.length === 0 && (
-              <div className="py-12 text-center text-white/30">لا توجد تحديثات مسجلة</div>
+              <div className="py-12 text-center text-white/30">No updates recorded yet</div>
             )}
           </div>
         </CardContent>
@@ -448,10 +448,10 @@ function ImageUploader({ bankId, type, label, currentUrl }: { bankId: string, ty
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
-          toast({ title: 'تم الرفع', description: `تم تحديث ${label} بنجاح` });
+          toast({ title: 'Uploaded', description: `${label} updated successfully` });
         },
         onError: () => {
-          toast({ title: 'خطأ', description: 'فشل في رفع الصورة', variant: 'destructive' });
+          toast({ title: 'Error', description: 'Failed to upload image', variant: 'destructive' });
         }
       });
     };
@@ -490,36 +490,36 @@ function ProductTypesManager() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListProductTypesQueryKey() });
 
-  if (isLoading) return <div>جاري التحميل...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
         <Tag className="w-6 h-6 text-primary" />
         <div>
-          <h2 className="text-2xl font-bold text-white">كتالوج أنواع المنتجات</h2>
-          <p className="text-sm text-white/50">القائمة المرجعية لأنواع المنتجات القابلة للربط مع كل بنك.</p>
+          <h2 className="text-2xl font-bold text-white">Product Type Catalogue</h2>
+          <p className="text-sm text-white/50">The reference list of product types that can be linked to each bank.</p>
         </div>
       </div>
 
       {!isSuperAdmin && (
-        <p className="text-sm text-white/40">يمكن للمشرف العام فقط إضافة أو تعديل أنواع المنتجات.</p>
+        <p className="text-sm text-white/40">Only super admins can add or edit product types.</p>
       )}
 
       {isSuperAdmin && (
         <div className="flex gap-2">
-          <Input placeholder="اسم نوع المنتج الجديد" value={newName} onChange={e => setNewName(e.target.value)} className="bg-white/5 border-white/10" />
+          <Input placeholder="New product type name" value={newName} onChange={e => setNewName(e.target.value)} className="bg-white/5 border-white/10" />
           <Button
             className="gap-2 shrink-0"
             disabled={!newName.trim() || createType.isPending}
             onClick={() => {
               createType.mutate({ data: { name: newName.trim() } }, {
-                onSuccess: () => { setNewName(''); invalidate(); toast({ title: 'تمت الإضافة' }); },
-                onError: (err: any) => toast({ title: 'خطأ', description: err?.message || 'فشلت الإضافة', variant: 'destructive' }),
+                onSuccess: () => { setNewName(''); invalidate(); toast({ title: 'Added' }); },
+                onError: (err: any) => toast({ title: 'Error', description: err?.message || 'Failed to add product type', variant: 'destructive' }),
               });
             }}
           >
-            <Plus className="w-4 h-4" /> إضافة
+            <Plus className="w-4 h-4" /> Add
           </Button>
         </div>
       )}
@@ -541,7 +541,7 @@ function ProductTypesManager() {
                         updateType.mutate({ id: pt.id, data: { name: editingName.trim() } }, {
                           onSuccess: () => { setEditingId(null); invalidate(); },
                         });
-                      }}>حفظ</Button>
+                      }}>Save</Button>
                     ) : (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-white/50" onClick={() => { setEditingId(pt.id); setEditingName(pt.name); }}>
                         <Edit className="w-4 h-4" />
@@ -549,7 +549,7 @@ function ProductTypesManager() {
                     )}
                     {pt.isActive && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400/50 hover:text-red-400" onClick={() => {
-                        if (confirm('تعطيل هذا النوع؟ ستبقى الربطات الحالية لكن لن يظهر عند الإضافة.')) {
+                        if (confirm('Deactivate this product type? Existing links will be preserved but it will no longer appear when adding new entries.')) {
                           deactivateType.mutate({ id: pt.id }, { onSuccess: invalidate });
                         }
                       }}>
@@ -561,7 +561,7 @@ function ProductTypesManager() {
               </div>
             ))}
             {(!productTypes || productTypes.length === 0) && (
-              <div className="py-12 text-center text-white/30">لا توجد أنواع منتجات بعد</div>
+              <div className="py-12 text-center text-white/30">No product types yet</div>
             )}
           </div>
         </CardContent>
@@ -583,7 +583,7 @@ function ArchiveManager() {
     queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
   };
 
-  if (isLoading) return <div>جاري التحميل...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   const banks = data?.banks || [];
   const documents = data?.documents || [];
@@ -595,27 +595,27 @@ function ArchiveManager() {
       <div className="flex items-center gap-3">
         <Archive className="w-6 h-6 text-primary" />
         <div>
-          <h2 className="text-2xl font-bold text-white">الأرشيف</h2>
-          <p className="text-sm text-white/50">العناصر المؤرشفة (المحذوفة) — يمكن استعادتها في أي وقت.</p>
+          <h2 className="text-2xl font-bold text-white">Archive</h2>
+          <p className="text-sm text-white/50">Archived (deleted) items — they can be restored at any time.</p>
         </div>
       </div>
 
-      {isEmpty && <div className="py-12 text-center text-white/30">الأرشيف فارغ حالياً</div>}
+      {isEmpty && <div className="py-12 text-center text-white/30">The archive is currently empty</div>}
 
       {banks.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold text-white/80">البنوك ({banks.length})</h3>
+          <h3 className="text-lg font-bold text-white/80">Banks ({banks.length})</h3>
           <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/5">
             {banks.map(b => (
               <div key={b.id} className="flex items-center justify-between gap-4 px-6 py-4">
                 <div className="min-w-0">
                   <p className="font-medium text-white truncate">{b.nameAr} — {b.nameEn}</p>
-                  <p className="text-sm text-white/40">أُرشف بواسطة {b.archivedBy || 'غير معروف'} في {formatDateTime(b.archivedAt || '')}</p>
+                  <p className="text-sm text-white/40">Archived by {b.archivedBy || 'Unknown'} on {formatDateTime(b.archivedAt || '')}</p>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
-                  restoreBank.mutate({ id: b.id }, { onSuccess: () => { invalidate(); toast({ title: 'تمت الاستعادة' }); } });
+                  restoreBank.mutate({ id: b.id }, { onSuccess: () => { invalidate(); toast({ title: 'Restored' }); } });
                 }}>
-                  <RotateCcw className="w-4 h-4" /> استعادة
+                  <RotateCcw className="w-4 h-4" /> Restore
                 </Button>
               </div>
             ))}
@@ -625,18 +625,18 @@ function ArchiveManager() {
 
       {documents.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold text-white/80">المستندات ({documents.length})</h3>
+          <h3 className="text-lg font-bold text-white/80">Documents ({documents.length})</h3>
           <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/5">
             {documents.map(d => (
               <div key={d.id} className="flex items-center justify-between gap-4 px-6 py-4">
                 <div className="min-w-0">
                   <p className="font-medium text-white truncate">{d.title}</p>
-                  <p className="text-sm text-white/40">أُرشف بواسطة {d.archivedBy || 'غير معروف'} في {formatDateTime(d.archivedAt || '')}</p>
+                  <p className="text-sm text-white/40">Archived by {d.archivedBy || 'Unknown'} on {formatDateTime(d.archivedAt || '')}</p>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
-                  restoreDocument.mutate({ id: d.id }, { onSuccess: () => { invalidate(); toast({ title: 'تمت الاستعادة' }); } });
+                  restoreDocument.mutate({ id: d.id }, { onSuccess: () => { invalidate(); toast({ title: 'Restored' }); } });
                 }}>
-                  <RotateCcw className="w-4 h-4" /> استعادة
+                  <RotateCcw className="w-4 h-4" /> Restore
                 </Button>
               </div>
             ))}
@@ -646,18 +646,18 @@ function ArchiveManager() {
 
       {meetings.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold text-white/80">الاجتماعات ({meetings.length})</h3>
+          <h3 className="text-lg font-bold text-white/80">Meetings ({meetings.length})</h3>
           <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/5">
             {meetings.map(m => (
               <div key={m.id} className="flex items-center justify-between gap-4 px-6 py-4">
                 <div className="min-w-0">
                   <p className="font-medium text-white truncate">{m.topic}</p>
-                  <p className="text-sm text-white/40">أُرشف بواسطة {m.archivedBy || 'غير معروف'} في {formatDateTime(m.archivedAt || '')}</p>
+                  <p className="text-sm text-white/40">Archived by {m.archivedBy || 'Unknown'} on {formatDateTime(m.archivedAt || '')}</p>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
-                  restoreMeeting.mutate({ id: m.id }, { onSuccess: () => { invalidate(); toast({ title: 'تمت الاستعادة' }); } });
+                  restoreMeeting.mutate({ id: m.id }, { onSuccess: () => { invalidate(); toast({ title: 'Restored' }); } });
                 }}>
-                  <RotateCcw className="w-4 h-4" /> استعادة
+                  <RotateCcw className="w-4 h-4" /> Restore
                 </Button>
               </div>
             ))}

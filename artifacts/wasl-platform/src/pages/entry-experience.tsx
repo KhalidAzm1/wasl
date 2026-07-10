@@ -32,7 +32,7 @@ export default function EntryExperience() {
 
   return (
     <div
-      dir="rtl"
+      dir="ltr"
       className="relative h-screen w-screen overflow-hidden text-white"
       style={{ backgroundColor: '#050816' }}
     >
@@ -106,7 +106,7 @@ export default function EntryExperience() {
           style={{ boxShadow: '0 0 30px 6px rgba(59,130,246,0.3), 0 0 50px 12px rgba(124,58,237,0.18), inset 0 1px 0 rgba(255,255,255,0.15)' }}
         >
           <span className="text-white font-bold tracking-wide text-sm md:text-base">ENTER PLATFORM</span>
-          <span className="text-white/75 text-xs md:text-sm">دخول المنصة</span>
+          <span className="text-white/75 text-xs md:text-sm">Enter Platform</span>
         </motion.button>
       </motion.div>
 

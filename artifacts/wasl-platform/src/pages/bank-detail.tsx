@@ -40,7 +40,7 @@ export default function BankDetail() {
     );
   }
 
-  if (!bank) return <div className="p-8 text-center text-white/50">البنك غير موجود</div>;
+  if (!bank) return <div className="p-8 text-center text-white/50">Bank not found</div>;
 
   const avgProgress = bank.products?.length 
     ? bank.products.reduce((acc, p) => acc + p.progressPercent, 0) / bank.products.length 
@@ -51,7 +51,7 @@ export default function BankDetail() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-4 text-white/50 text-sm">
-          <Link href="/portfolio" className="hover:text-white transition-colors">الرئيسية</Link>
+          <Link href="/portfolio" className="hover:text-white transition-colors">Portfolio</Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-white">{bank.nameAr}</span>
         </div>
@@ -78,15 +78,15 @@ export default function BankDetail() {
               <span className={`w-2 h-2 rounded-full shrink-0 ${getStatusColor(bank.status).dot}`} />
               {bank.status}
             </span>
-            {bank.riskLevel === 'High' && <Badge variant="destructive">مخاطر عالية</Badge>}
-            {bank.priorityImpact === 'HOT' && <Badge variant="warning">أولوية قصوى</Badge>}
+            {bank.riskLevel === 'High' && <Badge variant="destructive">High Risk</Badge>}
+            {bank.priorityImpact === 'HOT' && <Badge variant="warning">Top Priority</Badge>}
           </div>
           <p className="text-white/50 text-lg">{bank.nameEn}</p>
         </div>
 
         <div className="flex gap-6 text-center shrink-0">
           <div className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <p className="text-white/40 text-sm mb-1">نسبة الإنجاز</p>
+            <p className="text-white/40 text-sm mb-1">Completion</p>
             <p className="text-2xl font-bold text-emerald-400 font-mono">{formatPercentage(avgProgress)}</p>
           </div>
         </div>
@@ -95,22 +95,22 @@ export default function BankDetail() {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="w-full flex justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
           <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
-            نظرة عامة
+            Overview
           </TabsTrigger>
           <TabsTrigger value="products" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
-            <LayoutGrid className="w-4 h-4" /> المنتجات
+            <LayoutGrid className="w-4 h-4" /> Products
           </TabsTrigger>
           <TabsTrigger value="meetings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
-            <Calendar className="w-4 h-4" /> الاجتماعات
+            <Calendar className="w-4 h-4" /> Meetings
           </TabsTrigger>
           <TabsTrigger value="actions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
-            <CheckSquare className="w-4 h-4" /> الإجراءات
+            <CheckSquare className="w-4 h-4" /> Actions
           </TabsTrigger>
           <TabsTrigger value="risks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
-            <AlertTriangle className="w-4 h-4" /> المخاطر
+            <AlertTriangle className="w-4 h-4" /> Risks
           </TabsTrigger>
           <TabsTrigger value="documents" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
-            <FileText className="w-4 h-4" /> المستندات
+            <FileText className="w-4 h-4" /> Documents
           </TabsTrigger>
         </TabsList>
 
@@ -119,22 +119,22 @@ export default function BankDetail() {
             <div className="md:col-span-2 space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>الملخص التنفيذي</CardTitle>
+                  <CardTitle>Executive Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-white/80 leading-relaxed whitespace-pre-wrap text-lg">
-                    {bank.executiveSummary || 'لا يوجد ملخص.'}
+                    {bank.executiveSummary || 'No summary available.'}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>ملاحظات الوصف</CardTitle>
+                  <CardTitle>Description Notes</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-white/70 leading-relaxed whitespace-pre-wrap">
-                    {bank.descriptionNotes || 'لا توجد ملاحظات.'}
+                    {bank.descriptionNotes || 'No notes available.'}
                   </p>
                 </CardContent>
               </Card>
@@ -143,20 +143,20 @@ export default function BankDetail() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>معلومات أساسية</CardTitle>
+                  <CardTitle>Key Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-sm text-white/40 mb-1">المسؤول</p>
+                    <p className="text-sm text-white/40 mb-1">Responsible Person</p>
                     <p className="font-medium">{bank.responsiblePerson || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-white/40 mb-1">مدير العلاقة</p>
+                    <p className="text-sm text-white/40 mb-1">Relationship Manager</p>
                     <p className="font-medium">{bank.relationshipManager || '-'}</p>
                   </div>
                   {bank.email && (
                     <div>
-                      <p className="text-sm text-white/40 mb-1">البريد الإلكتروني</p>
+                      <p className="text-sm text-white/40 mb-1">Email</p>
                       <a href={`mailto:${bank.email}`} className="font-medium text-primary hover:underline" dir="ltr">
                         {bank.email}
                       </a>
@@ -164,26 +164,26 @@ export default function BankDetail() {
                   )}
                   {bank.website && (
                     <div>
-                      <p className="text-sm text-white/40 mb-1">الموقع الإلكتروني</p>
+                      <p className="text-sm text-white/40 mb-1">Website</p>
                       <a href={bank.website} target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1" dir="ltr">
                         {bank.website} <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   )}
                   <div>
-                    <p className="text-sm text-white/40 mb-1">تاريخ آخر اجتماع</p>
+                    <p className="text-sm text-white/40 mb-1">Last Meeting Date</p>
                     <p className="font-medium">{formatDate(bank.lastMeetingDate)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-white/40 mb-1">الاجتماع القادم</p>
+                    <p className="text-sm text-white/40 mb-1">Next Meeting</p>
                     <p className="font-medium">{formatDate(bank.nextMeetingDate)}</p>
                     {bank.nextMeetingTopic && <p className="text-sm text-white/60 mt-1">{bank.nextMeetingTopic}</p>}
                   </div>
                   {bank.referenceLink && (
                     <div>
-                      <p className="text-sm text-white/40 mb-1">رابط مرجعي</p>
+                      <p className="text-sm text-white/40 mb-1">Reference Link</p>
                       <a href={bank.referenceLink} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                        فتح الرابط <ExternalLink className="w-3 h-3" />
+                        Open Link <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   )}
@@ -195,7 +195,7 @@ export default function BankDetail() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <User className="w-5 h-5 text-primary" />
-                      جهات الاتصال
+                      Contacts
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -272,7 +272,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
           setIsOpen(false);
-          toast({ title: 'تم الحفظ' });
+          toast({ title: 'Saved' });
         }
       });
     } else {
@@ -280,7 +280,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
           setIsOpen(false);
-          toast({ title: 'تمت الإضافة' });
+          toast({ title: 'Product Added' });
         }
       });
     }
@@ -289,9 +289,9 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">المنتجات المرتبطة</h3>
+        <h3 className="text-xl font-bold">Associated Products</h3>
         <Button onClick={() => { setEditing({ progressPercent: 0 }); setIsOpen(true); }} size="sm" className="gap-2">
-          <Plus className="w-4 h-4" /> إضافة منتج
+          <Plus className="w-4 h-4" /> Add Product
         </Button>
       </div>
 
@@ -304,7 +304,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-white/50" onClick={() => { setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400/50" onClick={() => {
-                    if (confirm('تأكيد الحذف؟')) {
+                    if (confirm('Confirm deletion?')) {
                       deleteProduct.mutate({ id: p.id }, {
                         onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) })
                       });
@@ -320,12 +320,12 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
 
               <div className="flex items-center gap-2 text-sm text-white/70 mb-4">
                 <User className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="truncate">{p.responsiblePerson || 'غير محدد'}</span>
+                <span className="truncate">{p.responsiblePerson || 'Unassigned'}</span>
               </div>
 
               <div className="mt-auto pt-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-white/60">الإنجاز</span>
+                  <span className="text-white/60">Progress</span>
                   <span className="font-mono">{formatPercentage(p.progressPercent)}</span>
                 </div>
                 <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
@@ -335,20 +335,20 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
             </CardContent>
           </Card>
         ))}
-        {products.length === 0 && <div className="col-span-full py-8 text-center text-white/30">لا توجد منتجات مسجلة</div>}
+        {products.length === 0 && <div className="col-span-full py-8 text-center text-white/30">No products recorded</div>}
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader><DialogTitle>{editing?.id ? 'تعديل منتج' : 'إضافة منتج'}</DialogTitle></DialogHeader>
+        <DialogContent dir="ltr">
+          <DialogHeader><DialogTitle>{editing?.id ? 'Edit Product' : 'Add Product'}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
-            <Input placeholder="كود المنتج" value={editing?.productCode || ''} onChange={e => setEditing({...editing, productCode: e.target.value})} />
-            <Input placeholder="المرحلة/التصنيف" value={editing?.categoryStage || ''} onChange={e => setEditing({...editing, categoryStage: e.target.value})} />
-            <Input placeholder="الحالة" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})} />
-            <Input type="number" placeholder="نسبة الإنجاز (0-100)" value={editing?.progressPercent || 0} onChange={e => setEditing({...editing, progressPercent: e.target.value})} />
-            <Input placeholder="المسؤول" value={editing?.responsiblePerson || ''} onChange={e => setEditing({...editing, responsiblePerson: e.target.value})} />
+            <Input placeholder="Product Code" value={editing?.productCode || ''} onChange={e => setEditing({...editing, productCode: e.target.value})} />
+            <Input placeholder="Stage / Category" value={editing?.categoryStage || ''} onChange={e => setEditing({...editing, categoryStage: e.target.value})} />
+            <Input placeholder="Status" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})} />
+            <Input type="number" placeholder="Progress % (0-100)" value={editing?.progressPercent || 0} onChange={e => setEditing({...editing, progressPercent: e.target.value})} />
+            <Input placeholder="Responsible Person" value={editing?.responsiblePerson || ''} onChange={e => setEditing({...editing, responsiblePerson: e.target.value})} />
           </div>
-          <DialogFooter><Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -375,8 +375,8 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">سجل الاجتماعات</h3>
-        <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2"><Plus className="w-4 h-4" /> اجتماع جديد</Button>
+        <h3 className="text-xl font-bold">Meeting Log</h3>
+        <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2"><Plus className="w-4 h-4" /> New Meeting</Button>
       </div>
       <div className="space-y-4">
         {meetings.map(m => (
@@ -386,9 +386,9 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
             </div>
             <div className="flex-1">
               <h4 className="font-bold text-lg">{m.topic}</h4>
-              <p className="text-white/70 mt-1">{m.summary || 'لا يوجد ملخص'}</p>
+              <p className="text-white/70 mt-1">{m.summary || 'No summary available'}</p>
               {m.updatedBy && (
-                <p className="text-xs text-white/30 mt-2">آخر تحديث بواسطة {m.updatedBy}{m.updatedAt ? ` — ${formatDateTime(m.updatedAt)}` : ''}</p>
+                <p className="text-xs text-white/30 mt-2">Last updated by {m.updatedBy}{m.updatedAt ? ` — ${formatDateTime(m.updatedAt)}` : ''}</p>
               )}
             </div>
             <Button variant="ghost" size="icon" className="text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}>
@@ -398,14 +398,14 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
         ))}
       </div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader><DialogTitle>إضافة اجتماع</DialogTitle></DialogHeader>
+        <DialogContent dir="ltr">
+          <DialogHeader><DialogTitle>Add Meeting</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <Input type="date" value={editing?.date || ''} onChange={e => setEditing({...editing, date: e.target.value})} />
-            <Input placeholder="الموضوع" value={editing?.topic || ''} onChange={e => setEditing({...editing, topic: e.target.value})} />
-            <Textarea placeholder="الملخص" value={editing?.summary || ''} onChange={e => setEditing({...editing, summary: e.target.value})} />
+            <Input placeholder="Topic" value={editing?.topic || ''} onChange={e => setEditing({...editing, topic: e.target.value})} />
+            <Textarea placeholder="Summary" value={editing?.summary || ''} onChange={e => setEditing({...editing, summary: e.target.value})} />
           </div>
-          <DialogFooter><Button onClick={handleSave} disabled={createMeeting.isPending}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createMeeting.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -433,8 +433,8 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">الإجراءات والقرارات</h3>
-        <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2"><Plus className="w-4 h-4" /> إجراء جديد</Button>
+        <h3 className="text-xl font-bold">Actions & Decisions</h3>
+        <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2"><Plus className="w-4 h-4" /> New Action</Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {actionItems.map(a => (
@@ -449,7 +449,7 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
               </div>
               <p className="text-lg mb-4">{a.description}</p>
               <div className="flex justify-between text-sm text-white/50">
-                <span>{a.owner || 'غير محدد'}</span>
+                <span>{a.owner || 'Unassigned'}</span>
                 <span>{formatDate(a.dueDate)}</span>
               </div>
             </CardContent>
@@ -457,18 +457,18 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
         ))}
       </div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader><DialogTitle>{editing?.id ? 'تعديل' : 'إضافة'} إجراء</DialogTitle></DialogHeader>
+        <DialogContent dir="ltr">
+          <DialogHeader><DialogTitle>{editing?.id ? 'Edit' : 'Add'} Action</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
-            <Textarea placeholder="الوصف" value={editing?.description || ''} onChange={e => setEditing({...editing, description: e.target.value})} />
-            <Input placeholder="المسؤول" value={editing?.owner || ''} onChange={e => setEditing({...editing, owner: e.target.value})} />
+            <Textarea placeholder="Description" value={editing?.description || ''} onChange={e => setEditing({...editing, description: e.target.value})} />
+            <Input placeholder="Owner" value={editing?.owner || ''} onChange={e => setEditing({...editing, owner: e.target.value})} />
             <Input type="date" value={editing?.dueDate || ''} onChange={e => setEditing({...editing, dueDate: e.target.value})} />
             <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})}>
-              <option value="Pending">قيد الانتظار</option>
-              <option value="Completed">مكتمل</option>
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
             </select>
           </div>
-          <DialogFooter><Button onClick={handleSave} disabled={createAction.isPending || updateAction.isPending}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createAction.isPending || updateAction.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -492,8 +492,8 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">سجل المخاطر</h3>
-        <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2"><Plus className="w-4 h-4" /> خطر جديد</Button>
+        <h3 className="text-xl font-bold">Risk Register</h3>
+        <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2"><Plus className="w-4 h-4" /> New Risk</Button>
       </div>
       <div className="space-y-4">
         {risks.map(r => (
@@ -510,17 +510,17 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
         ))}
       </div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader><DialogTitle>إضافة خطر</DialogTitle></DialogHeader>
+        <DialogContent dir="ltr">
+          <DialogHeader><DialogTitle>Add Risk</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
-            <Textarea placeholder="الوصف" value={editing?.description || ''} onChange={e => setEditing({...editing, description: e.target.value})} />
+            <Textarea placeholder="Description" value={editing?.description || ''} onChange={e => setEditing({...editing, description: e.target.value})} />
             <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white" value={editing?.level || 'Medium'} onChange={e => setEditing({...editing, level: e.target.value})}>
-              <option value="Low">منخفض</option>
-              <option value="Medium">متوسط</option>
-              <option value="High">عالي</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
             </select>
           </div>
-          <DialogFooter><Button onClick={handleSave} disabled={createRisk.isPending}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createRisk.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -562,10 +562,10 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
         setUploadFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        toast({ title: 'تم الرفع', description: 'تم رفع المستند إلى OneDrive بنجاح' });
+        toast({ title: 'Upload Successful', description: 'The document has been uploaded to OneDrive.' });
       },
       onError: (err: any) => {
-        toast({ title: 'خطأ', description: err?.message || 'فشل رفع المستند', variant: 'destructive' });
+        toast({ title: 'Upload Failed', description: err?.message || 'Failed to upload the document.', variant: 'destructive' });
       }
     });
   };
@@ -573,26 +573,26 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">المستندات والروابط</h3>
+        <h3 className="text-xl font-bold">Documents & Links</h3>
         <div className="flex gap-2">
           <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
           <Button variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
-            <UploadCloud className="w-4 h-4" /> رفع ملف إلى OneDrive
+            <UploadCloud className="w-4 h-4" /> Upload to OneDrive
           </Button>
           <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2">
-            <Plus className="w-4 h-4" /> رابط جديد
+            <Plus className="w-4 h-4" /> New Link
           </Button>
         </div>
       </div>
 
       {uploadFile && (
         <div className="p-4 rounded-xl bg-white/5 border border-primary/30 flex flex-col md:flex-row gap-3 md:items-center">
-          <span className="text-sm text-white/70 shrink-0">الملف: {uploadFile.name}</span>
-          <Input placeholder="عنوان المستند" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} className="max-w-xs" />
-          <Input placeholder="نوع المستند (عقد، تقرير...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} className="max-w-xs" />
-          <div className="flex gap-2 md:mr-auto">
-            <Button size="sm" onClick={handleUpload} disabled={uploadDoc.isPending}>{uploadDoc.isPending ? 'جاري الرفع...' : 'تأكيد الرفع'}</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>إلغاء</Button>
+          <span className="text-sm text-white/70 shrink-0">File: {uploadFile.name}</span>
+          <Input placeholder="Document Title" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} className="max-w-xs" />
+          <Input placeholder="Document Type (Contract, Report...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} className="max-w-xs" />
+          <div className="flex gap-2 md:ml-auto">
+            <Button size="sm" onClick={handleUpload} disabled={uploadDoc.isPending}>{uploadDoc.isPending ? 'Uploading...' : 'Confirm Upload'}</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Cancel</Button>
           </div>
         </div>
       )}
@@ -608,7 +608,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
                   <p className="text-sm text-white/50">{d.docType}</p>
                   {(d.uploadedBy || d.updatedBy) && (
                     <p className="text-xs text-white/30 mt-1">
-                      {d.oneDriveItemId ? 'رفع بواسطة' : 'أضيف بواسطة'} {d.uploadedBy || d.updatedBy}
+                      {d.oneDriveItemId ? 'Uploaded by' : 'Added by'} {d.uploadedBy || d.updatedBy}
                     </p>
                   )}
                 </div>
@@ -617,17 +617,17 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
             </CardContent>
           </Card>
         ))}
-        {documents.length === 0 && <div className="col-span-full py-8 text-center text-white/30">لا توجد مستندات مسجلة</div>}
+        {documents.length === 0 && <div className="col-span-full py-8 text-center text-white/30">No documents recorded</div>}
       </div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader><DialogTitle>إضافة مستند / رابط</DialogTitle></DialogHeader>
+        <DialogContent dir="ltr">
+          <DialogHeader><DialogTitle>Add Document / Link</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
-            <Input placeholder="عنوان المستند" value={editing?.title || ''} onChange={e => setEditing({...editing, title: e.target.value})} />
-            <Input placeholder="الرابط (URL)" value={editing?.link || ''} onChange={e => setEditing({...editing, link: e.target.value})} />
-            <Input placeholder="نوع المستند (عقد، تقرير...)" value={editing?.docType || ''} onChange={e => setEditing({...editing, docType: e.target.value})} />
+            <Input placeholder="Document Title" value={editing?.title || ''} onChange={e => setEditing({...editing, title: e.target.value})} />
+            <Input placeholder="URL" value={editing?.link || ''} onChange={e => setEditing({...editing, link: e.target.value})} />
+            <Input placeholder="Document Type (Contract, Report...)" value={editing?.docType || ''} onChange={e => setEditing({...editing, docType: e.target.value})} />
           </div>
-          <DialogFooter><Button onClick={handleSave} disabled={createDoc.isPending}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createDoc.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

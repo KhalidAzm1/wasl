@@ -29,19 +29,19 @@ export class AppErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div
-          dir="rtl"
+          dir="ltr"
           className="min-h-[100dvh] w-full flex items-center justify-center bg-background text-foreground p-8"
         >
           <div className="max-w-md text-center space-y-4">
-            <h1 className="text-xl font-bold">حدث خطأ غير متوقع</h1>
+            <h1 className="text-xl font-bold">An unexpected error occurred</h1>
             <p className="text-white/60">
-              حدثت مشكلة أثناء تحميل الصفحة. حاول تحديث الصفحة، وإذا استمرت المشكلة أخبرنا بالتفاصيل.
+              Something went wrong while loading the page. Try refreshing, and let us know if the problem persists.
             </p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 rounded-lg bg-primary text-white font-semibold"
             >
-              تحديث الصفحة
+              Refresh page
             </button>
           </div>
         </div>

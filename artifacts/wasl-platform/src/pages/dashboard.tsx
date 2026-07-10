@@ -25,7 +25,7 @@ function KpiButton({ label, value, colorClass, active, onClick }: { label: strin
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col text-right rounded-xl px-3 py-1.5 shrink-0 w-[140px] md:w-auto transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${
+      className={`flex flex-col text-left rounded-xl px-3 py-1.5 shrink-0 w-[140px] md:w-auto transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${
         active ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/5'
       }`}
     >
@@ -56,14 +56,14 @@ export default function Dashboard() {
   const { data: banks, isLoading: isLoadingBanks } = useListBanks();
   const { data: products, isLoading: isLoadingProducts } = useListProducts();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>('الكل');
+  const [filter, setFilter] = useState<string>('All');
   const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk'>('all');
 
   if (isLoadingSummary || isLoadingBanks || isLoadingProducts) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-6">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <div className="text-white/50 text-xl font-light tracking-widest uppercase">جاري التحميل...</div>
+        <div className="text-white/50 text-xl font-light tracking-widest uppercase">Loading...</div>
       </div>
     );
   }
@@ -83,7 +83,7 @@ export default function Dashboard() {
     progressByBank.set(bank.id, entry && entry.count ? entry.sum / entry.count : 0);
   }
 
-  const categories = ["الكل", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
+  const categories = ["All", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
 
   // Mirrors the exact substring predicates used by the /dashboard/summary API
   // route, so the KPI counters and the filtered results always agree.
@@ -101,7 +101,7 @@ export default function Dashboard() {
   const highRiskBankCount = banks.filter(b => b.riskLevel === 'High').length;
 
   const filteredBanks = [...banks]
-    .filter(b => (filter === 'الكل' || b.category === filter) && matchesKpi(b))
+    .filter(b => (filter === 'All' || b.category === filter) && matchesKpi(b))
     .sort((a, b) => (progressByBank.get(b.id) || 0) - (progressByBank.get(a.id) || 0));
 
   return (
@@ -118,15 +118,15 @@ export default function Dashboard() {
         {/* KPI Strip. Horizontal scroll (snap) on mobile so 5 KPIs never
             wrap/overlap on narrow screens; normal wrapping row from md up. */}
         <div className="flex md:flex-wrap items-center gap-4 md:gap-10 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0">
-          <KpiButton label="إجمالي البنوك" value={summary.totalBanks} colorClass="text-white" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
+          <KpiButton label="Total Banks" value={summary.totalBanks} colorClass="text-white" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
           <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="قيد التنفيذ" value={summary.inProgress} colorClass="text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />
+          <KpiButton label="In Progress" value={summary.inProgress} colorClass="text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />
           <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="مكتمل" value={summary.completed} colorClass="text-emerald-400" active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
+          <KpiButton label="Completed" value={summary.completed} colorClass="text-emerald-400" active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
           <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="متأخر" value={summary.delayed} colorClass="text-red-400" active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} />
+          <KpiButton label="Delayed" value={summary.delayed} colorClass="text-red-400" active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} />
           <div className="hidden md:block w-px h-8 md:h-10 bg-white/10 shrink-0" />
-          <KpiButton label="مخاطر عالية" value={highRiskBankCount} colorClass="text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
+          <KpiButton label="High Risk" value={highRiskBankCount} colorClass="text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
         </div>
       </div>
 
@@ -136,7 +136,7 @@ export default function Dashboard() {
             onClick={() => setKpiFilter('all')}
             className="text-sm text-primary hover:text-white bg-primary/10 hover:bg-primary/30 border border-primary/30 rounded-full px-4 py-1.5 transition-colors"
           >
-            ✕ إزالة الفلتر
+            ✕ Clear Filter
           </button>
         </div>
       )}
@@ -184,7 +184,7 @@ export default function Dashboard() {
         </AnimatePresence>
 
         {filteredBanks.length === 0 && (
-          <div className="py-32 text-center text-white/30 text-2xl font-light">لا توجد بنوك مطابقة</div>
+          <div className="py-32 text-center text-white/30 text-2xl font-light">No matching banks found</div>
         )}
       </div>
     </div>
@@ -231,73 +231,73 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
         queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) });
         onOpenChange(false);
-        toast({ title: 'تم الحفظ', description: 'تم تحديث بيانات البنك بنجاح' });
+        toast({ title: 'Saved', description: 'Bank details updated successfully' });
       },
       onError: () => {
-        toast({ title: 'خطأ', description: 'فشل حفظ التعديلات', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to save changes', variant: 'destructive' });
       }
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-card border-white/10 text-white max-h-[85vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
+      <DialogContent className="sm:max-w-[600px] bg-card border-white/10 text-white max-h-[85vh] overflow-y-auto" dir="ltr" onClick={e => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle>تعديل {bank.nameAr}</DialogTitle>
+          <DialogTitle>Edit {bank.nameAr}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm text-white/70">الحالة</label>
+              <label className="text-sm text-white/70">Status</label>
               <select className="flex h-10 w-full rounded-md border border-white/10 bg-card px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary"
                 value={form.status || ''} onChange={e => setForm({ ...form, status: e.target.value })}>
-                <option value="Not Started">لم يبدأ</option>
-                <option value="In Progress">قيد التنفيذ</option>
-                <option value="Active - Integration In Progress">نشط - جاري التكامل</option>
-                <option value="Delayed">متأخر</option>
-                <option value="Completed">مكتمل</option>
+                <option value="Not Started">Not Started</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Active - Integration In Progress">Active - Integration In Progress</option>
+                <option value="Delayed">Delayed</option>
+                <option value="Completed">Completed</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">المسؤول</label>
+              <label className="text-sm text-white/70">Responsible Person</label>
               <Input value={form.responsiblePerson || ''} onChange={e => setForm({ ...form, responsiblePerson: e.target.value })} className="bg-white/5 border-white/10" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">مدير العلاقة</label>
+              <label className="text-sm text-white/70">Relationship Manager</label>
               <Input value={form.relationshipManager || ''} onChange={e => setForm({ ...form, relationshipManager: e.target.value })} className="bg-white/5 border-white/10" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">البريد الإلكتروني</label>
+              <label className="text-sm text-white/70">Email</label>
               <Input value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">الموقع الإلكتروني</label>
+              <label className="text-sm text-white/70">Website</label>
               <Input value={form.website || ''} onChange={e => setForm({ ...form, website: e.target.value })} className="bg-white/5 border-white/10" dir="ltr" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">تاريخ آخر اجتماع</label>
+              <label className="text-sm text-white/70">Last Meeting Date</label>
               <Input value={form.lastMeetingDate || ''} onChange={e => setForm({ ...form, lastMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">تاريخ الاجتماع القادم</label>
+              <label className="text-sm text-white/70">Next Meeting Date</label>
               <Input value={form.nextMeetingDate || ''} onChange={e => setForm({ ...form, nextMeetingDate: e.target.value })} className="bg-white/5 border-white/10" placeholder="YYYY-MM-DD" />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-white/70">موضوع الاجتماع القادم</label>
+            <label className="text-sm text-white/70">Next Meeting Topic</label>
             <Input value={form.nextMeetingTopic || ''} onChange={e => setForm({ ...form, nextMeetingTopic: e.target.value })} className="bg-white/5 border-white/10" />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-white/70">الخطوة القادمة</label>
+            <label className="text-sm text-white/70">Next Action</label>
             <Input value={form.nextAction || ''} onChange={e => setForm({ ...form, nextAction: e.target.value })} className="bg-white/5 border-white/10" />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-white/70">ملاحظات الوصف</label>
+            <label className="text-sm text-white/70">Description Notes</label>
             <Textarea value={form.descriptionNotes || ''} onChange={e => setForm({ ...form, descriptionNotes: e.target.value })} className="bg-white/5 border-white/10 h-24" />
           </div>
 
           <div className="space-y-2 pt-2 border-t border-white/10">
-            <label className="text-sm text-white/70">أنواع المنتجات</label>
+            <label className="text-sm text-white/70">Product Types</label>
             <div className="flex flex-wrap gap-2">
               {(productTypes || []).filter(pt => pt.isActive).map(pt => {
                 const selected = (form.productTypeIds || []).includes(pt.id);
@@ -319,29 +319,29 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
                 );
               })}
               {(!productTypes || productTypes.length === 0) && (
-                <span className="text-sm text-white/30">لا توجد أنواع منتجات معرّفة بعد (يمكن إضافتها من الإعدادات)</span>
+                <span className="text-sm text-white/30">No product types defined yet (you can add them in Settings)</span>
               )}
             </div>
           </div>
 
           <div className="space-y-2 pt-2 border-t border-white/10">
-            <label className="text-sm text-white/70">جهات الاتصال</label>
+            <label className="text-sm text-white/70">Contacts</label>
             {contacts.map((c, idx) => (
               <div key={idx} className="grid grid-cols-3 gap-2">
-                <Input value={c.name || ''} placeholder="الاسم" onChange={e => updateContact(idx, 'name', e.target.value)} className="bg-white/5 border-white/10" />
-                <Input value={c.title || ''} placeholder="المسمى" onChange={e => updateContact(idx, 'title', e.target.value)} className="bg-white/5 border-white/10" />
-                <Input value={c.phone || ''} placeholder="الجوال" onChange={e => updateContact(idx, 'phone', e.target.value)} className="bg-white/5 border-white/10" dir="ltr" />
-                <Input value={c.email || ''} placeholder="البريد الإلكتروني" onChange={e => updateContact(idx, 'email', e.target.value)} className="bg-white/5 border-white/10 col-span-3" dir="ltr" />
+                <Input value={c.name || ''} placeholder="Name" onChange={e => updateContact(idx, 'name', e.target.value)} className="bg-white/5 border-white/10" />
+                <Input value={c.title || ''} placeholder="Job Title" onChange={e => updateContact(idx, 'title', e.target.value)} className="bg-white/5 border-white/10" />
+                <Input value={c.phone || ''} placeholder="Phone" onChange={e => updateContact(idx, 'phone', e.target.value)} className="bg-white/5 border-white/10" dir="ltr" />
+                <Input value={c.email || ''} placeholder="Email Address" onChange={e => updateContact(idx, 'email', e.target.value)} className="bg-white/5 border-white/10 col-span-3" dir="ltr" />
               </div>
             ))}
             <Button variant="outline" size="sm" onClick={() => setForm({ ...form, contacts: [...contacts, { name: '', title: '', phone: '', email: '' }] })}>
-              + إضافة جهة اتصال
+              + Add Contact
             </Button>
           </div>
         </div>
         <DialogFooter>
           <Button onClick={handleSave} className="w-full gap-2" disabled={updateBank.isPending}>
-            <Save className="w-4 h-4" /> {updateBank.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+            <Save className="w-4 h-4" /> {updateBank.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -369,7 +369,7 @@ function CompactBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSummary
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditOpen(true); }}
         className="absolute top-3 left-3 z-40 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/70 hover:text-white hover:bg-primary/60 hover:border-primary transition-all"
-        title="تعديل بيانات البنك"
+        title="Edit Bank Details"
       >
         <Pencil className="w-3.5 h-3.5" />
       </button>
@@ -435,15 +435,15 @@ function CompactBankCard({ bankSummary, hoveredId, setHoveredId }: { bankSummary
             {/* Meta grid: responsible, next meeting, last updated */}
             <div className="mt-auto grid grid-cols-1 gap-1.5 text-[11px]">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-white/40">المسؤول</span>
-                <span className="text-white/85 font-medium truncate max-w-[65%]">{displayBank.responsiblePerson || 'غير محدد'}</span>
+                <span className="text-white/40">Responsible</span>
+                <span className="text-white/85 font-medium truncate max-w-[65%]">{displayBank.responsiblePerson || 'Not assigned'}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-white/40">الاجتماع القادم</span>
+                <span className="text-white/40">Next Meeting</span>
                 <span className="text-white/85 font-medium truncate max-w-[65%]">{formatDate(displayBank.nextMeetingDate)}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-white/30">آخر تحديث</span>
+                <span className="text-white/30">Last Updated</span>
                 <span className="text-white/50 truncate max-w-[65%]">
                   {formatDateTime(displayBank.updatedAt)}
                   {displayBank.updatedBy && <span className="text-white/30"> · {displayBank.updatedBy}</span>}

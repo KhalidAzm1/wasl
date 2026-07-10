@@ -25,6 +25,23 @@ export default function ChangePassword() {
     }
 
     setLoading(true);
+
+    // The session in memory can be stale (expired/rotated refresh token,
+    // long idle tab, etc.) by the time the form is submitted. Re-check with
+    // Supabase first so we can send the user back to /login with a clear
+    // message instead of surfacing a raw "Auth session missing!" error.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setLoading(false);
+      toast({
+        title: 'انتهت الجلسة',
+        description: 'انتهت صلاحية جلستك، يرجى تسجيل الدخول مجددًا لتعيين كلمة المرور.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+
     const { error } = await supabase.auth.updateUser({
       password,
       data: { must_change_password: false },
@@ -32,7 +49,17 @@ export default function ChangePassword() {
     setLoading(false);
 
     if (error) {
-      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+      const sessionExpired = /session/i.test(error.message);
+      toast({
+        title: 'خطأ',
+        description: sessionExpired
+          ? 'انتهت صلاحية جلستك، يرجى تسجيل الدخول مجددًا لتعيين كلمة المرور.'
+          : error.message,
+        variant: 'destructive',
+      });
+      if (sessionExpired) {
+        navigate('/login');
+      }
       return;
     }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
+import { StaticGlowFallback } from '@/components/EntryCube';
 
 interface Props {
   children: React.ReactNode;
@@ -32,16 +32,7 @@ export class EntryCubeBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: '#050816' }}>
-          <img
-            src={logoUrl}
-            alt="Wasl"
-            className="no-mirror h-40 md:h-56 w-auto"
-            style={{ filter: 'drop-shadow(0 0 30px rgba(124,58,237,0.8)) drop-shadow(0 0 55px rgba(59,130,246,0.5))' }}
-          />
-        </div>
-      );
+      return <StaticGlowFallback />;
     }
     return this.props.children;
   }

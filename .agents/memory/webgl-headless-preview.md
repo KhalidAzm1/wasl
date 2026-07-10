@@ -1,10 +1,13 @@
 ---
-name: WebGL unavailable in headless preview/screenshot tool
-description: canvas.getContext('webgl') can return a truthy context in this sandbox's headless browser yet still fail on actual WebGLRenderer construction.
+name: WebGL can fail in the live Replit preview itself, not just headless tools
+description: THREE.WebGLRenderer construction can throw in the real proxied preview pane, not only in headless screenshot tooling -- getContext() alone is not sufficient feature detection.
 ---
 
-When adding a Three.js/React Three Fiber canvas, `canvas.getContext('webgl')` returning non-null is not sufficient proof WebGL works — the headless screenshot browser here can return a context object that still throws `Error creating WebGL context` when `THREE.WebGLRenderer` is constructed.
+`canvas.getContext('webgl')` returning non-null is not proof WebGL works. `new THREE.WebGLRenderer()` can still throw (`Error creating WebGL context`, e.g. `BindToCurrentSequence failed`) in both the headless Screenshot tool and the real proxied preview pane.
 
-**Why:** hit this building a rotating cube for a sidebar; naive feature detection let the crash through and broke the whole layout in the Screenshot tool (real user browsers with GPU access are typically fine).
+**Why:** a React error boundary around `<Canvas>` is not enough on its own — React re-throws caught errors to the console in dev, which triggers Vite's `runtime-error-plugin` full-screen overlay even when the boundary already recovered underneath it, so the user perceives a broken/blank page instead of the intended fallback.
 
-**How to apply:** always pair feature detection with a React error boundary around the `<Canvas>` mount, and also handle the `webglcontextlost` event by switching to a static fallback — detection alone isn't enough.
+**How to apply:**
+1. Probe for real support once at module load with an actual `try { new THREE.WebGLRenderer({canvas}).dispose(); return true } catch { return false }`, and skip mounting `<Canvas>` entirely (render a static fallback) when it returns false — this avoids the throw, so Vite's overlay never fires.
+2. Still keep a React error boundary around `<Canvas>` for other synchronous throws, and a `webglcontextlost` listener (via `onCreated`) for async GPU loss mid-session — no single layer covers every failure mode.
+3. To debug an auth-gated page without login credentials, temporarily add an unauthenticated route to the router pointing at the same page, screenshot it, then remove the route.

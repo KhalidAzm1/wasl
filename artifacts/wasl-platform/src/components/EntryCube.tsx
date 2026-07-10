@@ -5,6 +5,29 @@ import * as THREE from 'three';
 
 const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768;
 
+/**
+ * `canvas.getContext('webgl')` returning non-null is not sufficient proof
+ * WebGL actually works -- some sandboxed/headless browsers (and a real GPU
+ * driver crash) return a context object that still throws once
+ * THREE.WebGLRenderer is constructed on top of it. Do the real probe once,
+ * synchronously, before ever mounting <Canvas>, so a known-bad environment
+ * never throws (and never triggers the dev error overlay) in the first
+ * place -- it goes straight to the static fallback.
+ */
+function detectWebglSupport(): boolean {
+  if (typeof document === 'undefined') return false;
+  const canvas = document.createElement('canvas');
+  try {
+    const renderer = new THREE.WebGLRenderer({ canvas, failIfMajorPerformanceCaveat: false });
+    renderer.dispose();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const webglSupported = detectWebglSupport();
+
 import wasLogoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import snbUrl from '@assets/wasl_brand/bank_cube/snb.png';
 import alrajhiUrl from '@assets/wasl_brand/bank_cube/alrajhi.png';
@@ -210,20 +233,27 @@ function Floor() {
  * on `webglcontextlost` we swap to the same static glowing mark the boundary
  * uses, instead of leaving a dead/blank canvas on screen.
  */
+export function StaticGlowFallback() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: '#050816' }}>
+      <img
+        src={wasLogoUrl}
+        alt="Wasl"
+        className="no-mirror h-40 md:h-56 w-auto"
+        style={{ filter: 'drop-shadow(0 0 30px rgba(124,58,237,0.8)) drop-shadow(0 0 55px rgba(59,130,246,0.5))' }}
+      />
+    </div>
+  );
+}
+
 export default function EntryCube() {
   const [contextLost, setContextLost] = useState(false);
 
-  if (contextLost) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: '#050816' }}>
-        <img
-          src={wasLogoUrl}
-          alt="Wasl"
-          className="no-mirror h-40 md:h-56 w-auto"
-          style={{ filter: 'drop-shadow(0 0 30px rgba(124,58,237,0.8)) drop-shadow(0 0 55px rgba(59,130,246,0.5))' }}
-        />
-      </div>
-    );
+  // Known-bad environment (probed once at module load): never mount <Canvas>
+  // at all, so THREE.WebGLRenderer never throws and the dev error overlay
+  // never fires.
+  if (!webglSupported || contextLost) {
+    return <StaticGlowFallback />;
   }
 
   return (

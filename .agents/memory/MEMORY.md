@@ -8,3 +8,4 @@
 - [Client-side-only PIN/2FA gates](client-side-only-gates.md) — a frontend-only PIN gate (sessionStorage flag) protects nothing; the backend must issue and verify a signed token on every protected route.
 - [Bare access-denied pages look broken](role-gated-page-perceived-as-broken.md) — hide nav links to role-gated pages a user can't access; a bare-text denial view reads as a "black screen" bug, not a permissions message.
 - [Auth/archive coverage must span every CRUD router](enterprise-crud-audit-coverage.md) — retrofitting requireAuth/soft-delete to named routers misses sibling routers and dashboard aggregates with the same tables; grep before declaring done.
+- [Un-disabled dialog Save buttons cause duplicate records](wasl-double-submit-duplicates.md) — mutation buttons without `disabled={mutation.isPending}` let a double-click fire two POSTs, showing up later as "duplicate reports" in lists.

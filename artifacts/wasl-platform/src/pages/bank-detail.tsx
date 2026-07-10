@@ -258,6 +258,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
   const deleteProduct = useDeleteProduct();
 
   const handleSave = () => {
+    if (createProduct.isPending || updateProduct.isPending) return;
     const payload = {
       bankId,
       productCode: editing.productCode,
@@ -347,7 +348,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
             <Input type="number" placeholder="نسبة الإنجاز (0-100)" value={editing?.progressPercent || 0} onChange={e => setEditing({...editing, progressPercent: e.target.value})} />
             <Input placeholder="المسؤول" value={editing?.responsiblePerson || ''} onChange={e => setEditing({...editing, responsiblePerson: e.target.value})} />
           </div>
-          <DialogFooter><Button onClick={handleSave}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>حفظ</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -362,6 +363,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
   const deleteMeeting = useDeleteMeeting();
 
   const handleSave = () => {
+    if (createMeeting.isPending) return;
     createMeeting.mutate({ data: { bankId, topic: editing.topic, date: editing.date, summary: editing.summary } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
@@ -403,7 +405,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
             <Input placeholder="الموضوع" value={editing?.topic || ''} onChange={e => setEditing({...editing, topic: e.target.value})} />
             <Textarea placeholder="الملخص" value={editing?.summary || ''} onChange={e => setEditing({...editing, summary: e.target.value})} />
           </div>
-          <DialogFooter><Button onClick={handleSave}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createMeeting.isPending}>حفظ</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -419,6 +421,7 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
   const deleteAction = useDeleteActionItem();
 
   const handleSave = () => {
+    if (createAction.isPending || updateAction.isPending) return;
     const payload = { bankId, description: editing.description, owner: editing.owner, dueDate: editing.dueDate, status: editing.status || 'Pending' };
     if (editing.id) {
       updateAction.mutate({ id: editing.id, data: payload }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); setIsOpen(false); } });
@@ -465,7 +468,7 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
               <option value="Completed">مكتمل</option>
             </select>
           </div>
-          <DialogFooter><Button onClick={handleSave}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createAction.isPending || updateAction.isPending}>حفظ</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -480,6 +483,7 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
   const deleteRisk = useDeleteRisk();
 
   const handleSave = () => {
+    if (createRisk.isPending) return;
     createRisk.mutate({ data: { bankId, description: editing.description, level: editing.level || 'Medium', status: editing.status || 'Open' } }, {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); setIsOpen(false); }
     });
@@ -516,7 +520,7 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
               <option value="High">عالي</option>
             </select>
           </div>
-          <DialogFooter><Button onClick={handleSave}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createRisk.isPending}>حفظ</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -535,6 +539,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
   const deleteDoc = useDeleteDocument();
 
   const handleSave = () => {
+    if (createDoc.isPending) return;
     createDoc.mutate({ data: { bankId, title: editing.title, link: editing.link, docType: editing.docType } }, {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); setIsOpen(false); }
     });
@@ -622,7 +627,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
             <Input placeholder="الرابط (URL)" value={editing?.link || ''} onChange={e => setEditing({...editing, link: e.target.value})} />
             <Input placeholder="نوع المستند (عقد، تقرير...)" value={editing?.docType || ''} onChange={e => setEditing({...editing, docType: e.target.value})} />
           </div>
-          <DialogFooter><Button onClick={handleSave}>حفظ</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createDoc.isPending}>حفظ</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

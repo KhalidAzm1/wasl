@@ -1,0 +1,121 @@
+Implement the following enterprise features:
+
+1. Audit Log System
+Every action in the system must be tracked.
+
+Track:
+- Create
+- Update
+- Archive
+- Restore
+- Upload document
+- Delete document
+- Add meeting
+- Update meeting
+- Change status
+- Change product
+
+For every action save:
+
+- User name
+- User email
+- Action
+- Entity type
+- Entity name
+- Old value
+- New value
+- Date and time
+
+Show the activity inside:
+Settings → Activity Logs
+
+==================================================
+
+2. Soft Delete and Archive System
+
+Nothing should ever be permanently deleted.
+
+When a user clicks Delete:
+
+- Move the record to Archive.
+- Set:
+is_archived = true
+archived_at
+archived_by
+
+Create:
+Settings → Archive
+
+Allow:
+- Restore
+- View archived data
+
+==================================================
+
+3. Google Drive Document Storage
+
+Do not store files in Supabase Storage.
+
+Prepare the architecture for Google Drive integration.
+
+When a file is uploaded:
+
+- Upload file to Google Drive.
+- Save only:
+  - file_name
+  - drive_file_id
+  - drive_url
+  - uploaded_by
+  - uploaded_at
+
+Display files inside the bank details page.
+
+==================================================
+
+4. Product Management
+
+Create a Products table.
+
+Allow Super Admin to create product types.
+
+Examples:
+
+- Personal Finance
+- Credit Card
+- Auto Finance
+- Mortgage
+- SME Finance
+- BNPL
+- Savings
+- Insurance
+- Custom Product
+
+When creating or editing a bank:
+
+Display:
+
+Product Type (Dropdown)
+
+Allow selecting one or multiple products.
+
+==================================================
+
+5. User Tracking
+
+Every update in the system must show:
+
+Updated By
+Updated At
+
+Display this information:
+
+- On bank details page
+- On documents
+- On meetings
+- On activity feed
+
+==================================================
+
+6. Keep the current UI design unchanged.
+
+Only add these enterprise features and database integration.

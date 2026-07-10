@@ -71,15 +71,10 @@ const WallPanel = ({ side, isMobile }: { side: 'left' | 'right'; isMobile: boole
            style={{
              backgroundColor: 'rgba(5,3,10,0.85)',
              backdropFilter: 'blur(12px)',
-             border: `1px solid rgba(108,76,255,0.4)`
+             border: `1px solid rgba(108,76,255,0.4)`,
+             willChange: 'opacity',
            }}
-           animate={{ 
-             boxShadow: [
-               '0 0 20px rgba(108,76,255,0.15), inset 0 0 10px rgba(108,76,255,0.15)', 
-               '0 0 40px rgba(108,76,255,0.3), inset 0 0 20px rgba(108,76,255,0.25)', 
-               '0 0 20px rgba(108,76,255,0.15), inset 0 0 10px rgba(108,76,255,0.15)'
-             ] 
-           }}
+           animate={{ opacity: [0.85, 1, 0.85] }}
            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: isLeft ? 0 : 2 }}
          >
             <img src={waslLogo} alt="WASL" className="w-24 md:w-32 opacity-90 drop-shadow-[0_0_15px_rgba(108,76,255,0.6)]" />
@@ -109,7 +104,7 @@ const CubeFace = ({ rx = 0, ry = 0, isTop = false, isBottom = false, stage, cube
   
   return (
     <motion.div 
-      className="absolute left-0 top-0 flex items-center justify-center backdrop-blur-[8px]"
+      className="absolute left-0 top-0 flex items-center justify-center"
       initial={false}
       animate={{
         opacity,
@@ -119,37 +114,48 @@ const CubeFace = ({ rx = 0, ry = 0, isTop = false, isBottom = false, stage, cube
       style={{ 
         width: cubeSize, 
         height: cubeSize, 
-        backgroundColor: 'rgba(5, 3, 10, 0.95)',
+        backgroundColor: '#0A0714',
         border: `1px solid rgba(108, 76, 255, 0.6)`,
-        boxShadow: `inset 0 0 30px rgba(108, 76, 255, 0.4), 0 0 20px rgba(108, 76, 255, 0.3)`,
-        backfaceVisibility: 'visible',
+        boxShadow: `inset 0 0 20px rgba(108, 76, 255, 0.3), 0 0 12px rgba(108, 76, 255, 0.25)`,
+        backfaceVisibility: 'hidden',
+        willChange: 'transform, opacity',
       }}
     >
       {isTop ? (
         <img src={waslLogo} alt="WASL" className="w-[65%] h-[65%] object-contain drop-shadow-[0_0_15px_rgba(108,76,255,0.8)]" />
       ) : isBottom ? (
-        <div className="w-full h-full bg-[rgba(5,3,10,0.95)]" />
+        <div className="w-full h-full bg-[#0A0714]" />
       ) : (
         <div className="w-full h-full grid grid-cols-2 grid-rows-2">
           {/* Upper-Left: Alrajhi */}
-          <div className="flex items-center justify-center border-r border-b border-[rgba(108,76,255,0.3)]">
-            <img src={alrajhiLogo} alt="Alrajhi" className="w-[60%] h-[60%] object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" />
+          <div className="flex items-center justify-center border-r border-b border-[rgba(108,76,255,0.3)] p-2">
+            <div className="w-[78%] h-[68%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 10px rgba(0,0,0,0.35)' }}>
+              <img src={alrajhiLogo} alt="Alrajhi" className="w-[82%] h-[82%] object-contain" />
+            </div>
           </div>
           {/* Upper-Right: SNB */}
-          <div className="flex items-center justify-center border-b border-[rgba(108,76,255,0.3)]">
-            <img src={snbLogo} alt="SNB" className="w-[60%] h-[60%] object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" />
+          <div className="flex items-center justify-center border-b border-[rgba(108,76,255,0.3)] p-2">
+            <div className="w-[78%] h-[68%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 10px rgba(0,0,0,0.35)' }}>
+              <img src={snbLogo} alt="SNB" className="w-[82%] h-[82%] object-contain" />
+            </div>
           </div>
           {/* Lower-Left: Riyad */}
-          <div className="flex items-center justify-center border-r border-[rgba(108,76,255,0.3)]">
-            <img src={riyadLogo} alt="Riyad" className="w-[60%] h-[60%] object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" />
+          <div className="flex items-center justify-center border-r border-[rgba(108,76,255,0.3)] p-2">
+            <div className="w-[78%] h-[68%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 10px rgba(0,0,0,0.35)' }}>
+              <img src={riyadLogo} alt="Riyad" className="w-[82%] h-[82%] object-contain" />
+            </div>
           </div>
           {/* Lower-Right: Split Alinma & BSF */}
-          <div className="flex flex-col">
-            <div className="flex-1 flex items-center justify-center border-b border-[rgba(108,76,255,0.3)]">
-              <img src={alinmaLogo} alt="Alinma" className="w-[50%] h-[50%] object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" />
+          <div className="flex flex-col p-2 gap-1">
+            <div className="flex-1 flex items-center justify-center border-b border-[rgba(108,76,255,0.3)] pb-1">
+              <div className="w-[82%] h-[80%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 8px rgba(0,0,0,0.35)' }}>
+                <img src={alinmaLogo} alt="Alinma" className="w-[80%] h-[80%] object-contain" />
+              </div>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <img src={bsfLogo} alt="BSF" className="w-[50%] h-[50%] object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" />
+            <div className="flex-1 flex items-center justify-center pt-1">
+              <div className="w-[82%] h-[80%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 8px rgba(0,0,0,0.35)' }}>
+                <img src={bsfLogo} alt="BSF" className="w-[80%] h-[80%] object-contain" />
+              </div>
             </div>
           </div>
         </div>
@@ -372,7 +378,6 @@ export default function EntryExperience() {
         />
 
         {/* Illuminated Glass Panels on Walls */}
-        <WallPanel side="left" isMobile={cubeSize <= 180} />
         <WallPanel side="right" isMobile={cubeSize <= 180} />
 
         {/* Center Glowing Rotating Cube Container */}

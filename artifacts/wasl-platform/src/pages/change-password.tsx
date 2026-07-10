@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
+import { WaslLogo } from '@/components/WaslLogo';
 
 export default function ChangePassword() {
   const [password, setPassword] = useState('');
@@ -71,9 +71,12 @@ export default function ChangePassword() {
     <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex justify-center">
-          <div className="logo-plate rounded-2xl px-6 py-5">
-            <img src={logoUrl} alt="Wasl" className="no-mirror w-60 h-auto" />
-          </div>
+          <WaslLogo
+            height={72}
+            plateClassName="px-6 py-5"
+            imgClassName="w-60 h-auto"
+            imgStyle={{}}
+          />
         </div>
         <h1 className="text-2xl font-bold text-foreground text-center">Set a New Password</h1>
         <p className="text-sm text-foreground/50 text-center">This is your first sign-in. Please set a new password before continuing.</p>

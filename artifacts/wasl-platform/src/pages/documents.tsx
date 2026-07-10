@@ -30,7 +30,7 @@ export default function Documents() {
     <div className="p-8 pb-24 max-w-5xl mx-auto w-full space-y-8">
       <header className="mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-white to-white/60 mb-2 flex items-center gap-3">
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-foreground to-foreground/60 mb-2 flex items-center gap-3">
             <FileText className="w-8 h-8 text-primary" />
             Global Documents
           </h1>

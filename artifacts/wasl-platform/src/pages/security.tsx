@@ -80,13 +80,13 @@ export default function Security() {
     <div className="p-8 pb-24 max-w-5xl mx-auto w-full space-y-8">
       <header className="mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-white to-white/60 mb-2 flex items-center gap-3">
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-foreground to-foreground/60 mb-2 flex items-center gap-3">
             <ShieldCheck className="w-8 h-8 text-primary" />
-            Security & Activity
+            Activity Timeline
           </h1>
           <p className="text-foreground/50 text-lg">System-wide audit trail and security access</p>
         </div>
-        <NavControls />
+        <NavControls hideHome />
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

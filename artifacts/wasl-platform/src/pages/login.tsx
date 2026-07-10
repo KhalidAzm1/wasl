@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
+import { WaslLogo } from '@/components/WaslLogo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -35,8 +35,13 @@ export default function Login() {
     <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex flex-col items-center gap-3 pb-2">
-          <div className="logo-plate rounded-2xl px-6 py-5 w-full flex justify-center">
-            <img src={logoUrl} alt="Wasl" className="no-mirror w-full max-w-[280px] h-auto" />
+          <div className="w-full flex justify-center">
+            <WaslLogo
+              height={80}
+              plateClassName="px-6 py-5 w-full"
+              imgClassName="w-full max-w-[280px] h-auto"
+              imgStyle={{}}
+            />
           </div>
           <p className="text-[11px] text-foreground/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
         </div>

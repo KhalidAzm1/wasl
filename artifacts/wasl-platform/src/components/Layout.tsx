@@ -7,6 +7,7 @@ import { AnimatedBackground } from './AnimatedBackground';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
 import { useTheme } from './ThemeProvider';
+import { WaslLogo } from './WaslLogo';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LayoutProps {
@@ -28,7 +29,7 @@ const contentNavItems = [
 ];
 
 const systemNavItems = [
-  { href: '/security', icon: ShieldCheck, label: 'Security & Activity', roles: null, permission: 'security' as const },
+  { href: '/security', icon: ShieldCheck, label: 'Activity Timeline', roles: null, permission: 'security' as const },
   { href: '/settings', icon: Settings, label: 'Settings', roles: null, permission: null },
 ];
 
@@ -173,9 +174,7 @@ export function Layout({ children }: LayoutProps) {
               className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-background/95 backdrop-blur-2xl border-l border-foreground/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
             >
               <div className="relative flex flex-col items-center justify-center gap-2 px-12 pt-10 pb-8 border-b border-foreground/5">
-                <div className="logo-plate rounded-2xl px-6 py-4">
-                  <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto max-w-full" />
-                </div>
+                <WaslLogo height={90} />
                 <p className="text-[11px] text-foreground/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
                 <button
                   type="button"

@@ -5,10 +5,15 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { Layout } from '@/components/Layout';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
+import { AuthProvider } from '@/lib/authContext';
+import { RequireAuth } from '@/components/RequireAuth';
 import EntryExperience from '@/pages/entry-experience';
 import Dashboard from '@/pages/dashboard';
 import BankDetail from '@/pages/bank-detail';
 import Settings from '@/pages/settings';
+import Login from '@/pages/login';
+import ChangePassword from '@/pages/change-password';
+import AdminUsers from '@/pages/admin-users';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +39,15 @@ function AppRoutes() {
       <Route path="/settings">
         <Layout><Settings /></Layout>
       </Route>
+      <Route path="/login" component={Login} />
+      <Route path="/change-password" component={ChangePassword} />
+      <Route path="/admin/users">
+        <Layout>
+          <RequireAuth roles={['super_admin']}>
+            <AdminUsers />
+          </RequireAuth>
+        </Layout>
+      </Route>
       <Route>
         <Layout><NotFound /></Layout>
       </Route>
@@ -47,7 +61,9 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <AppRoutes />
+            <AuthProvider>
+              <AppRoutes />
+            </AuthProvider>
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

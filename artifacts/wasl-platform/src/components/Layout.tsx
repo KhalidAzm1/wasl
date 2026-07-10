@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Settings, Menu, X, Users } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
@@ -11,6 +11,7 @@ interface LayoutProps {
 
 const navItems = [
   { href: '/portfolio', icon: LayoutDashboard, label: 'لوحة القيادة (Dashboard)' },
+  { href: '/admin/users', icon: Users, label: 'إدارة المستخدمين' },
   { href: '/settings', icon: Settings, label: 'الإعدادات (Settings)' },
 ];
 

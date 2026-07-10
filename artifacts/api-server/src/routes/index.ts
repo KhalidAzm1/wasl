@@ -8,6 +8,7 @@ import actionItemsRouter from "./action-items";
 import documentsRouter from "./documents";
 import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
+import adminUsersRouter from "./admin-users";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(actionItemsRouter);
 router.use(documentsRouter);
 router.use(dashboardRouter);
 router.use(settingsRouter);
+router.use(adminUsersRouter);
 
 export default router;

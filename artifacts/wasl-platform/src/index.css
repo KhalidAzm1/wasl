@@ -63,48 +63,48 @@
 
 :root {
   color-scheme: light;
-  --button-outline: rgba(0, 0, 0, 0.1);
-  --badge-outline: rgba(0, 0, 0, 0.05);
+  --button-outline: rgba(47, 107, 255, 0.1);
+  --badge-outline: rgba(47, 107, 255, 0.05);
 
-  --elevate-1: rgba(0, 0, 0, 0.03);
-  --elevate-2: rgba(0, 0, 0, 0.08);
+  --elevate-1: 0 8px 30px rgba(15, 23, 42, 0.08);
+  --elevate-2: 0 0 30px rgba(47, 107, 255, 0.08);
 
-  --background: 240 12% 88%; /* Cool grey canvas — clearly distinct from card white */
-  --foreground: 255 45% 14%; /* Deep violet/dark grey */
+  --background: 216 33% 97%; /* #EEF2F7 - base behind the gradient */
+  --foreground: 222 47% 11%; /* #0F172A */
 
-  --border: 250 15% 78%;
+  --border: 211 100% 70%; /* #63B3FF at ~20% opacity used for borders */
 
-  --card: 0 0% 100%; /* White cards, standing out against the grey canvas */
-  --card-foreground: 255 45% 14%;
-  --card-border: 250 15% 80%;
+  --card: 0 0% 100%; /* base white, opacity handled in utilities */
+  --card-foreground: 222 47% 11%; /* #0F172A */
+  --card-border: 211 100% 70%; /* #63B3FF at ~20% opacity */
 
   --popover: 0 0% 100%;
-  --popover-foreground: 255 45% 14%;
-  --popover-border: 250 15% 80%;
+  --popover-foreground: 222 47% 11%;
+  --popover-border: 211 100% 70%;
 
-  --primary: 255 78% 52%; /* #4F32D6 — matches Wasl logo deep violet */
+  --primary: 223 100% 59%; /* Accent #2F6BFF mapped to primary */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 258 80% 68%; /* #A48CF2 — matches Wasl logo lavender */
-  --secondary-foreground: 255 45% 14%;
+  --secondary: 215 19% 35%; /* Secondary #475569 */
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 240 10% 84%;
-  --muted-foreground: 253 15% 38%;
+  --muted: 214 32% 91%; /* #E2E8F0 */
+  --muted-foreground: 215 19% 35%; /* Secondary #475569 */
 
-  --accent: 255 78% 52%;
+  --accent: 223 100% 59%; /* Accent #2F6BFF */
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 72% 48%;
+  --destructive: 0 84% 60%; /* Danger #EF4444 */
   --destructive-foreground: 0 0% 98%;
 
-  --input: 252 30% 82%;
-  --ring: 255 78% 52%;
+  --input: 214 32% 91%;
+  --ring: 223 100% 59%; /* Accent #2F6BFF */
 
-  --chart-1: 255 78% 56%;
-  --chart-2: 258 85% 74%;
-  --chart-3: 160 84% 39%;
-  --chart-4: 43 96% 56%;
-  --chart-5: 0 84% 60%;
+  --chart-1: 223 100% 59%; /* Accent #2F6BFF */
+  --chart-2: 142 71% 45%; /* Success #22C55E */
+  --chart-3: 48 96% 53%; /* Warning #FACC15 */
+  --chart-4: 0 84% 60%; /* Danger #EF4444 */
+  --chart-5: 222 47% 11%; /* Primary #0F172A */
 
   --app-font-sans: 'Outfit', sans-serif;
   --app-font-serif: Georgia, serif;
@@ -192,10 +192,57 @@
 
 /* Base custom classes for glassmorphism */
 .glass-panel {
-  @apply bg-card/40 backdrop-blur-xl border border-foreground/5 shadow-2xl;
+  border-radius: 20px;
+  transition: all 0.3s ease;
 }
+:root .glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 179, 255, 0.20);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08), 0 0 30px rgba(47, 107, 255, 0.08);
+}
+.dark .glass-panel {
+  /* Unchanged from the pre-existing dark theme — identical to the previous
+     shared `bg-card/40 backdrop-blur-xl border border-foreground/5 shadow-2xl` rule. */
+  background: hsl(var(--card) / 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid hsl(var(--foreground) / 0.05);
+  box-shadow: var(--shadow-2xl);
+  border-radius: var(--radius-xl);
+}
+
 .glass-card {
-  @apply bg-card/60 backdrop-blur-md border border-foreground/5 shadow-xl hover:bg-card/80 hover:border-foreground/10 transition-all duration-300;
+  border-radius: 20px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+:root .glass-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 179, 255, 0.20);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08), 0 0 30px rgba(47, 107, 255, 0.08);
+}
+:root .glass-card:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(47, 107, 255, 0.40);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12), 0 0 40px rgba(47, 107, 255, 0.15);
+  transform: translateY(-4px);
+}
+.dark .glass-card {
+  /* Unchanged from the pre-existing dark theme — identical to the previous
+     shared `bg-card/60 backdrop-blur-md border border-foreground/5 shadow-xl` rule. */
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--foreground) / 0.05);
+  box-shadow: var(--shadow-xl);
+  border-radius: var(--radius-xl);
+}
+.dark .glass-card:hover {
+  background: hsl(var(--card) / 0.8);
+  border-color: hsl(var(--foreground) / 0.1);
 }
 .gradient-text {
   @apply text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary;

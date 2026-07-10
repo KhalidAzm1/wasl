@@ -33,6 +33,7 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
+    root.style.transition = 'background-color 0.5s ease, color 0.5s ease';
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
   }, [theme]);

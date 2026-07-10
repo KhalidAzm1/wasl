@@ -75,14 +75,14 @@ function CategoryFilter({ categories, value, onChange }: { categories: string[],
       <button 
         onClick={() => setOpen(!open)} 
         className={cn(
-          "flex items-center gap-2 h-[42px] px-4 rounded-xl border text-sm transition-all backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-primary/50",
+          "flex items-center gap-2 h-[48px] px-5 rounded-full border text-[15px] transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 glass-panel",
           open 
-            ? "bg-primary/10 border-primary/40 text-foreground shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
-            : "bg-foreground/5 border-foreground/10 text-foreground/80 hover:text-foreground hover:bg-foreground/10 hover:border-foreground/20"
+            ? "bg-white/80 dark:bg-primary/10 border-primary/40 shadow-[0_0_15px_-3px_rgba(47,107,255,0.3)] dark:shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
+            : "hover:bg-white/60 dark:hover:bg-foreground/10 hover:border-primary/30"
         )}
       >
-        <span className="max-w-[120px] truncate">{value === 'All' ? 'All Categories' : value}</span>
-        <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0" />
+        <span className="max-w-[120px] truncate font-medium">{value === 'All' ? 'All Categories' : value}</span>
+        <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
       </button>
 
       {open && (
@@ -218,32 +218,64 @@ function AdvancedFiltersPanel({
 }
 
 function KpiButton({ label, value, colorClass, active, onClick }: { label: string; value: number; colorClass: string; active: boolean; onClick: () => void }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+
+  React.useEffect(() => {
+    if (prefersReducedMotion) {
+      setDisplayValue(value);
+      return;
+    }
+
+    let startTimestamp: number | null = null;
+    let rafId: number;
+    const duration = 1000;
+    const startValue = displayValue;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // easeOutExpo
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setDisplayValue(Math.floor(startValue + (value - startValue) * easeProgress));
+
+      if (progress < 1) {
+        rafId = window.requestAnimationFrame(step);
+      }
+    };
+
+    rafId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(rafId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, prefersReducedMotion]);
+
   return (
     <button
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "relative overflow-hidden flex flex-col text-left rounded-2xl px-5 py-3.5 shrink-0 min-w-[140px] md:w-auto transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+        "relative overflow-hidden flex flex-col text-left px-5 py-3.5 shrink-0 min-w-[140px] md:w-auto transition-all duration-300 focus:outline-none glass-card group outline-none",
         active 
-          ? "bg-foreground/10 border border-primary/40 shadow-[0_0_30px_-5px_rgba(79,50,214,0.25)]" 
-          : "bg-foreground/5 border border-foreground/5 hover:bg-foreground/10 hover:border-foreground/10 backdrop-blur-xl"
+          ? "border-primary/50 shadow-[0_0_30px_-5px_rgba(47,107,255,0.4)] transform -translate-y-1 bg-white/80 dark:bg-foreground/10 dark:border-primary/40 dark:shadow-[0_0_30px_-5px_rgba(79,50,214,0.25)]" 
+          : "hover:border-primary/30 dark:bg-foreground/5 dark:border-foreground/5 dark:hover:bg-foreground/10 dark:hover:border-foreground/10"
       )}
     >
-      {active && <div className="absolute inset-0 bg-gradient-to-b from-[#00e5ff]/10 to-transparent pointer-events-none" />}
+      {active && <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-b from-white/50 to-transparent pointer-events-none transition-opacity duration-300 dark:hidden" />
       <span className="relative z-10 text-foreground/50 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] mb-1.5">{label}</span>
       <AnimatePresence mode="popLayout">
         <motion.span
-          key={value}
+          key={value} // The actual value changing triggers the pop, but displayValue is what renders
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
           transition={{ duration: 0.3 }}
           className={cn(
             "relative z-10 text-2xl md:text-3xl font-mono font-light tracking-tight",
-            active ? "text-primary drop-shadow-[0_0_8px_rgba(79,50,214,0.6)]" : colorClass
+            active ? "text-primary drop-shadow-[0_0_8px_rgba(47,107,255,0.4)] dark:drop-shadow-[0_0_8px_rgba(79,50,214,0.6)]" : colorClass
           )}
         >
-          {value}
+          {displayValue}
         </motion.span>
       </AnimatePresence>
     </button>
@@ -383,13 +415,15 @@ export default function Dashboard() {
           <div className="flex flex-wrap md:flex-nowrap items-center gap-3 w-full xl:w-auto">
             {/* Search */}
             <div className="relative group w-full md:w-[320px] shrink-0">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-primary transition-colors" />
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Search className="w-5 h-5 text-foreground/40 group-focus-within:text-primary transition-colors" />
+              </div>
               <input 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search banks, people..."
                 aria-label="Search banks, people..."
-                className="w-full bg-foreground/5 border border-foreground/10 rounded-xl pl-10 pr-4 h-[42px] text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all backdrop-blur-md shadow-inner"
+                className="w-full glass-panel !rounded-full pl-11 pr-4 h-[48px] text-[15px] text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 focus:bg-white/80 dark:focus:bg-card/60 transition-all shadow-inner"
               />
             </div>
 
@@ -802,10 +836,15 @@ function CompactBankCard({
         onMouseLeave={() => setHoveredId(null)}
         animate={{ scale: isHovered ? 1.02 : 1, y: isHovered ? -4 : 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full h-[280px] rounded-[24px] overflow-hidden bg-card/20 backdrop-blur-2xl border border-foreground/5 cursor-pointer shadow-xl group"
+        className="relative w-full h-[320px] rounded-[24px] overflow-hidden glass-card cursor-pointer group"
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#00e5ff]/0 to-[#00e5ff]/0 group-hover:from-[#00e5ff]/5 group-hover:to-transparent transition-all duration-700 pointer-events-none" />
-        <div className="absolute inset-0 z-10 rounded-[24px] pointer-events-none group-hover:shadow-[inset_0_0_0_1.5px_rgba(79,50,214,0.4),0_15px_40px_-10px_rgba(79,50,214,0.2)] transition-all duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-transparent transition-all duration-700 pointer-events-none" />
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-b from-white/50 to-transparent pointer-events-none transition-opacity duration-300 dark:hidden rounded-[24px]" />
+        
+        {/* Glow for active bank */}
+        {displayBank.status === 'Active - Integration In Progress' && (
+           <div className="absolute inset-0 z-10 rounded-[24px] pointer-events-none shadow-[inset_0_0_0_1px_rgba(47,107,255,0.3),0_0_20px_0_rgba(47,107,255,0.15)] dark:shadow-[inset_0_0_0_1px_rgba(79,50,214,0.3),0_0_20px_0_rgba(79,50,214,0.2)]" />
+        )}
 
         {displayBank.logoUrl && (
           <div className="absolute -right-8 -bottom-8 w-40 h-40 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none blur-[2px]">
@@ -813,10 +852,10 @@ function CompactBankCard({
           </div>
         )}
 
-        <div className="relative z-20 h-full p-5 flex flex-col">
+        <div className="relative z-20 h-full p-6 flex flex-col">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-foreground/5 border border-foreground/10 p-2 flex items-center justify-center shadow-inner backdrop-blur-md">
+              <div className="w-14 h-14 rounded-2xl bg-white/50 dark:bg-foreground/5 border border-foreground/10 p-2.5 flex items-center justify-center shadow-sm backdrop-blur-md">
                  <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
               </div>
               <ProgressRing progress={avgProgress} size={44} strokeWidth={3} />

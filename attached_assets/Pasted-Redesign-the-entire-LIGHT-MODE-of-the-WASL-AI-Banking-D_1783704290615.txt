@@ -1,0 +1,183 @@
+Redesign the entire LIGHT MODE of the WASL AI Banking Dashboard.
+
+IMPORTANT:
+Do NOT use a plain white dashboard.
+Create a premium "Arctic Glass" theme inspired by Apple Vision Pro, Linear, Stripe Dashboard, and futuristic fintech products.
+
+=========================
+DESIGN SYSTEM
+=========================
+
+Background:
+- Use a very light blue-gray gradient.
+- Add subtle radial glows.
+- Add a minimal grid texture.
+- The page should feel premium and futuristic.
+
+Background CSS inspiration:
+
+background:
+radial-gradient(circle at top,
+#FFFFFF,
+#F6F8FC,
+#EEF2F7);
+
+Add blurred blue light spots in the corners.
+
+=========================
+GLASSMORPHISM
+=========================
+
+Cards:
+background:
+rgba(255,255,255,0.65);
+
+backdrop-filter:
+blur(20px);
+
+border:
+1px solid rgba(99,179,255,0.20);
+
+box-shadow:
+0 8px 30px rgba(15,23,42,0.08),
+0 0 30px rgba(47,107,255,0.08);
+
+Border radius:
+20px.
+
+=========================
+COLORS
+=========================
+
+Primary:
+#0F172A
+
+Secondary:
+#475569
+
+Accent:
+#2F6BFF
+
+Glow:
+rgba(47,107,255,0.20)
+
+Success:
+#22C55E
+
+Warning:
+#FACC15
+
+Danger:
+#EF4444
+
+=========================
+KPI CARDS
+=========================
+
+Redesign:
+- Total Banks
+- In Progress
+- Completed
+- Delayed
+- High Risk
+
+Make them:
+- Glass cards
+- Hover animation
+- Slight floating effect
+- Blue glowing border on hover
+- Animated counters
+
+Cards should feel luxurious.
+
+=========================
+SEARCH AREA
+=========================
+
+Redesign search bar:
+- Bigger.
+- Rounded.
+- Glass style.
+- Search icon inside.
+- Smooth focus animation.
+
+Category dropdown:
+- Floating glass dropdown.
+- Premium transitions.
+
+=========================
+BANK CARDS
+=========================
+
+Bank cards should become:
+
+- Larger.
+- More spacing.
+- Better shadows.
+- Glass effect.
+- Smooth hover animation.
+- Slight lift when hovering.
+- Glow on active banks.
+
+Logos should be bigger.
+
+Cards should look like enterprise SaaS products.
+
+=========================
+LIGHT MODE EXPERIENCE
+=========================
+
+Do NOT invert dark mode.
+
+Create a completely separate premium experience.
+
+Inspired by:
+
+- Apple Vision Pro
+- Linear
+- Stripe
+- Vercel Dashboard
+- Arc Browser
+
+=========================
+THEME TOGGLE
+=========================
+
+Dark mode:
+Futuristic Neon FinTech.
+
+Light mode:
+Arctic Glass.
+
+Animate the transition between both themes.
+
+=========================
+BACKGROUND EFFECTS
+=========================
+
+Add:
+
+- floating particles
+- subtle blue glows
+- smooth animated gradients
+
+No heavy animations.
+
+Keep performance high.
+
+=========================
+GENERAL FEELING
+=========================
+
+The dashboard should look like:
+
+"A multi-million dollar AI Banking Platform for executives and banks."
+
+The result should impress CEOs and enterprise clients immediately.
+
+Prioritize:
+1. elegance
+2. premium fintech feeling
+3. readability
+4. smooth animations
+5. professional enterprise design.

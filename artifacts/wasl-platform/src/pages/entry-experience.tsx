@@ -97,6 +97,27 @@ const WallPanel = ({ side, isMobile }: { side: 'left' | 'right'; isMobile: boole
   );
 };
 
+const BankTile = ({ logo, alt, compact = false }: { logo: string; alt: string; compact?: boolean }) => (
+  <div
+    className={`${compact ? 'w-[82%] h-[80%]' : 'w-[78%] h-[68%]'} rounded-md flex items-center justify-center relative overflow-hidden`}
+    style={{
+      background: 'linear-gradient(155deg, rgba(20,16,38,0.9) 0%, rgba(12,9,24,0.95) 100%)',
+      border: '1px solid rgba(108,76,255,0.35)',
+      boxShadow: 'inset 0 0 10px rgba(108,76,255,0.12), 0 0 10px rgba(0,0,0,0.35)',
+    }}
+  >
+    <div
+      className="absolute inset-0 opacity-60"
+      style={{ background: 'radial-gradient(circle at 30% 20%, rgba(108,76,255,0.18), transparent 60%)' }}
+    />
+    <img
+      src={logo}
+      alt={alt}
+      className={`relative z-10 ${compact ? 'w-[80%] h-[80%]' : 'w-[82%] h-[82%]'} object-contain drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]`}
+    />
+  </div>
+);
+
 const CubeFace = ({ rx = 0, ry = 0, isTop = false, isBottom = false, stage, cubeSize }: { rx?: number, ry?: number, isTop?: boolean, isBottom?: boolean, stage: number, cubeSize: number }) => {
   const H_SIZE = cubeSize / 2;
   const explodeOffset = stage >= 3 ? 600 : 0;
@@ -129,33 +150,23 @@ const CubeFace = ({ rx = 0, ry = 0, isTop = false, isBottom = false, stage, cube
         <div className="w-full h-full grid grid-cols-2 grid-rows-2">
           {/* Upper-Left: Alrajhi */}
           <div className="flex items-center justify-center border-r border-b border-[rgba(108,76,255,0.3)] p-2">
-            <div className="w-[78%] h-[68%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 10px rgba(0,0,0,0.35)' }}>
-              <img src={alrajhiLogo} alt="Alrajhi" className="w-[82%] h-[82%] object-contain" />
-            </div>
+            <BankTile logo={alrajhiLogo} alt="Alrajhi" />
           </div>
           {/* Upper-Right: SNB */}
           <div className="flex items-center justify-center border-b border-[rgba(108,76,255,0.3)] p-2">
-            <div className="w-[78%] h-[68%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 10px rgba(0,0,0,0.35)' }}>
-              <img src={snbLogo} alt="SNB" className="w-[82%] h-[82%] object-contain" />
-            </div>
+            <BankTile logo={snbLogo} alt="SNB" />
           </div>
           {/* Lower-Left: Riyad */}
           <div className="flex items-center justify-center border-r border-[rgba(108,76,255,0.3)] p-2">
-            <div className="w-[78%] h-[68%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 10px rgba(0,0,0,0.35)' }}>
-              <img src={riyadLogo} alt="Riyad" className="w-[82%] h-[82%] object-contain" />
-            </div>
+            <BankTile logo={riyadLogo} alt="Riyad" />
           </div>
           {/* Lower-Right: Split Alinma & BSF */}
           <div className="flex flex-col p-2 gap-1">
             <div className="flex-1 flex items-center justify-center border-b border-[rgba(108,76,255,0.3)] pb-1">
-              <div className="w-[82%] h-[80%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 8px rgba(0,0,0,0.35)' }}>
-                <img src={alinmaLogo} alt="Alinma" className="w-[80%] h-[80%] object-contain" />
-              </div>
+              <BankTile logo={alinmaLogo} alt="Alinma" compact />
             </div>
             <div className="flex-1 flex items-center justify-center pt-1">
-              <div className="w-[82%] h-[80%] rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(245,245,250,0.94)', boxShadow: '0 0 8px rgba(0,0,0,0.35)' }}>
-                <img src={bsfLogo} alt="BSF" className="w-[80%] h-[80%] object-contain" />
-              </div>
+              <BankTile logo={bsfLogo} alt="BSF" compact />
             </div>
           </div>
         </div>

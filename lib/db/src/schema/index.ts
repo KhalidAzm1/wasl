@@ -3,7 +3,7 @@ export * from "./products";
 export * from "./meetings";
 export * from "./risks";
 export * from "./action-items";
-export * from "./documents";
+export * from "./files";
 export * from "./settings";
 export * from "./product-catalog";
 export * from "./audit-logs";

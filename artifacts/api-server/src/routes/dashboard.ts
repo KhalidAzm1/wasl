@@ -1,12 +1,12 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import {
   db,
   banksTable,
   meetingsTable,
   risksTable,
   actionItemsTable,
-  documentsTable,
+  filesTable,
   productsTable,
 } from "@workspace/db";
 import {
@@ -101,9 +101,9 @@ router.get("/dashboard/activity", async (_req, res): Promise<void> => {
         .limit(15),
       db
         .select()
-        .from(documentsTable)
-        .where(eq(documentsTable.isArchived, false))
-        .orderBy(desc(documentsTable.createdAt))
+        .from(filesTable)
+        .where(and(eq(filesTable.entityType, "bank"), eq(filesTable.isArchived, false)))
+        .orderBy(desc(filesTable.createdAt))
         .limit(15),
       db
         .select()
@@ -139,7 +139,7 @@ router.get("/dashboard/activity", async (_req, res): Promise<void> => {
     })),
     ...documents.map((d) => ({
       id: `document-${d.id}`,
-      bankId: d.bankId,
+      bankId: d.entityId,
       type: "document" as const,
       description: d.title,
       date: d.createdAt.toISOString(),

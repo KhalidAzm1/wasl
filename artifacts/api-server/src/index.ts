@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { ensureWaslFolders } from "./lib/onedrive";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,10 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Best-effort: make sure the Wasl Documents/Banks/Products/Meetings/Archive
+  // folder structure exists in OneDrive. Never blocks server startup.
+  ensureWaslFolders().catch((err) => {
+    logger.warn({ err }, "Failed to ensure OneDrive folder structure");
+  });
 });

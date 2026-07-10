@@ -1,0 +1,142 @@
+Build a premium cinematic landing page for WASL AI HUB.
+
+This is NOT a dashboard.
+This is an executive entry experience.
+
+Style inspiration:
+Apple Vision Pro + Iron Man Jarvis + Tesla OS + Bloomberg Terminal.
+
+Color palette:
+- Background: #050816
+- Neon Blue: #2F6BFF
+- Glow Blue: #63B3FF
+- White text only.
+
+================================================
+LAYOUT
+================================================
+
+The page contains ONLY 5 sections:
+
+1. Animated WASL AI logo at the top center.
+2. Large holographic cube in the center.
+3. Floating banking environment around the cube.
+4. Subtitle:
+   BANKING INTELLIGENCE PLATFORM
+5. Small hint under the cube:
+   Click the cube to enter.
+
+No buttons.
+No sidebar.
+No cards.
+No extra menus.
+
+================================================
+HERO CUBE
+================================================
+
+Create a premium glass cube.
+
+Requirements:
+- Size: large and dominant.
+- Slow 360° rotation.
+- Slight floating movement.
+- Blue neon edges.
+- Soft reflections.
+- Dynamic shadows.
+- Energy ring on the floor.
+
+Each face contains:
+- SNB
+- Riyad Bank
+- Alrajhi Bank
+- BSF
+- Alinma
+
+Use ONLY transparent PNG or SVG logos.
+
+================================================
+INTERACTION
+================================================
+
+On hover:
+- Cube glow increases.
+- Cube slightly scales to 1.05.
+- Cursor becomes pointer.
+- Small blue particles appear.
+
+On click:
+1. Cube stops rotating.
+2. Camera zooms in.
+3. Cube emits strong blue light.
+4. Cube opens into particles.
+5. Full screen flash.
+6. Text appears:
+
+Initializing WASL AI Hub...
+
+for 1 second.
+
+7. Navigate to dashboard.
+
+================================================
+BACKGROUND
+================================================
+
+Create a futuristic AI room.
+
+Features:
+- Dark environment.
+- Floating particles.
+- Light rays.
+- Reflection floor.
+- Animated data lines.
+- Subtle moving stars.
+- Holographic panels on left and right.
+
+================================================
+SIDE PANELS
+================================================
+
+Left panel:
+WASL logo glowing.
+
+Right panel:
+AI Banking Dashboard logo glowing.
+
+Panels should pulse softly.
+
+================================================
+LOGO ANIMATION
+================================================
+
+The WASL AI logo should:
+- softly glow
+- pulse every 4 seconds
+- emit circuit lines
+- feel alive
+
+================================================
+ANIMATIONS
+================================================
+
+Use:
+- Framer Motion
+- CSS transforms
+- CSS keyframes
+
+Avoid:
+- Three.js
+- Heavy WebGL
+- Complex shaders
+
+Performance is extremely important.
+
+Target:
+60 FPS smooth animation.
+
+================================================
+EXPERIENCE GOAL
+================================================
+
+The page should feel like opening a classified banking AI operating system that executives have never seen before.

@@ -1,5 +1,6 @@
 import type React from 'react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
+import iconUrl from '@assets/wasl_brand/wasl_icon_transparent.png';
 import { useTheme } from './ThemeProvider';
 
 /**
@@ -34,15 +35,12 @@ export function WaslLogo({
 
   if (theme === 'light') {
     return (
-      <div
-        className={`flex items-center justify-center gap-3 no-mirror ${className}`}
-        style={{ height, filter: 'drop-shadow(0 0 12px rgba(47, 107, 255, 0.25))' }}
-      >
-        <svg viewBox="0 0 200 200" style={{ height: '100%', width: 'auto' }} aria-hidden="true">
-          <path d="M100,100 L100,0 A100,100 0 0,1 200,100 Z" fill="#1D4ED8" />
-          <path d="M100,100 L100,0 A100,100 0 0,0 0,100 Z" fill="#93C5FD" />
-          <path d="M100,100 L200,100 A100,100 0 0,1 100,200 Z" fill="#2F6BFF" />
-        </svg>
+      <div className={`flex items-center justify-center gap-3 no-mirror ${className}`} style={{ height }}>
+        <img
+          src={iconUrl}
+          alt=""
+          style={{ height: '100%', width: 'auto', filter: 'drop-shadow(0 0 10px rgba(47, 107, 255, 0.3))' }}
+        />
         <div className="flex flex-col items-start leading-none">
           <span className="font-bold" style={{ color: '#0F172A', fontSize: height * 0.34, lineHeight: 1 }}>
             وصل

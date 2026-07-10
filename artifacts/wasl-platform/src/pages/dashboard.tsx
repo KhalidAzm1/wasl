@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useToast } from '@/hooks/use-toast';
 import { formatDateTime, getStatusColor, cn } from '@/lib/utils';
 import { Command } from 'cmdk';
+import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -336,9 +337,7 @@ export default function Dashboard() {
       
       <div className="sticky top-0 z-40 bg-[#050816]/80 backdrop-blur-3xl border-b border-white/5 px-8 py-5 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-2xl">
         <div className="flex items-center gap-4">
-           <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight drop-shadow-md">
-             WASL <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-[#00e5ff] to-secondary">AI HUB</span>
-           </h1>
+           <img src={logoUrl} alt="Wasl" className="no-mirror h-12 md:h-14 w-auto drop-shadow-md" />
         </div>
         
         <div className="flex md:flex-wrap items-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0">

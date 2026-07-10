@@ -111,7 +111,7 @@ export default function Dashboard() {
       <div className="sticky top-0 z-40 bg-background/85 backdrop-blur-2xl border-b border-white/5 px-8 py-5 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-xl">
         <div className="flex items-center gap-4">
            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight drop-shadow-md">
-             المحفظة <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">الاستراتيجية</span>
+             WASL <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">AI HUB</span>
            </h1>
         </div>
         

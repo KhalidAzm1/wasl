@@ -1,39 +1,60 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Menu, X, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, Tag, Archive, ShieldCheck, X } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
+const mainNavItems = [
   { href: '/portfolio', icon: LayoutDashboard, label: 'Dashboard', roles: null },
-  { href: '/admin/users', icon: Users, label: 'User Management', roles: ['super_admin'] as const },
+];
+
+const contentNavItems = [
+  { href: '/admin/users', icon: Users, label: 'User Management', roles: ['super_admin'] },
+  { href: '/meetings', icon: Calendar, label: 'Meetings', roles: null },
+  { href: '/documents', icon: FileText, label: 'Documents', roles: null },
+  { href: '/settings', icon: Tag, label: 'Product Types', roles: null },
+  { href: '/settings', icon: Archive, label: 'Archive', roles: null },
+];
+
+const systemNavItems = [
+  { href: '/security', icon: ShieldCheck, label: 'Security', roles: null },
   { href: '/settings', icon: Settings, label: 'Settings', roles: null },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [location, navigate] = useLocation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const { role } = useAuth();
-  const visibleNavItems = navItems.filter((item) => !item.roles || (role && (item.roles as readonly string[]).includes(role)));
 
-  // Close the mobile drawer on route change so it never lingers open.
+  // Close panel on route change
   useEffect(() => {
-    setDrawerOpen(false);
+    setPanelOpen(false);
   }, [location]);
+
+  // Close panel on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPanelOpen(false);
+    };
+    if (panelOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+    return undefined;
+  }, [panelOpen]);
 
   async function handleSignOut() {
     setSigningOut(true);
     try {
-      // Clear any verified admin-panel PIN token so it can't be reused
-      // after logout (e.g. by another person sharing the device).
       sessionStorage.removeItem('wasl_admin_pin_token');
       sessionStorage.removeItem('wasl_admin_pin_token_expires');
       await supabase.auth.signOut();
@@ -42,6 +63,44 @@ export function Layout({ children }: LayoutProps) {
       setSigningOut(false);
     }
   }
+
+  const filterNavItems = (items: any[]) =>
+    items.filter((item) => !item.roles || (role && item.roles.includes(role)));
+
+  const renderNavSection = (items: any[], title?: string) => {
+    const filtered = filterNavItems(items);
+    if (filtered.length === 0) return null;
+
+    return (
+      <div className="flex flex-col gap-1 mb-6">
+        {title && (
+          <div className="px-4 py-2 text-xs font-semibold text-white/40 uppercase tracking-wider">
+            {title}
+          </div>
+        )}
+        {filtered.map((item, idx) => {
+          // Simplistic exact path match; handle deep linking /settings active states if needed
+          const isActive = location === item.href;
+          const Icon = item.icon;
+          return (
+            <Link key={`${item.href}-${idx}`} href={item.href} className="block">
+              <div
+                className={cn(
+                  'flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all cursor-pointer group',
+                  isActive
+                    ? 'bg-primary/20 text-white border border-primary/30 shadow-[0_0_15px_rgba(124,58,237,0.15)]'
+                    : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+                )}
+              >
+                <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "group-hover:text-white")} />
+                <span className="font-medium text-[15px]">{item.label}</span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-[100dvh] w-full text-foreground bg-background font-sans flex overflow-x-hidden" dir="ltr">
@@ -55,98 +114,76 @@ export function Layout({ children }: LayoutProps) {
         className="no-mirror pointer-events-none select-none fixed bottom-[-6%] right-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
       />
 
-      {/* Mobile-only top bar: hamburger toggle for the drawer sidebar. Sits
-          above safe-area insets (notch / Dynamic Island). */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-40 safe-area-top flex items-center justify-between px-4 py-3 bg-background/85 backdrop-blur-xl border-b border-white/5">
-        <img src={logoUrl} alt="Wasl" className="no-mirror h-16 w-auto" />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Sign out"
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setDrawerOpen((v) => !v)}
-            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            {drawerOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Backdrop, mobile drawer mode only. */}
-      {drawerOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-          onClick={() => setDrawerOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar. Hierarchy: logo -> nav -> empty space. Only one Wasl logo
-          lives in the sidebar (top); no cube widget or second logo card
-          fills the remaining space below nav.
-          Responsive behavior:
-          - Desktop (xl, >=1280px): static 340px panel, always visible.
-          - Tablet (md-lg, 768-1279px): static 280px panel, always visible.
-          - Mobile (<768px): collapses into a left-side slide-in drawer,
-            toggled by the hamburger button above; hidden off-canvas by
-            default and never overlaps page content. */}
-      <aside
-        className={cn(
-          'glass-panel border-r border-l-0 flex flex-col items-center py-8 px-4 gap-8 overflow-hidden',
-          'fixed md:static inset-y-0 left-0 z-50 md:z-20 w-[82vw] max-w-[300px] md:w-[280px] xl:w-[340px]',
-          'transition-transform duration-300 ease-out',
-          'safe-area-top safe-area-bottom',
-          drawerOpen ? 'translate-x-0' : 'max-md:-translate-x-full'
-        )}
-      >
-        <div className="w-full flex items-center justify-center shrink-0">
-          <img src={logoUrl} alt="Wasl" className="no-mirror w-full max-w-[280px] h-auto drop-shadow-lg" />
-        </div>
-
-        <nav className="w-full flex flex-col gap-3 shrink-0">
-          {visibleNavItems.map((item) => {
-            const isActive = location === item.href;
-            const Icon = item.icon;
-            return (
-              <Link key={item.href} href={item.href}>
-                <div className={cn(
-                  "flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer",
-                  isActive 
-                    ? "bg-primary/20 text-white border border-primary/30 shadow-[0_0_15px_rgba(124,58,237,0.2)]" 
-                    : "text-white/60 hover:text-white hover:bg-white/5 border border-transparent"
-                )}>
-                  <Icon className="w-5 h-5" />
-                  <span className="font-semibold text-[15px]">{item.label}</span>
-                </div>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Remaining space intentionally left empty. */}
-        <div className="flex-1 w-full min-h-0" />
-
+      {/* Floating Settings Button */}
+      <div className="fixed top-6 right-6 z-40 safe-area-top">
         <button
           type="button"
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer text-white/60 hover:text-white hover:bg-white/5 border border-transparent shrink-0 disabled:opacity-50"
+          aria-label="Open settings panel"
+          onClick={() => setPanelOpen(true)}
+          className="w-12 h-12 rounded-full bg-card/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-all shadow-xl hover:shadow-primary/20 hover:scale-105 hover:border-white/20"
         >
-          <LogOut className="w-5 h-5" />
-          <span className="font-semibold text-[15px]">{signingOut ? 'Signing out...' : 'Sign out'}</span>
+          <Settings className="w-5 h-5" />
         </button>
-      </aside>
+      </div>
 
-      {/* Main Content. Top padding on mobile clears the fixed hamburger bar. */}
-      <main className="relative z-10 flex-1 flex flex-col min-w-0 h-[100dvh] pt-14 md:pt-0 overflow-y-auto overflow-x-hidden hide-scrollbar safe-area-bottom">
+      {/* Slide-over Panel & Backdrop */}
+      <AnimatePresence>
+        {panelOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => setPanelOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Slide-over panel */}
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-[#050816]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
+            >
+              <div className="flex items-center justify-between p-6 pb-4 border-b border-white/5">
+                <img src={logoUrl} alt="Wasl" className="no-mirror h-10 w-auto opacity-90 drop-shadow-md" />
+                <button
+                  type="button"
+                  aria-label="Close settings panel"
+                  onClick={() => setPanelOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-6 hide-scrollbar">
+                {renderNavSection(mainNavItems)}
+                {renderNavSection(contentNavItems, 'Content')}
+                {renderNavSection(systemNavItems, 'System')}
+              </div>
+
+              <div className="p-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-red-400/80 hover:text-red-400 hover:bg-red-400/10 border border-transparent disabled:opacity-50 group"
+                >
+                  <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+                  <span className="font-medium text-[15px]">{signingOut ? 'Signing out...' : 'Sign out'}</span>
+                </button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <main className="relative z-10 flex-1 flex flex-col min-w-0 min-h-[100dvh] pt-4 md:pt-0 overflow-y-auto overflow-x-hidden safe-area-bottom">
         {children}
       </main>
     </div>

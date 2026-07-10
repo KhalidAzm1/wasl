@@ -12,7 +12,7 @@ export function NavControls({ variant = 'default' }: { variant?: 'default' | 'ov
       : `${base} bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10`;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 mr-14 xl:mr-0 z-20 relative">
       <button onClick={() => window.history.back()} className={style}>
         <ArrowRight className="w-4 h-4 rotate-180" />
         Back

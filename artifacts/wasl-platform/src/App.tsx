@@ -11,6 +11,9 @@ import EntryExperience from '@/pages/entry-experience';
 import Dashboard from '@/pages/dashboard';
 import BankDetail from '@/pages/bank-detail';
 import Settings from '@/pages/settings';
+import Meetings from '@/pages/meetings';
+import Documents from '@/pages/documents';
+import Security from '@/pages/security';
 import Login from '@/pages/login';
 import ChangePassword from '@/pages/change-password';
 import AdminUsers from '@/pages/admin-users';
@@ -25,8 +28,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// The cinematic entry experience is a standalone full-screen page (no
-// sidebar/chrome). Every other route lives inside the normal app Layout.
 function AppRoutes() {
   return (
     <Switch>
@@ -54,6 +55,21 @@ function AppRoutes() {
       <Route path="/settings">
         <RequireAuth>
           <Layout><Settings /></Layout>
+        </RequireAuth>
+      </Route>
+      <Route path="/meetings">
+        <RequireAuth>
+          <Layout><Meetings /></Layout>
+        </RequireAuth>
+      </Route>
+      <Route path="/documents">
+        <RequireAuth>
+          <Layout><Documents /></Layout>
+        </RequireAuth>
+      </Route>
+      <Route path="/security">
+        <RequireAuth>
+          <Layout><Security /></Layout>
         </RequireAuth>
       </Route>
       <Route path="/admin/users">

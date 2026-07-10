@@ -51,6 +51,16 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@layer utilities {
+  /* The Wasl logo artwork is baked onto a near-black canvas, so it needs a
+     fixed dark "stage" to stay legible and on-brand in both themes. */
+  .logo-plate {
+    background: linear-gradient(155deg, #0a0f24 0%, #050816 100%);
+    border: 1px solid rgba(164, 140, 242, 0.18);
+    box-shadow: 0 12px 30px -8px rgba(79, 50, 214, 0.35);
+  }
+}
+
 :root {
   color-scheme: light;
   --button-outline: rgba(0, 0, 0, 0.1);
@@ -59,36 +69,36 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 250 100% 98%; /* Soft tinted white */
-  --foreground: 255 40% 15%; /* Deep violet/dark grey */
+  --background: 248 45% 94%; /* Lavender-tinted canvas, not flat white */
+  --foreground: 255 45% 14%; /* Deep violet/dark grey */
 
-  --border: 250 20% 85%;
-  
-  --card: 0 0% 100%;
-  --card-foreground: 255 40% 15%;
-  --card-border: 250 20% 85%;
+  --border: 252 30% 82%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 255 40% 15%;
-  --popover-border: 250 20% 85%;
+  --card: 250 55% 98%; /* Soft violet-white surface, lifted above the canvas */
+  --card-foreground: 255 45% 14%;
+  --card-border: 252 30% 82%;
 
-  --primary: 255 78% 56%; /* #4F32D6 — matches Wasl logo deep violet */
+  --popover: 250 55% 98%;
+  --popover-foreground: 255 45% 14%;
+  --popover-border: 252 30% 82%;
+
+  --primary: 255 78% 52%; /* #4F32D6 — matches Wasl logo deep violet */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 258 85% 74%; /* #A48CF2 — matches Wasl logo lavender */
-  --secondary-foreground: 255 40% 15%;
+  --secondary: 258 80% 68%; /* #A48CF2 — matches Wasl logo lavender */
+  --secondary-foreground: 255 45% 14%;
 
-  --muted: 250 15% 95%;
-  --muted-foreground: 250 10% 40%;
+  --muted: 250 35% 90%;
+  --muted-foreground: 253 15% 38%;
 
-  --accent: 255 78% 56%;
+  --accent: 255 78% 52%;
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 84% 60%;
+  --destructive: 0 72% 48%;
   --destructive-foreground: 0 0% 98%;
 
-  --input: 250 20% 85%;
-  --ring: 255 78% 56%;
+  --input: 252 30% 82%;
+  --ring: 255 78% 52%;
 
   --chart-1: 255 78% 56%;
   --chart-2: 258 85% 74%;

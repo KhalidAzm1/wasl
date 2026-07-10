@@ -338,7 +338,9 @@ export default function Dashboard() {
       
       <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-3xl border-b border-foreground/5 px-8 py-8 flex flex-col items-center gap-7 shadow-2xl">
         <div className="flex flex-col items-center gap-2 text-center">
-           <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto drop-shadow-md" />
+           <div className="logo-plate rounded-2xl px-6 py-4">
+             <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto" />
+           </div>
            <p className="text-[11px] text-foreground/40 uppercase tracking-[0.2em] font-medium">Banking Intelligence Platform</p>
         </div>
 

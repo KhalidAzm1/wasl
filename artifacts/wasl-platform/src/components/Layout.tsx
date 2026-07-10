@@ -165,7 +165,9 @@ export function Layout({ children }: LayoutProps) {
               className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-background/95 backdrop-blur-2xl border-l border-foreground/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
             >
               <div className="relative flex flex-col items-center justify-center gap-2 px-12 pt-10 pb-8 border-b border-foreground/5">
-                <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto max-w-full drop-shadow-lg" />
+                <div className="logo-plate rounded-2xl px-6 py-4">
+                  <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto max-w-full" />
+                </div>
                 <p className="text-[11px] text-foreground/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
                 <button
                   type="button"

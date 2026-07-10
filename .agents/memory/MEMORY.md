@@ -9,3 +9,4 @@
 - [Bare access-denied pages look broken](role-gated-page-perceived-as-broken.md) — hide nav links to role-gated pages a user can't access; a bare-text denial view reads as a "black screen" bug, not a permissions message.
 - [Auth/archive coverage must span every CRUD router](enterprise-crud-audit-coverage.md) — retrofitting requireAuth/soft-delete to named routers misses sibling routers and dashboard aggregates with the same tables; grep before declaring done.
 - [Un-disabled dialog Save buttons cause duplicate records](wasl-double-submit-duplicates.md) — mutation buttons without `disabled={mutation.isPending}` let a double-click fire two POSTs, showing up later as "duplicate reports" in lists.
+- [Replit connectors proxy needs API version in path](connectors-proxy-graph-version.md) — `ReplitConnectors.proxy()` passes the path through literally; Graph-based connectors (onedrive, etc.) need `/v1.0/...` prefixed or you get a cryptic "Invalid version" 404.

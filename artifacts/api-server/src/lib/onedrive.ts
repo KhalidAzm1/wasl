@@ -33,7 +33,7 @@ export async function uploadFileToOneDrive(
     .map((segment) => encodeURIComponent(segment))
     .join("/");
 
-  const response = await connectors.proxy("onedrive", `/me/drive/root:/${safePath}:/content`, {
+  const response = await connectors.proxy("onedrive", `/v1.0/me/drive/root:/${safePath}:/content`, {
     method: "PUT",
     headers: { "Content-Type": contentType },
     body: buffer,

@@ -9,7 +9,6 @@ import {
   useSetBankLogo, 
   useSetBankHeroImage, 
   getListBanksQueryKey,
-  useListProducts,
   useListProductTypes,
   useCreateProductType,
   useUpdateProductType,
@@ -29,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Image as ImageIcon, Trash2, Edit, Plus, Save, UploadCloud, History, Archive, ScrollText, RotateCcw, Tag } from 'lucide-react';
+import { Building2, Image as ImageIcon, Trash2, Edit, Plus, Save, UploadCloud, History, Archive, ScrollText, RotateCcw, Tag, ChevronDown } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 import { useAuth } from '@/lib/authContext';
 import type { Bank } from '@workspace/api-client-react';
@@ -51,8 +50,7 @@ export default function Settings() {
         <TabsList className="w-full justify-start border-b border-white/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
           <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">البنوك وجهات التمويل</TabsTrigger>
           <TabsTrigger value="productTypes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Tag className="w-4 h-4" /> أنواع المنتجات</TabsTrigger>
-          <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">التحديثات الأخيرة</TabsTrigger>
-          <TabsTrigger value="activity" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><ScrollText className="w-4 h-4" /> سجل النشاطات</TabsTrigger>
+          <TabsTrigger value="updates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><ScrollText className="w-4 h-4" /> التحديثات الأخيرة</TabsTrigger>
           <TabsTrigger value="archive" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Archive className="w-4 h-4" /> الأرشيف</TabsTrigger>
         </TabsList>
 
@@ -66,10 +64,6 @@ export default function Settings() {
 
         <TabsContent value="updates">
           <RecentUpdates />
-        </TabsContent>
-
-        <TabsContent value="activity">
-          <ActivityLog />
         </TabsContent>
 
         <TabsContent value="archive">
@@ -249,65 +243,128 @@ function BanksManager() {
   );
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  nameEn: 'الاسم (انجليزي)',
+  nameAr: 'الاسم (عربي)',
+  category: 'التصنيف',
+  status: 'الحالة',
+  logoUrl: 'الشعار',
+  heroImageUrl: 'صورة العرض',
+  referenceLink: 'رابط مرجعي',
+  contacts: 'بيانات التواصل',
+  productTypeIds: 'أنواع المنتجات',
+  productCode: 'رمز المنتج',
+  categoryStage: 'المرحلة',
+  progressPercent: 'نسبة الإنجاز',
+  dateType: 'نوع التاريخ',
+  dateValue: 'التاريخ',
+  responsiblePerson: 'المسؤول',
+  priorityImpact: 'الأولوية',
+  descriptionNotes: 'ملاحظات',
+  riskLevel: 'مستوى الخطورة',
+  name: 'الاسم',
+  isActive: 'نشط',
+  date: 'التاريخ',
+  topic: 'الموضوع',
+  summary: 'ملخص الاجتماع',
+  attendees: 'الحضور',
+  description: 'الوصف',
+  level: 'المستوى',
+  dueDate: 'تاريخ الاستحقاق',
+  owner: 'المسؤول',
+  title: 'العنوان',
+  docType: 'نوع المستند',
+  link: 'الرابط',
+};
+
+function formatDetailValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'نعم' : 'لا';
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '—';
+    if (typeof value[0] === 'object') return `${value.length} عنصر`;
+    return value.join('، ');
+  }
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
 function RecentUpdates() {
-  const { data: banks, isLoading: isLoadingBanks } = useListBanks();
-  const { data: products, isLoading: isLoadingProducts } = useListProducts();
+  const { data, isLoading } = useListAuditLogs({ limit: 100 });
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  if (isLoadingBanks || isLoadingProducts) return <div>جاري التحميل...</div>;
+  if (isLoading) return <div>جاري التحميل...</div>;
 
-  type Row = { id: string; label: string; sub: string; updatedAt: string; kind: 'بنك' | 'منتج' };
+  const actionLabel: Record<string, string> = { CREATE: 'إضافة', UPDATE: 'تعديل', ARCHIVE: 'أرشفة', RESTORE: 'استعادة' };
+  const entityLabel: Record<string, string> = { bank: 'بنك', document: 'مستند', meeting: 'اجتماع', product: 'منتج', productType: 'نوع منتج', actionItem: 'إجراء', risk: 'مخاطرة' };
+  const actionColor: Record<string, string> = {
+    CREATE: 'bg-emerald-500/20 text-emerald-400',
+    UPDATE: 'bg-primary/20 text-primary',
+    ARCHIVE: 'bg-red-500/20 text-red-400',
+    RESTORE: 'bg-yellow-500/20 text-yellow-400',
+  };
 
-  const bankRows: Row[] = (banks || []).map(b => ({
-    id: b.id,
-    label: b.nameAr,
-    sub: b.nameEn,
-    updatedAt: b.updatedAt,
-    kind: 'بنك',
-  }));
-
-  const productRows: Row[] = (products || []).map(p => {
-    const bank = (banks || []).find(b => b.id === p.bankId);
-    return {
-      id: `${p.bankId}-${p.id}`,
-      label: `${p.productCode} — ${p.categoryStage}`,
-      sub: bank ? bank.nameAr : p.bankId,
-      updatedAt: p.updatedAt,
-      kind: 'منتج',
-    };
-  });
-
-  const rows = [...bankRows, ...productRows].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  const items = data?.items || [];
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
         <History className="w-6 h-6 text-primary" />
         <div>
-          <h2 className="text-2xl font-bold text-white">سجل كل التحديثات</h2>
-          <p className="text-sm text-white/50">آخر تعديل لكل بنك ومنتج، مرتبة من الأحدث للأقدم.</p>
+          <h2 className="text-2xl font-bold text-white">التحديثات الأخيرة</h2>
+          <p className="text-sm text-white/50">كل عمليات الإضافة والتعديل والأرشفة والاستعادة، مرتبة من الأحدث للأقدم. اضغط السهم لعرض التفاصيل.</p>
         </div>
       </div>
 
       <Card className="bg-white/5 border-white/10">
         <CardContent className="p-0">
           <div className="divide-y divide-white/5">
-            {rows.map(row => (
-              <div key={`${row.kind}-${row.id}`} className="flex items-center justify-between gap-4 px-6 py-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${row.kind === 'بنك' ? 'bg-primary/20 text-primary' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                    {row.kind}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-medium text-white truncate">{row.label}</p>
-                    <p className="text-sm text-white/40 truncate">{row.sub}</p>
-                  </div>
+            {items.map(entry => {
+              const details = entry.details && typeof entry.details === 'object' ? entry.details as Record<string, unknown> : null;
+              const hasDetails = !!details && Object.keys(details).length > 0;
+              const isExpanded = expandedId === entry.id;
+              return (
+                <div key={entry.id}>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between gap-4 px-6 py-4 text-right hover:bg-white/5 transition-colors"
+                    onClick={() => hasDetails && setExpandedId(isExpanded ? null : entry.id)}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${actionColor[entry.action] || 'bg-white/10 text-white/60'}`}>
+                        {actionLabel[entry.action] || entry.action}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-medium text-white truncate">
+                          {entityLabel[entry.entityType] || entry.entityType}
+                          {entry.entityLabel ? ` — ${entry.entityLabel}` : ''}
+                        </p>
+                        <p className="text-sm text-white/40 truncate">{entry.userName || entry.userEmail || 'مستخدم غير معروف'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm text-white/60 font-mono">{formatDateTime(entry.createdAt)}</span>
+                      {hasDetails && (
+                        <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </button>
+                  {isExpanded && details && (
+                    <div className="px-6 pb-4 -mt-1">
+                      <div className="rounded-lg bg-black/20 border border-white/10 p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                        {Object.entries(details).map(([key, value]) => (
+                          <div key={key} className="flex justify-between gap-4 text-sm">
+                            <span className="text-white/40">{FIELD_LABELS[key] || key}</span>
+                            <span className="text-white/80 truncate">{formatDetailValue(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="shrink-0 text-sm text-white/60 font-mono">{formatDateTime(row.updatedAt)}</div>
-              </div>
-            ))}
-            {rows.length === 0 && (
+              );
+            })}
+            {items.length === 0 && (
               <div className="py-12 text-center text-white/30">لا توجد تحديثات مسجلة</div>
             )}
           </div>
@@ -450,60 +507,6 @@ function ProductTypesManager() {
             ))}
             {(!productTypes || productTypes.length === 0) && (
               <div className="py-12 text-center text-white/30">لا توجد أنواع منتجات بعد</div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function ActivityLog() {
-  const { data, isLoading } = useListAuditLogs({ limit: 100 });
-
-  if (isLoading) return <div>جاري التحميل...</div>;
-
-  const actionLabel: Record<string, string> = { CREATE: 'إضافة', UPDATE: 'تعديل', ARCHIVE: 'أرشفة', RESTORE: 'استعادة' };
-  const entityLabel: Record<string, string> = { bank: 'بنك', document: 'مستند', meeting: 'اجتماع', product: 'منتج', productType: 'نوع منتج' };
-  const actionColor: Record<string, string> = {
-    CREATE: 'bg-emerald-500/20 text-emerald-400',
-    UPDATE: 'bg-primary/20 text-primary',
-    ARCHIVE: 'bg-red-500/20 text-red-400',
-    RESTORE: 'bg-yellow-500/20 text-yellow-400',
-  };
-
-  return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-3">
-        <ScrollText className="w-6 h-6 text-primary" />
-        <div>
-          <h2 className="text-2xl font-bold text-white">سجل النشاطات</h2>
-          <p className="text-sm text-white/50">كل عمليات الإضافة والتعديل والأرشفة والاستعادة، مرتبة من الأحدث للأقدم.</p>
-        </div>
-      </div>
-
-      <Card className="bg-white/5 border-white/10">
-        <CardContent className="p-0">
-          <div className="divide-y divide-white/5">
-            {(data?.items || []).map(entry => (
-              <div key={entry.id} className="flex items-center justify-between gap-4 px-6 py-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${actionColor[entry.action] || 'bg-white/10 text-white/60'}`}>
-                    {actionLabel[entry.action] || entry.action}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-medium text-white truncate">
-                      {entityLabel[entry.entityType] || entry.entityType}
-                      {entry.entityLabel ? ` — ${entry.entityLabel}` : ''}
-                    </p>
-                    <p className="text-sm text-white/40 truncate">{entry.userName || entry.userEmail || 'مستخدم غير معروف'}</p>
-                  </div>
-                </div>
-                <div className="shrink-0 text-sm text-white/60 font-mono">{formatDateTime(entry.createdAt)}</div>
-              </div>
-            ))}
-            {(!data?.items || data.items.length === 0) && (
-              <div className="py-12 text-center text-white/30">لا توجد نشاطات مسجلة</div>
             )}
           </div>
         </CardContent>

@@ -1,0 +1,77 @@
+Completely redesign the landing page into a cinematic futuristic experience called "WASL AI HUB".
+
+This is ONLY the entry page. The dashboard remains unchanged.
+
+DESIGN STYLE
+- Apple Vision Pro + Iron Man Jarvis + futuristic banking operating system.
+- Premium enterprise experience.
+- Dark futuristic room with reflective floor.
+- Blue neon lighting and volumetric light rays.
+- Floating particles and subtle camera movement.
+
+CENTERPIECE
+- Create a premium holographic glass cube in the center.
+- The cube rotates slowly 360° continuously.
+- The cube floats slightly up and down.
+- Realistic reflections and glow.
+- Each face displays a bank logo.
+- The cube emits blue light onto the floor.
+
+BANK LOGOS
+- Use only transparent PNG or SVG logos.
+- Automatically remove white backgrounds.
+- Logos should be centered and crisp.
+
+WASL BRANDING
+- Place the WASL AI Banking Dashboard logo above the cube.
+- Soft breathing glow effect.
+- Animated circuit lines extending from the logo.
+
+REMOVE THE BUTTON
+- Remove the "ENTER WASL AI HUB" button entirely.
+- The cube itself becomes the entry button.
+
+INTERACTION
+- When hovering the cube:
+  - Increase glow intensity.
+  - Slightly enlarge the cube.
+  - Show a soft blue aura around it.
+  - Change cursor to pointer.
+
+- When clicking the cube:
+  Stage 1:
+    Cube glow becomes stronger.
+
+  Stage 2:
+    Camera slowly zooms toward the cube.
+
+  Stage 3:
+    The cube splits open or explodes into glowing particles.
+
+  Stage 4:
+    A bright blue flash fills the screen.
+
+  Stage 5:
+    Smooth transition into the dashboard page.
+
+ANIMATIONS
+- Particle system around the cube.
+- Light pulses every few seconds.
+- Floating holographic effects.
+- Dynamic reflections.
+- Animated energy rings under the cube.
+
+EXTRA EFFECTS
+- Small floating banking icons in the background.
+- Data streams moving slowly.
+- Premium cinematic transitions.
+
+TECHNICAL REQUIREMENTS
+- React + Framer Motion.
+- CSS 3D transforms preferred.
+- GPU accelerated animations.
+- Avoid heavy WebGL if possible.
+- Fully responsive.
+- Maintain smooth performance.
+
+The final experience should feel like opening a classified AI banking operating system that nobody has seen before.

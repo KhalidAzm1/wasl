@@ -1,0 +1,149 @@
+Redesign the landing page into a premium futuristic AI banking platform.
+
+IMPORTANT:
+Do not change the main concept of the page.
+Keep the futuristic dark room and the glowing cube in the center.
+The final result should feel like a billion-dollar fintech operating system.
+
+========================
+GENERAL STYLE
+========================
+- Dark futuristic environment.
+- Premium blue neon lighting.
+- Cinematic atmosphere.
+- Glassmorphism effects.
+- Smooth animations.
+- Professional and elegant, not childish.
+
+========================
+BACKGROUND
+========================
+Create a realistic futuristic room with:
+
+- Reflective dark floor.
+- Blue neon wall lines.
+- Soft fog and volumetric light rays.
+- Tiny moving particles.
+- Subtle floating dust particles.
+- Light reflections on the floor.
+- Slight camera movement to make the page feel alive.
+
+========================
+CENTER CUBE
+========================
+Recreate the cube as a real 3D animated object.
+
+Cube requirements:
+
+- Slow continuous rotation.
+- Floating animation.
+- Soft up and down movement.
+- Blue glow around the edges.
+- Reflections on the floor.
+- Bloom effect.
+- Slight tilt while rotating.
+- Smooth shadows.
+
+Each face of the cube should display:
+
+- SNB
+- Riyad Bank
+- Alrajhi Bank
+- Alinma Bank
+- BSF
+- WASL logo on top.
+
+Hover effects:
+
+- Increase glow.
+- Increase rotation speed slightly.
+- Add energy particles around the cube.
+
+========================
+WASL LOGOS ON BOTH SIDES
+========================
+Replace the current flat logos.
+
+Create illuminated glass panels on both walls.
+
+Requirements:
+
+- The WASL logo should look like a hologram.
+- Neon blue glow.
+- Reflection on the floor.
+- Breathing light animation.
+- Slowly pulse every few seconds.
+
+The logo should look embedded into the wall.
+
+========================
+MAIN BUTTON
+========================
+Replace the simple button with a premium futuristic button.
+
+Button text:
+
+ENTER WASL AI HUB
+
+Design:
+
+- Glassmorphism style.
+- Rounded corners.
+- Animated border.
+- Blue glow.
+- Subtle inner light.
+
+Hover:
+
+- Scale 1.05.
+- Glow becomes stronger.
+- Light sweep animation from left to right.
+- Cursor changes.
+
+Click:
+
+- Ripple effect.
+- Small press animation.
+- Smooth transition to dashboard.
+
+========================
+PAGE TRANSITIONS
+========================
+When clicking Enter:
+
+1. Cube glow intensifies.
+2. Camera zooms in slightly.
+3. Background fades.
+4. Smooth transition to dashboard.
+
+Duration:
+700ms–1000ms.
+
+========================
+MICRO ANIMATIONS
+========================
+- Light particles moving around.
+- Floating neon dots.
+- Animated reflections.
+- Breathing glows.
+- Smooth transitions everywhere.
+
+========================
+PERFORMANCE
+========================
+Use CSS animations and lightweight transforms.
+Avoid heavy rendering.
+Maintain smooth performance on laptops.
+
+========================
+FINAL GOAL
+========================
+The landing page should look like:
+
+- Premium FinTech software.
+- Enterprise banking platform.
+- AI operating system.
+- Similar quality to futuristic movie interfaces.
+- Professional enough for executives and employees to use daily.
+
+The design must feel luxurious, modern, and highly polished.

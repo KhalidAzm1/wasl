@@ -221,6 +221,7 @@ function KpiButton({ label, value, colorClass, active, onClick }: { label: strin
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
         "relative overflow-hidden flex flex-col text-left rounded-2xl px-5 py-3.5 shrink-0 min-w-[140px] md:w-auto transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e5ff]/70",
         active 
@@ -337,7 +338,7 @@ export default function Dashboard() {
       
       <div className="sticky top-0 z-40 bg-[#050816]/80 backdrop-blur-3xl border-b border-white/5 px-8 py-5 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-2xl">
         <div className="flex items-center gap-4">
-           <img src={logoUrl} alt="Wasl" className="no-mirror h-20 md:h-24 w-auto drop-shadow-md" />
+           <img src={logoUrl} alt="Wasl" className="no-mirror h-14 md:h-20 w-auto drop-shadow-md" />
         </div>
         
         <div className="flex md:flex-wrap items-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0">

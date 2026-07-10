@@ -148,15 +148,18 @@ export function Layout({ children }: LayoutProps) {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Settings panel"
               className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-[#050816]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
             >
-              <div className="flex items-center justify-between p-6 pb-5 border-b border-white/5">
-                <img src={logoUrl} alt="Wasl" className="no-mirror h-24 w-auto drop-shadow-lg" />
+              <div className="relative flex items-center justify-center px-12 pt-8 pb-6 border-b border-white/5">
+                <img src={logoUrl} alt="Wasl" className="no-mirror h-20 w-auto max-w-full drop-shadow-lg" />
                 <button
                   type="button"
                   aria-label="Close settings panel"
                   onClick={() => setPanelOpen(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>

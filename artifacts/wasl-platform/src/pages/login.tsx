@@ -39,12 +39,12 @@ export default function Login() {
         </div>
         <h2 className="text-xl font-bold text-white text-center">Sign In</h2>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">Email</label>
-          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" dir="ltr" />
+          <label htmlFor="login-email" className="text-sm text-white/60">Email</label>
+          <Input id="login-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" dir="ltr" autoComplete="username" />
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-white/60">Password</label>
-          <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
+          <label htmlFor="login-password" className="text-sm text-white/60">Password</label>
+          <Input id="login-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" autoComplete="current-password" />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? 'Signing in...' : 'Sign In'}

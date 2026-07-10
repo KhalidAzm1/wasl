@@ -34,8 +34,9 @@ export default function Login() {
   return (
     <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-3 pb-2">
           <img src={logoUrl} alt="Wasl" className="no-mirror w-full h-auto drop-shadow-lg" />
+          <p className="text-[11px] text-white/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
         </div>
         <h2 className="text-xl font-bold text-white text-center">Sign In</h2>
         <div className="space-y-2">

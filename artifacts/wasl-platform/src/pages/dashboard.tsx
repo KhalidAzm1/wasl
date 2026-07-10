@@ -336,9 +336,11 @@ export default function Dashboard() {
   return (
     <div className="min-h-full flex flex-col w-full overflow-x-hidden">
       
-      <div className="sticky top-0 z-40 bg-[#050816]/80 backdrop-blur-3xl border-b border-white/5 px-8 py-5 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-2xl">
-        <div className="flex items-center gap-4">
-           <img src={logoUrl} alt="Wasl" className="no-mirror h-14 md:h-20 w-auto drop-shadow-md" />
+      <div className="sticky top-0 z-40 bg-[#050816]/80 backdrop-blur-3xl border-b border-white/5 px-8 py-6 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-2xl">
+        <div className="flex items-center gap-5">
+           <img src={logoUrl} alt="Wasl" style={{ height: '70px' }} className="no-mirror w-auto drop-shadow-md" />
+           <div className="hidden sm:block h-10 w-px bg-white/10" />
+           <p className="hidden sm:block text-[11px] text-white/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
         </div>
         
         <div className="flex md:flex-wrap items-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0">

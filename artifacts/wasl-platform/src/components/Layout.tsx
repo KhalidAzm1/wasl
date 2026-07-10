@@ -153,8 +153,9 @@ export function Layout({ children }: LayoutProps) {
               aria-label="Settings panel"
               className="fixed inset-y-0 right-0 z-50 w-full max-w-[320px] md:max-w-[380px] bg-[#050816]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col safe-area-top safe-area-bottom"
             >
-              <div className="relative flex items-center justify-center px-12 pt-8 pb-6 border-b border-white/5">
-                <img src={logoUrl} alt="Wasl" className="no-mirror h-20 w-auto max-w-full drop-shadow-lg" />
+              <div className="relative flex flex-col items-center justify-center gap-2 px-12 pt-10 pb-8 border-b border-white/5">
+                <img src={logoUrl} alt="Wasl" style={{ height: '90px' }} className="no-mirror w-auto max-w-full drop-shadow-lg" />
+                <p className="text-[11px] text-white/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
                 <button
                   type="button"
                   aria-label="Close settings panel"

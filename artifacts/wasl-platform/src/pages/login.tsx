@@ -36,12 +36,7 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
         <div className="flex flex-col items-center gap-3 pb-2">
           <div className="w-full flex justify-center">
-            <WaslLogo
-              height={80}
-              plateClassName="px-6 py-5 w-full"
-              imgClassName="w-full max-w-[280px] h-auto"
-              imgStyle={{}}
-            />
+            <WaslLogo imgClassName="w-full max-w-[280px] h-auto" imgStyle={{}} />
           </div>
           <p className="text-[11px] text-foreground/40 uppercase tracking-[0.15em] font-medium">Banking Intelligence Platform</p>
         </div>

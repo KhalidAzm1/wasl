@@ -28,15 +28,3 @@ channel = "stable-25_05"
 SUPABASE_URL = "https://szsykojszbdjouhwadfy.supabase.co"
 VITE_SUPABASE_ANON_KEY = "sb_publishable_WLv9WUzp9TtVytKqCV_mWA_p_ToDUwA"
 VITE_SUPABASE_URL = "https://szsykojszbdjouhwadfy.supabase.co"
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
-
-[[ports]]
-localPort = 20541
-externalPort = 80

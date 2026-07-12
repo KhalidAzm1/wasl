@@ -9,7 +9,7 @@ import {
   useCreateRisk, useUpdateRisk, useDeleteRisk,
   useCreateActionItem, useUpdateActionItem, useDeleteActionItem,
   useCreateDocument, useUploadDocument, useDeleteDocument,
-  useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey
+  useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -368,6 +368,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
       updateProduct.mutate({ id: editing.id, data: payload }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
           setIsOpen(false);
           toast({ title: 'Saved' });
         }
@@ -376,6 +377,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
       createProduct.mutate({ data: payload }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
           setIsOpen(false);
           toast({ title: 'Product Added' });
         }
@@ -404,7 +406,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => {
                     if (confirm('Confirm deletion?')) {
                       deleteProduct.mutate({ id: p.id }, {
-                        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Product archived' }); },
+                        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }); toast({ title: 'Product archived' }); },
                         onError: (e: any) => toast({ title: 'Failed to delete product', description: e?.message, variant: 'destructive' }),
                       });
                     }

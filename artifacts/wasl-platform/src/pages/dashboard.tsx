@@ -321,6 +321,14 @@ export default function Dashboard() {
     progressByBank.set(bank.id, entry && entry.count ? entry.sum / entry.count : 0);
   }
 
+  // Build distinct product-code badge list per bank — single pass, zero N+1
+  const productCodesByBank = new Map<string, string[]>();
+  for (const bank of banks) productCodesByBank.set(bank.id, []);
+  for (const p of products || []) {
+    const arr = productCodesByBank.get(p.bankId);
+    if (arr && p.productCode && !arr.includes(p.productCode)) arr.push(p.productCode);
+  }
+
   const categories = ["All", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
 
   const normalizeStatus = (s: string) => s.toLowerCase();
@@ -488,7 +496,7 @@ export default function Dashboard() {
                      </div>
                      <div className="flex flex-col gap-3">
                        {columnBanks.map(bank => (
-                         <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" avgProgress={progressByBank.get(bank.id) || 0} />
+                         <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} />
                        ))}
                      </div>
                    </div>
@@ -502,7 +510,7 @@ export default function Dashboard() {
               className="flex flex-col gap-3 pb-24"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" avgProgress={progressByBank.get(bank.id) || 0} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} />
               ))}
             </motion.div>
           ) : (
@@ -512,7 +520,7 @@ export default function Dashboard() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-24"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" avgProgress={progressByBank.get(bank.id) || 0} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} />
               ))}
             </motion.div>
           )}
@@ -689,18 +697,45 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
   );
 }
 
+function ProductBadges({ codes }: { codes: string[] }) {
+  if (codes.length === 0) {
+    return <span className="text-[10px] text-foreground/30 italic">No Products</span>;
+  }
+  const visible = codes.slice(0, 3);
+  const overflow = codes.length - 3;
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {visible.map(code => (
+        <span
+          key={code}
+          className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 tracking-wider leading-none"
+        >
+          {code}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-foreground/5 text-foreground/40 text-[10px] font-medium border border-foreground/10 leading-none">
+          +{overflow}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function CompactBankCard({ 
   bankSummary, 
   hoveredId, 
   setHoveredId,
   viewMode,
-  avgProgress
+  avgProgress,
+  productCodes
 }: { 
   bankSummary: Bank; 
   hoveredId: string | null; 
   setHoveredId: (id: string | null) => void;
   viewMode: 'grid' | 'list' | 'kanban';
   avgProgress: number;
+  productCodes: string[];
 }) {
   const { data: bankDetail } = useGetBank(bankSummary.id, {
     query: { queryKey: getGetBankQueryKey(bankSummary.id) }
@@ -749,6 +784,9 @@ function CompactBankCard({
             <div className="min-w-0 flex-1">
               <h2 className="text-[15px] font-bold text-foreground truncate">{displayBank.nameAr}</h2>
               <h3 className="text-[11px] text-foreground/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
+              <div className="mt-1">
+                <ProductBadges codes={productCodes} />
+              </div>
             </div>
           </div>
 
@@ -811,6 +849,9 @@ function CompactBankCard({
           <div className="relative z-20 min-w-0">
             <h2 className="text-sm font-bold text-foreground truncate">{displayBank.nameAr}</h2>
             <h3 className="text-[10px] text-foreground/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
+            <div className="mt-1.5">
+              <ProductBadges codes={productCodes} />
+            </div>
           </div>
           
           <div className="relative z-20 flex items-center justify-between text-[11px] mt-1 pt-3 border-t border-foreground/5">
@@ -868,7 +909,11 @@ function CompactBankCard({
             <h3 className="text-[11px] text-foreground/50 tracking-[0.15em] uppercase truncate">{displayBank.nameEn}</h3>
           </div>
 
-          <div className="mt-2.5">
+          <div className="mt-2">
+            <ProductBadges codes={productCodes} />
+          </div>
+
+          <div className="mt-2">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-foreground/5 border border-foreground/5 text-[11px] font-medium backdrop-blur-md shadow-sm">
               <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_8px_currentColor]`} />
               <span className="text-foreground/80">{displayBank.status}</span>

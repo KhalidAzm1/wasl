@@ -43,6 +43,15 @@ export function initPostHog(): void {
     loaded: (ph) => {
       // Verbose debug logs only during local development
       if (import.meta.env.DEV) ph.debug();
+
+      // ── Connectivity test ────────────────────────────────────────────────
+      // Fires once per session on successful init. Confirms the SDK is live,
+      // the key/host are correct, and events reach the PostHog ingest pipeline.
+      ph.capture('PostHog Connected', {
+        sdk_version: ph.LIB_VERSION,
+        environment: import.meta.env.MODE,
+        timestamp: new Date().toISOString(),
+      });
     },
   });
 

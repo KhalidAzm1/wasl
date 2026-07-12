@@ -483,6 +483,24 @@ export default function AdminUsers() {
     }
   }
 
+  async function handlePromote(user: AdminUser) {
+    if (!confirm(`ترقية "${user.name}" لصلاحية Super Admin؟\nسيحصل على كامل الصلاحيات بدون قيود.`)) return;
+    try {
+      await authedFetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          role: 'super_admin',
+          permissions: DEFAULT_PERMISSIONS_BY_ROLE.super_admin,
+        }),
+      });
+      analytics.userRoleChanged({ target_user_id: user.id, old_role: user.role, new_role: 'super_admin' });
+      toast({ title: '✓ تمت الترقية', description: `${user.name} أصبح الآن Super Admin.` });
+      loadUsers();
+    } catch (err) {
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+    }
+  }
+
   const permissionCount = useMemo(() => Object.values(form.permissions).filter(Boolean).length, [form.permissions]);
 
   return (
@@ -550,6 +568,18 @@ export default function AdminUsers() {
                         <span className="text-foreground/30 text-xs px-2 py-1">Your Account</span>
                       ) : (
                         <>
+                          {/* Promote to Super Admin — only visible to super_admins, only for non-super users */}
+                          {isSuperAdmin && user.role !== 'super_admin' && !user.deleted_at && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handlePromote(user)}
+                              title="ترقية لـ Super Admin"
+                              className="text-amber-500/60 hover:text-amber-400 hover:bg-amber-400/10"
+                            >
+                              <Crown className="w-4 h-4" />
+                            </Button>
+                          )}
                           {user.deleted_at ? (
                             <Button size="icon" variant="ghost" onClick={() => handleReactivate(user)} title="Reactivate">
                               <UserCheck className="w-4 h-4" />

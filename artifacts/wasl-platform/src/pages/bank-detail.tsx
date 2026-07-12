@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'wouter';
 import { BankLogo } from '@/components/BankLogo';
 import { NavControls } from '@/components/NavControls';
@@ -127,6 +127,21 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
 export default function BankDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: bank, isLoading } = useGetBank(id!, { query: { enabled: !!id, queryKey: getGetBankQueryKey(id!) } });
+
+  // Fire once when bank data first resolves for this page visit
+  const firedRef = useRef(false);
+  useEffect(() => {
+    if (bank && !firedRef.current) {
+      firedRef.current = true;
+      analytics.bankOpened({
+        bank_id: bank.id,
+        bank_name_en: bank.nameEn,
+        bank_name_ar: bank.nameAr,
+        risk_level: bank.riskLevel ?? 'Unknown',
+        priority_impact: bank.priorityImpact ?? 'Unknown',
+      });
+    }
+  }, [bank]);
 
   if (isLoading) {
     return (

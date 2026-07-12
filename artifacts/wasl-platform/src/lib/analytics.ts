@@ -23,6 +23,10 @@ export const analytics = {
     posthog.capture('Bank Updated', props);
   },
 
+  bankOpened(props: { bank_id: string; bank_name_en: string; bank_name_ar: string; risk_level: string; priority_impact: string }) {
+    posthog.capture('Bank Opened', props);
+  },
+
   bankArchived(props: { bank_id: string; bank_name_en: string }) {
     posthog.capture('Bank Archived', props);
   },

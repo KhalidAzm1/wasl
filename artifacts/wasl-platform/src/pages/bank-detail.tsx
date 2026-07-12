@@ -24,7 +24,8 @@ import { formatDate, formatDateTime, formatPercentage, getStatusColor } from '@/
 import { analytics } from '@/lib/analytics';
 import { 
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
-  CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip
+  CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip,
+  Maximize2,
 } from 'lucide-react';
 
 // Generic attachment button + dialog for entities other than banks (products,
@@ -205,7 +206,7 @@ export default function BankDetail() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue="overview" className="w-full" onValueChange={(tab) => analytics.bankDetailsViewed({ bank_id: bank.id, bank_name_en: bank.nameEn, tab })}>
         <TabsList className="w-full flex justify-start border-b border-foreground/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
           <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
             Overview
@@ -231,8 +232,17 @@ export default function BankDetail() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Executive Summary</CardTitle>
+                  <button
+                    type="button"
+                    title="Enable Presentation Mode"
+                    className="flex items-center gap-1.5 text-xs text-foreground/40 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
+                    onClick={() => analytics.executivePresentationModeEnabled({ bank_id: bank.id, bank_name: bank.nameEn })}
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Presentation</span>
+                  </button>
                 </CardHeader>
                 <CardContent>
                   <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap text-lg">
@@ -414,13 +424,13 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map(p => (
-          <Card key={p.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all">
+          <Card key={p.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all" onClick={() => analytics.associatedProductViewed({ bank_id: bankId, product_id: p.id, product_code: p.productCode, category_stage: p.categoryStage })}>
             <CardContent className="p-5 flex flex-col h-full">
               <div className="flex justify-between items-start mb-3">
                 <Badge variant="outline">{p.productCode}</Badge>
                 <div className="flex gap-1">
                   <EntityAttachmentsButton entityType="product" entityId={p.id} label={p.productCode} />
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground/50" onClick={() => { setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground/50" onClick={() => { analytics.productOpened({ bank_id: bankId, product_id: p.id, product_code: p.productCode, category_stage: p.categoryStage }); setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => {
                     if (confirm('Confirm deletion?')) {
                       deleteProduct.mutate({ id: p.id }, {
@@ -501,7 +511,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
       </div>
       <div className="space-y-4">
         {meetings.map(m => (
-          <div key={m.id} className="p-4 rounded-xl bg-foreground/5 border border-foreground/10 flex flex-col md:flex-row gap-4">
+          <div key={m.id} className="p-4 rounded-xl bg-foreground/5 border border-foreground/10 flex flex-col md:flex-row gap-4 cursor-pointer" onClick={() => analytics.meetingOpened({ bank_id: bankId, meeting_id: m.id, topic: m.topic, date: m.date })}>
             <div className="md:w-48 shrink-0 text-foreground/60">
               {formatDate(m.date)}
             </div>
@@ -514,10 +524,10 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
             </div>
             <div className="flex items-start gap-1 shrink-0">
               <EntityAttachmentsButton entityType="meeting" entityId={m.id} label={m.topic} />
-              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, {
-                onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Meeting archived' }); },
-                onError: (e: any) => toast({ title: 'Failed to delete meeting', description: e?.message, variant: 'destructive' }),
-              })}>
+              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={(e) => { e.stopPropagation(); deleteMeeting.mutate({ id: m.id }, {
+                onSuccess: () => { analytics.meetingDeleted({ bank_id: bankId, meeting_id: m.id, topic: m.topic }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Meeting archived' }); },
+                onError: (err: any) => toast({ title: 'Failed to delete meeting', description: err?.message, variant: 'destructive' }),
+              }); }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -552,9 +562,24 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
     if (createAction.isPending || updateAction.isPending) return;
     const payload = { bankId, description: editing.description, owner: editing.owner, dueDate: editing.dueDate, status: editing.status || 'Pending' };
     if (editing.id) {
-      updateAction.mutate({ id: editing.id, data: payload }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); setIsOpen(false); } });
+      updateAction.mutate({ id: editing.id, data: payload }, {
+        onSuccess: () => {
+          analytics.taskUpdated({ bank_id: bankId, task_id: editing.id, status: payload.status, description: payload.description });
+          if (payload.status === 'Completed') {
+            analytics.taskCompleted({ bank_id: bankId, task_id: editing.id, description: payload.description, owner: payload.owner });
+          }
+          queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+          setIsOpen(false);
+        },
+      });
     } else {
-      createAction.mutate({ data: payload }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); setIsOpen(false); } });
+      createAction.mutate({ data: payload }, {
+        onSuccess: () => {
+          analytics.taskCreated({ bank_id: bankId, description: payload.description, owner: payload.owner, due_date: payload.dueDate });
+          queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+          setIsOpen(false);
+        },
+      });
     }
   };
 
@@ -573,7 +598,7 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditing(a); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => deleteAction.mutate({ id: a.id }, {
-                    onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Action archived' }); },
+                    onSuccess: () => { analytics.taskDeleted({ bank_id: bankId, task_id: a.id }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Action archived' }); },
                     onError: (e: any) => toast({ title: 'Failed to delete action', description: e?.message, variant: 'destructive' }),
                   })}><Trash2 className="w-3 h-3" /></Button>
                 </div>
@@ -742,7 +767,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {documents.map(d => (
-          <Card key={d.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all cursor-pointer" onClick={() => { const url = (d as any).fileUrl || d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
+          <Card key={d.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all cursor-pointer" onClick={() => { const url = (d as any).fileUrl || d.oneDriveWebUrl || d.link; if (url) { analytics.documentDownloaded({ doc_id: d.id, bank_id: bankId, file_name: d.title, doc_type: d.docType ?? undefined, source: 'bank_documents' }); window.open(url, '_blank'); } }}>
             <CardContent className="p-5 flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <FileText className="w-8 h-8 text-primary/70 shrink-0" />

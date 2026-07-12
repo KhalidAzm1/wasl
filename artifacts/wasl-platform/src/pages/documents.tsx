@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/utils';
 import { FileText, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { analytics } from '@/lib/analytics';
 
 export default function Documents() {
   const { data: documents, isLoading: docsLoading } = useListDocuments();
@@ -67,7 +68,18 @@ export default function Documents() {
                 <div className="mt-auto pt-4 border-t border-foreground/10">
                   {docUrl ? (
                     <Button asChild variant="outline" className="w-full gap-2 border-foreground/10 bg-foreground/5 hover:bg-foreground/10 hover:text-foreground">
-                      <a href={docUrl} target="_blank" rel="noreferrer">
+                      <a
+                        href={docUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => analytics.documentDownloaded({
+                          doc_id: doc.id,
+                          bank_id: doc.bankId ?? undefined,
+                          file_name: doc.title,
+                          doc_type: doc.docType ?? undefined,
+                          source: 'global_documents',
+                        })}
+                      >
                         Open Document <ExternalLink className="w-4 h-4" />
                       </a>
                     </Button>

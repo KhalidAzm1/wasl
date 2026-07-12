@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGetDashboardSummary, useListBanks, useListProducts, useListProductTypes, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey } from '@workspace/api-client-react';
 import type { Bank } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -298,6 +298,43 @@ export default function Dashboard() {
   const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk'>('all');
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
 
+  // ── Analytics: Dashboard Loaded ─────────────────────────────────────────
+  const dashboardLoadedRef = useRef(false);
+  useEffect(() => {
+    if (isLoadingSummary || isLoadingBanks || !summary || !banks || dashboardLoadedRef.current) return;
+    dashboardLoadedRef.current = true;
+    analytics.dashboardLoaded({
+      total_banks: summary.totalBanks,
+      in_progress: summary.inProgress,
+      completed: summary.completed,
+      delayed: summary.delayed,
+      high_risk: banks.filter(b => b.riskLevel === 'High').length,
+    });
+  }, [isLoadingSummary, isLoadingBanks, summary, banks]);
+
+  // ── Analytics: Search Used (debounced 800 ms) ───────────────────────────
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!searchQuery) return;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      const q = searchQuery.toLowerCase();
+      const count = (banks || []).filter(b =>
+        b.nameEn?.toLowerCase().includes(q) ||
+        b.nameAr?.toLowerCase().includes(q) ||
+        b.responsiblePerson?.toLowerCase().includes(q) ||
+        b.relationshipManager?.toLowerCase().includes(q)
+      ).length;
+      analytics.searchUsed({
+        query: searchQuery,
+        results_count: count,
+        filters_active: filterCategory !== 'All' || filterRisk !== 'All',
+      });
+    }, 800);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
   if (isLoadingSummary || isLoadingBanks || isLoadingProducts) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-6">
@@ -497,7 +534,7 @@ export default function Dashboard() {
                      </div>
                      <div className="flex flex-col gap-3">
                        {columnBanks.map(bank => (
-                         <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} />
+                          <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
                        ))}
                      </div>
                    </div>
@@ -511,7 +548,7 @@ export default function Dashboard() {
               className="flex flex-col gap-3 pb-24"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
               ))}
             </motion.div>
           ) : (
@@ -521,7 +558,7 @@ export default function Dashboard() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-24"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
               ))}
             </motion.div>
           )}
@@ -730,7 +767,8 @@ function CompactBankCard({
   setHoveredId,
   viewMode,
   avgProgress,
-  productCodes
+  productCodes,
+  onNavigate,
 }: { 
   bankSummary: Bank; 
   hoveredId: string | null; 
@@ -738,6 +776,7 @@ function CompactBankCard({
   viewMode: 'grid' | 'list' | 'kanban';
   avgProgress: number;
   productCodes: string[];
+  onNavigate?: () => void;
 }) {
   const { data: bankDetail } = useGetBank(bankSummary.id, {
     query: { queryKey: getGetBankQueryKey(bankSummary.id) }
@@ -968,6 +1007,7 @@ function CompactBankCard({
         className="block w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-[24px]"
         onFocus={() => setHoveredId(displayBank.id)}
         onBlur={() => { if (hoveredId === displayBank.id) setHoveredId(null); }}
+        onClick={() => onNavigate?.()}
       >
         {content()}
       </Link>

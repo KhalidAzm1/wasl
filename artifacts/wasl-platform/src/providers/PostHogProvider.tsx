@@ -8,7 +8,8 @@
  */
 import React, { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { initPostHog, posthog } from '@/lib/posthog';
+import { initPostHog } from '@/lib/posthog';
+import { analytics } from '@/lib/analytics';
 import { useAuth } from '@/lib/authContext';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -53,27 +54,21 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         user.email ??
         'Unknown';
 
-      posthog.identify(user.id, {
-        user_id: user.id,
-        user_name: userName,
-        user_role: role ?? 'unknown',
+      analytics.identifyUser(user.id, {
+        name: userName,
+        role: role ?? 'unknown',
         email: user.email,
-        device_type: getDeviceType(),
-        browser: getBrowser(),
-        company: 'Wasl',
       });
     } else {
       // Signed out — wipe any previously identified user
-      posthog.reset();
+      analytics.resetUser();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, role, loading]);
 
   // 3. Automatic page-view on every route change
   useEffect(() => {
-    posthog.capture('$pageview', {
-      $current_url: window.location.href,
-    });
+    analytics.trackEvent('$pageview', { $current_url: window.location.href });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 

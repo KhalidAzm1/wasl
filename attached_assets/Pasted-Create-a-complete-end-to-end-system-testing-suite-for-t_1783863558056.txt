@@ -1,0 +1,212 @@
+Create a complete end-to-end system testing suite for the Wasl Banking Dashboard.
+
+Test Scenarios:
+
+1. Authentication Testing
+- Login
+- Logout
+- Session persistence
+- Permission checks
+
+2. Bank Management Testing
+- Create a new bank
+- Edit bank information
+- Delete bank
+- Verify data is stored in database
+- Verify data can be retrieved correctly
+
+3. Product Testing
+- Add product to bank
+- Edit product
+- Delete product
+- Verify relationships are saved correctly
+
+4. Document Testing
+- Upload PDF, Word, Excel and Images.
+- Verify files upload successfully.
+- Verify file metadata is stored in database.
+- Verify files can be downloaded.
+- Verify files can be opened.
+- Verify files remain available after page refresh.
+- Verify deleting a file removes it correctly.
+
+5. Storage Verification
+
+Create a page:
+
+/admin/system-health
+
+Show:
+- Storage Provider being used
+- Upload directory path
+- Number of files
+- Total storage used
+- Database status
+- Missing files
+- Broken links
+- Last backup date
+- Storage health score
+
+6. Database Verification
+
+Create integrity checks for:
+- Banks
+- Products
+- Meetings
+- Documents
+- Users
+- Tasks
+- Relationships and foreign keys
+- Orphan records
+- Missing records
+- Duplicate records
+
+7. Automatic Test Runner
+
+Create a page:
+
+/admin/system-tests
+
+Buttons:
+- Run All Tests
+- Run Storage Test
+- Run Database Test
+- Run Upload Test
+- Run Download Test
+- Run Authentication Test
+- Run Performance Test
+- Generate Test Report
+- Download Latest Report
+
+8. Generate report:
+- Passed tests
+- Failed tests
+- Errors
+- Warnings
+- Recommendations
+
+9. Add PostHog tracking:
+- File Uploaded
+- File Downloaded
+- File Opened
+- File Deleted
+- Test Executed
+- Test Failed
+- Test Passed
+- System Health Check Executed
+
+10. Create a diagnostic report showing:
+- Where uploaded files are physically stored.
+- Whether storage is local, Supabase Storage or Google Drive.
+- Exact database tables used.
+- Orphan files.
+- Missing records.
+- Failed uploads.
+- Invalid links.
+- Database size.
+- Storage size.
+
+11. Add a button:
+"Run Full System Health Check"
+
+The system should automatically:
+
+- Upload a sample PDF.
+- Upload a sample image.
+- Upload a sample Excel file.
+- Create a sample bank.
+- Create a sample product.
+- Attach documents to the bank.
+- Read the files back.
+- Download the files.
+- Verify file integrity.
+- Verify database records.
+- Delete test data after completion.
+
+Show the results inside an admin dashboard with green and red status indicators.
+
+12. Create ONE comprehensive downloadable report:
+
+Generate a professional PDF report named:
+
+Wasl-System-Health-Report-{date}.pdf
+
+The report must include:
+
+Executive Summary
+- Date and time
+- Environment
+- Application version
+- Database provider
+- Storage provider
+- Overall system health score (%)
+
+Authentication Section
+- Login test results
+- Logout test results
+- Session test results
+- Permission test results
+
+Bank Management Section
+- Banks created
+- Data verification results
+- Relationship validation
+
+Product Section
+- Product creation results
+- Relationship checks
+
+Documents Section
+- Upload results
+- Download results
+- File opening results
+- File integrity checks
+- Storage locations
+
+Database Section
+- Tables checked
+- Record counts
+- Integrity status
+- Orphan records
+- Duplicate records
+
+Storage Section
+- Storage provider
+- Storage path
+- Total files
+- Total storage used
+- Missing files
+- Broken links
+
+Performance Section
+- Response times
+- Failed requests
+- Error logs
+
+Recommendations
+- Critical issues
+- Medium issues
+- Low priority improvements
+- Suggested fixes
+
+Appendix
+- Full logs
+- Error details
+- Test execution history
+
+Save reports in:
+
+/storage/reports
+
+Create a page:
+
+/admin/system-tests/reports
+
+Features:
+- View reports
+- Download reports
+- Delete reports
+- View previous test history
+
+Automatically generate the PDF report every time:
+"Run Full System Health Check" is executed.

@@ -110,9 +110,22 @@ function BanksManager() {
     };
 
     if (editingBank.id) {
+      // Detect status change before mutating
+      const originalBank = banks?.find(b => b.id === editingBank.id);
+      const oldStatus = originalBank?.status ?? '';
+      const newStatus = payload.status ?? '';
+
       updateBank.mutate({ id: editingBank.id, data: payload }, {
         onSuccess: () => {
           analytics.bankUpdated({ bank_id: editingBank.id!, bank_name_en: payload.nameEn });
+          if (oldStatus && newStatus && oldStatus !== newStatus) {
+            analytics.bankStatusChanged({
+              bank_id: editingBank.id!,
+              bank_name_en: payload.nameEn,
+              old_status: oldStatus,
+              new_status: newStatus,
+            });
+          }
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(editingBank.id!) });
           setIsModalOpen(false);
@@ -159,7 +172,7 @@ function BanksManager() {
                     if (confirm('Are you sure you want to delete this bank?')) {
                       deleteBank.mutate({ id: bank.id }, {
                         onSuccess: () => {
-                          analytics.bankArchived({ bank_id: bank.id, bank_name_en: bank.nameEn });
+                          analytics.bankDeleted({ bank_id: bank.id, bank_name_en: bank.nameEn });
                           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
                           toast({ title: 'Deleted', description: 'Bank moved to archive' });
                         },

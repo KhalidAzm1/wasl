@@ -33,6 +33,7 @@ import { Trash2, Edit, Plus, Save, UploadCloud, Archive, RotateCcw, Tag } from '
 import { formatDateTime } from '@/lib/utils';
 import { useAuth } from '@/lib/authContext';
 import type { Bank } from '@workspace/api-client-react';
+import { analytics } from '@/lib/analytics';
 
 export default function Settings() {
   return (
@@ -111,6 +112,7 @@ function BanksManager() {
     if (editingBank.id) {
       updateBank.mutate({ id: editingBank.id, data: payload }, {
         onSuccess: () => {
+          analytics.bankUpdated({ bank_id: editingBank.id!, bank_name_en: payload.nameEn });
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(editingBank.id!) });
           setIsModalOpen(false);
@@ -119,7 +121,8 @@ function BanksManager() {
       });
     } else {
       createBank.mutate({ data: payload }, {
-        onSuccess: () => {
+        onSuccess: (created) => {
+          analytics.bankCreated({ bank_id: created.id, bank_name_en: created.nameEn, bank_name_ar: created.nameAr, category: created.category });
           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
           setIsModalOpen(false);
           toast({ title: 'Added', description: 'Bank added successfully' });
@@ -156,6 +159,7 @@ function BanksManager() {
                     if (confirm('Are you sure you want to delete this bank?')) {
                       deleteBank.mutate({ id: bank.id }, {
                         onSuccess: () => {
+                          analytics.bankArchived({ bank_id: bank.id, bank_name_en: bank.nameEn });
                           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
                           toast({ title: 'Deleted', description: 'Bank moved to archive' });
                         },
@@ -480,7 +484,7 @@ function ArchiveManager() {
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
                   restoreBank.mutate({ id: b.id }, {
-                    onSuccess: () => { invalidate(); toast({ title: 'Bank Restored', description: 'The bank has been restored successfully.' }); },
+                    onSuccess: () => { analytics.bankRestored({ bank_id: b.id, bank_name_ar: b.nameAr }); invalidate(); toast({ title: 'Bank Restored', description: 'The bank has been restored successfully.' }); },
                     onError: (e: any) => toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' }),
                   });
                 }}>
@@ -504,7 +508,7 @@ function ArchiveManager() {
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
                   restoreDocument.mutate({ id: d.id }, {
-                    onSuccess: () => { invalidate(); toast({ title: 'Document Restored', description: 'The document has been restored successfully.' }); },
+                    onSuccess: () => { analytics.documentRestored({ doc_id: d.id }); invalidate(); toast({ title: 'Document Restored', description: 'The document has been restored successfully.' }); },
                     onError: (e: any) => toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' }),
                   });
                 }}>
@@ -528,7 +532,7 @@ function ArchiveManager() {
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
                   restoreMeeting.mutate({ id: m.id }, {
-                    onSuccess: () => { invalidate(); toast({ title: 'Meeting Restored', description: 'The meeting has been restored successfully.' }); },
+                    onSuccess: () => { analytics.meetingUpdated({ bank_id: '', meeting_id: m.id }); invalidate(); toast({ title: 'Meeting Restored', description: 'The meeting has been restored successfully.' }); },
                     onError: (e: any) => toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' }),
                   });
                 }}>

@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatDateTime, getStatusColor, cn } from '@/lib/utils';
+import { analytics } from '@/lib/analytics';
 import { Command } from 'cmdk';
 import { WaslLogo } from '@/components/WaslLogo';
 
@@ -568,6 +569,7 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
     };
     updateBank.mutate({ id: bank.id, data: payload }, {
       onSuccess: () => {
+        analytics.bankUpdated({ bank_id: bank.id, bank_name_en: bank.nameEn });
         queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) });
         onOpenChange(false);

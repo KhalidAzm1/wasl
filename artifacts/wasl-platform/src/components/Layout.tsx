@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/authContext';
 import { useTheme } from './ThemeProvider';
 import { WaslLogo } from './WaslLogo';
 import { motion, AnimatePresence } from 'framer-motion';
+import { analytics } from '@/lib/analytics';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -60,6 +61,7 @@ export function Layout({ children }: LayoutProps) {
   async function handleSignOut() {
     setSigningOut(true);
     try {
+      analytics.userLogout();
       sessionStorage.removeItem('wasl_admin_pin_token');
       sessionStorage.removeItem('wasl_admin_pin_token_expires');
       await supabase.auth.signOut();

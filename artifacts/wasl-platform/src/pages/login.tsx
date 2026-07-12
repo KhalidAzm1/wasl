@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { WaslLogo } from '@/components/WaslLogo';
+import { analytics } from '@/lib/analytics';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -23,6 +24,8 @@ export default function Login() {
       toast({ title: 'Login error', description: error?.message ?? 'Invalid login credentials', variant: 'destructive' });
       return;
     }
+
+    analytics.userLogin({ email });
 
     if (data.session.user.user_metadata?.must_change_password) {
       navigate('/change-password');

@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, formatDateTime, formatPercentage, getStatusColor } from '@/lib/utils';
+import { analytics } from '@/lib/analytics';
 import { 
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
   CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip
@@ -367,6 +368,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
     if (editing.id) {
       updateProduct.mutate({ id: editing.id, data: payload }, {
         onSuccess: () => {
+          analytics.productUpdated({ bank_id: bankId, product_id: editing.id, product_code: payload.productCode });
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
           queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
           setIsOpen(false);
@@ -376,6 +378,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
     } else {
       createProduct.mutate({ data: payload }, {
         onSuccess: () => {
+          analytics.productCreated({ bank_id: bankId, product_code: payload.productCode, category_stage: payload.categoryStage });
           queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
           queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
           setIsOpen(false);
@@ -406,7 +409,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => {
                     if (confirm('Confirm deletion?')) {
                       deleteProduct.mutate({ id: p.id }, {
-                        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }); toast({ title: 'Product archived' }); },
+                        onSuccess: () => { analytics.productDeleted({ bank_id: bankId, product_id: p.id, product_code: p.productCode }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }); toast({ title: 'Product archived' }); },
                         onError: (e: any) => toast({ title: 'Failed to delete product', description: e?.message, variant: 'destructive' }),
                       });
                     }
@@ -468,6 +471,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
     if (createMeeting.isPending) return;
     createMeeting.mutate({ data: { bankId, topic: editing.topic, date: editing.date, summary: editing.summary } }, {
       onSuccess: () => {
+        analytics.meetingCreated({ bank_id: bankId, topic: editing.topic ?? '', date: editing.date ?? '' });
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
         setIsOpen(false);
       }
@@ -675,6 +679,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
     if (!uploadFile) return;
     uploadDoc.mutate({ data: { bankId, title: uploadFile.title, fileName: uploadFile.name, docType: uploadFile.docType, fileDataBase64: uploadFile.dataUrl } }, {
       onSuccess: () => {
+        analytics.documentUploaded({ bank_id: bankId, file_name: uploadFile.name, doc_type: uploadFile.docType });
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
         setUploadFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -737,7 +742,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
                 </div>
               </div>
               <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50 shrink-0" onClick={(e) => { e.stopPropagation(); deleteDoc.mutate({ id: d.id }, {
-                onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Document archived' }); },
+                onSuccess: () => { analytics.documentDeleted({ doc_id: d.id, bank_id: bankId }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Document archived' }); },
                 onError: (err: any) => toast({ title: 'Failed to delete document', description: err?.message, variant: 'destructive' }),
               }); }}><Trash2 className="w-4 h-4" /></Button>
             </CardContent>

@@ -19,6 +19,7 @@ import Login from '@/pages/login';
 import ChangePassword from '@/pages/change-password';
 import AdminUsers from '@/pages/admin-users';
 import { AdminPinGate } from '@/components/AdminPinGate';
+import { PostHogProvider } from '@/providers/PostHogProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,7 +98,9 @@ function App() {
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
               <AuthProvider>
-                <AppRoutes />
+                <PostHogProvider>
+                  <AppRoutes />
+                </PostHogProvider>
               </AuthProvider>
             </WouterRouter>
             <Toaster />

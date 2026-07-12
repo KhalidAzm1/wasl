@@ -30,6 +30,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/authContext';
 import { getAdminPinToken } from '@/components/AdminPinGate';
+import { analytics } from '@/lib/analytics';
 
 type Role = 'super_admin' | 'admin' | 'manager' | 'editor' | 'viewer';
 
@@ -388,6 +389,10 @@ export default function AdminUsers() {
           method: 'PATCH',
           body: JSON.stringify({ name: form.name, role: form.role, permissions: form.permissions }),
         });
+        if (editing.role !== form.role) {
+          analytics.userRoleChanged({ target_user_id: editing.id, old_role: editing.role, new_role: form.role });
+        }
+        analytics.userUpdated({ target_user_id: editing.id, target_name: form.name });
       } else {
         if (form.password.length < 8) {
           toast({ title: 'Error', description: 'Temporary password must be at least 8 characters.', variant: 'destructive' });
@@ -404,6 +409,7 @@ export default function AdminUsers() {
             permissions: form.permissions,
           }),
         });
+        analytics.userCreated({ target_email: form.email, target_role: form.role });
       }
       setSuccess(true);
       loadUsers();
@@ -442,6 +448,7 @@ export default function AdminUsers() {
     if (!confirm(`User "${user.name}" will be permanently deleted. Are you sure?`)) return;
     try {
       await authedFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
+      analytics.userDeleted({ target_user_id: user.id, target_name: user.name });
       toast({ title: 'User Deleted', description: `${user.name} has been permanently deleted.` });
       loadUsers();
     } catch (err) {

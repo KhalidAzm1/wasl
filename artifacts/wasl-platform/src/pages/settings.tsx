@@ -157,8 +157,9 @@ function BanksManager() {
                       deleteBank.mutate({ id: bank.id }, {
                         onSuccess: () => {
                           queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
-                          toast({ title: 'Deleted', description: 'Bank deleted successfully' });
-                        }
+                          toast({ title: 'Deleted', description: 'Bank moved to archive' });
+                        },
+                        onError: (e: any) => toast({ title: 'Failed to delete bank', description: e?.message, variant: 'destructive' }),
                       });
                     }
                   }}>
@@ -478,7 +479,10 @@ function ArchiveManager() {
                   <p className="text-sm text-foreground/40">Archived by {b.archivedBy || 'Unknown'} on {formatDateTime(b.archivedAt || '')}</p>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
-                  restoreBank.mutate({ id: b.id }, { onSuccess: () => { invalidate(); toast({ title: 'Restored' }); } });
+                  restoreBank.mutate({ id: b.id }, {
+                    onSuccess: () => { invalidate(); toast({ title: 'Bank Restored', description: 'The bank has been restored successfully.' }); },
+                    onError: (e: any) => toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' }),
+                  });
                 }}>
                   <RotateCcw className="w-4 h-4" /> Restore
                 </Button>
@@ -499,7 +503,10 @@ function ArchiveManager() {
                   <p className="text-sm text-foreground/40">Archived by {d.archivedBy || 'Unknown'} on {formatDateTime(d.archivedAt || '')}</p>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
-                  restoreDocument.mutate({ id: d.id }, { onSuccess: () => { invalidate(); toast({ title: 'Restored' }); } });
+                  restoreDocument.mutate({ id: d.id }, {
+                    onSuccess: () => { invalidate(); toast({ title: 'Document Restored', description: 'The document has been restored successfully.' }); },
+                    onError: (e: any) => toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' }),
+                  });
                 }}>
                   <RotateCcw className="w-4 h-4" /> Restore
                 </Button>
@@ -520,7 +527,10 @@ function ArchiveManager() {
                   <p className="text-sm text-foreground/40">Archived by {m.archivedBy || 'Unknown'} on {formatDateTime(m.archivedAt || '')}</p>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
-                  restoreMeeting.mutate({ id: m.id }, { onSuccess: () => { invalidate(); toast({ title: 'Restored' }); } });
+                  restoreMeeting.mutate({ id: m.id }, {
+                    onSuccess: () => { invalidate(); toast({ title: 'Meeting Restored', description: 'The meeting has been restored successfully.' }); },
+                    onError: (e: any) => toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' }),
+                  });
                 }}>
                   <RotateCcw className="w-4 h-4" /> Restore
                 </Button>

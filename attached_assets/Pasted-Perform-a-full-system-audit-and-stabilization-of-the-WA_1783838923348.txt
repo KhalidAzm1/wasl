@@ -1,0 +1,79 @@
+Perform a full system audit and stabilization of the WASL AI Hub application.
+
+Tasks:
+
+1. Automatically inspect the entire application for:
+- Runtime errors
+- Console errors
+- API errors
+- Database issues
+- Broken pages
+- Missing validations
+- UI bugs
+- State management issues
+- Production deployment issues
+- Data persistence issues
+- Archive and restore issues
+
+2. Test all major workflows end-to-end:
+- Login and logout
+- Add/Edit/Delete/Archive/Restore Bank
+- Add/Edit/Delete/Archive/Restore Product
+- Add/Edit/Delete/Archive/Restore Meeting
+- Add/Edit/Delete/Archive/Restore Document
+- File uploads and downloads
+- Search and filters
+- User management
+- Theme switching
+- Navigation
+
+3. Fix any discovered issues safely without breaking existing functionality.
+
+4. Add proper error handling:
+- Loading states
+- Success messages
+- Failure messages
+- Retry mechanisms
+- Server unavailable messages
+
+5. Verify:
+- Data is permanently saved.
+- Archive works correctly.
+- No records disappear after refresh, restart, or deployment.
+- Production database is working correctly.
+
+6. Create a small button on the Welcome / Landing Page called:
+
+"How to Use WASL AI Hub"
+
+Requirements:
+- Small and elegant floating button.
+- Opens a beautiful onboarding modal or side panel.
+- Include step-by-step instructions with icons and illustrations.
+
+The guide should explain:
+1. How to log in.
+2. How to add a bank.
+3. How to edit information.
+4. How to upload files and images.
+5. How to archive and restore items.
+6. How to manage meetings.
+7. How to use search and filters.
+8. How to manage users.
+9. How to switch themes.
+10. Best practices and tips for new employees.
+
+7. Add a checkbox:
+"Don't show this guide again."
+
+8. Add a button:
+"Start Exploring".
+
+9. Generate a final QA report containing:
+- Bugs found
+- Bugs fixed
+- Remaining risks
+- Test results
+- Recommendations for production.
+
+Do not redesign the whole application. Only improve stability, onboarding, and usability.

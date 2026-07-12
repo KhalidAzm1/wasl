@@ -103,7 +103,10 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
                       {d.uploadedBy && <p className="text-xs text-foreground/30">Uploaded by {d.uploadedBy}</p>}
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50 shrink-0" onClick={() => deleteDoc.mutate({ id: d.id }, { onSuccess: invalidate })}><Trash2 className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50 shrink-0" onClick={() => deleteDoc.mutate({ id: d.id }, {
+                    onSuccess: () => { invalidate(); toast({ title: 'File archived' }); },
+                    onError: (err: any) => toast({ title: 'Failed to delete file', description: err?.message, variant: 'destructive' }),
+                  })}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               ))}
               {docs.length === 0 && <div className="py-6 text-center text-foreground/30 text-sm">No files attached yet</div>}
@@ -396,7 +399,8 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => {
                     if (confirm('Confirm deletion?')) {
                       deleteProduct.mutate({ id: p.id }, {
-                        onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) })
+                        onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Product archived' }); },
+                        onError: (e: any) => toast({ title: 'Failed to delete product', description: e?.message, variant: 'destructive' }),
                       });
                     }
                   }}><Trash2 className="w-3 h-3" /></Button>
@@ -449,6 +453,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const createMeeting = useCreateMeeting();
   const deleteMeeting = useDeleteMeeting();
 
@@ -483,7 +488,10 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
             </div>
             <div className="flex items-start gap-1 shrink-0">
               <EntityAttachmentsButton entityType="meeting" entityId={m.id} label={m.topic} />
-              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}>
+              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={() => deleteMeeting.mutate({ id: m.id }, {
+                onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Meeting archived' }); },
+                onError: (e: any) => toast({ title: 'Failed to delete meeting', description: e?.message, variant: 'destructive' }),
+              })}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -509,6 +517,7 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const createAction = useCreateActionItem();
   const updateAction = useUpdateActionItem();
   const deleteAction = useDeleteActionItem();
@@ -537,7 +546,10 @@ function ActionsTab({ bankId, actionItems }: { bankId: string, actionItems: any[
                 <Badge variant={a.status === 'Completed' ? 'success' : 'outline'}>{a.status}</Badge>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditing(a); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => deleteAction.mutate({ id: a.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}><Trash2 className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => deleteAction.mutate({ id: a.id }, {
+                    onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Action archived' }); },
+                    onError: (e: any) => toast({ title: 'Failed to delete action', description: e?.message, variant: 'destructive' }),
+                  })}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               </div>
               <p className="text-lg mb-4">{a.description}</p>
@@ -572,6 +584,7 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const createRisk = useCreateRisk();
   const deleteRisk = useDeleteRisk();
 
@@ -598,7 +611,10 @@ function RisksTab({ bankId, risks }: { bankId: string, risks: any[] }) {
               </div>
               <p className="text-lg">{r.description}</p>
             </div>
-            <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={() => deleteRisk.mutate({ id: r.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) })}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={() => deleteRisk.mutate({ id: r.id }, {
+              onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Risk archived' }); },
+              onError: (e: any) => toast({ title: 'Failed to delete risk', description: e?.message, variant: 'destructive' }),
+            })}><Trash2 className="w-4 h-4" /></Button>
           </div>
         ))}
       </div>
@@ -706,7 +722,10 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
                   )}
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50 shrink-0" onClick={(e) => { e.stopPropagation(); deleteDoc.mutate({ id: d.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }) }); }}><Trash2 className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50 shrink-0" onClick={(e) => { e.stopPropagation(); deleteDoc.mutate({ id: d.id }, {
+                onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Document archived' }); },
+                onError: (err: any) => toast({ title: 'Failed to delete document', description: err?.message, variant: 'destructive' }),
+              }); }}><Trash2 className="w-4 h-4" /></Button>
             </CardContent>
           </Card>
         ))}

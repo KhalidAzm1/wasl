@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
+import { WaslOnboardingGuide } from '@/components/WaslOnboardingGuide';
 
 // Images
 import snbLogo from '@assets/wasl_brand/bank_cube/snb.png';
@@ -472,6 +473,9 @@ export default function EntryExperience() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Onboarding Guide — rendered below flash overlays so the flash hides it during entry */}
+      {entryStage === 0 && <WaslOnboardingGuide onStartExploring={handleEnter} />}
 
       {/* Cinematic Flash / Fade transition mask */}
       <motion.div

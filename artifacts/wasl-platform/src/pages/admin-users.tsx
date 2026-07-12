@@ -421,6 +421,7 @@ export default function AdminUsers() {
   async function handleDeactivate(user: AdminUser) {
     try {
       await authedFetch(`/api/admin/users/${user.id}/deactivate`, { method: 'POST' });
+      toast({ title: 'User Deactivated', description: `${user.name} has been deactivated.` });
       loadUsers();
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
@@ -430,6 +431,7 @@ export default function AdminUsers() {
   async function handleReactivate(user: AdminUser) {
     try {
       await authedFetch(`/api/admin/users/${user.id}/reactivate`, { method: 'POST' });
+      toast({ title: 'User Reactivated', description: `${user.name} has been reactivated.` });
       loadUsers();
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
@@ -440,6 +442,7 @@ export default function AdminUsers() {
     if (!confirm(`User "${user.name}" will be permanently deleted. Are you sure?`)) return;
     try {
       await authedFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
+      toast({ title: 'User Deleted', description: `${user.name} has been permanently deleted.` });
       loadUsers();
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });

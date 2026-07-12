@@ -26,6 +26,8 @@ import {
   Calendar,
   Lock,
   LayoutDashboard,
+  Crown,
+  Infinity,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/authContext';
@@ -81,10 +83,8 @@ const roleLabel: Record<Role, string> = {
   viewer: 'Viewer',
 };
 
-// The creation/edit form only ever assigns these four roles. "Super Admin" is
-// an elevated, non-self-service tier — existing super_admin accounts keep
-// working, but new ones aren't minted from this UI.
-const ASSIGNABLE_ROLES: { value: Role; label: string; hint: string }[] = [
+const ASSIGNABLE_ROLES: { value: Role; label: string; hint: string; superAdminOnly?: boolean }[] = [
+  { value: 'super_admin', label: 'Super Admin', hint: 'تحكم كامل بكل شيء — بلا قيود', superAdminOnly: true },
   { value: 'admin', label: 'Admin', hint: 'Full access to all sections' },
   { value: 'manager', label: 'Manager', hint: 'Manage content, no user administration' },
   { value: 'editor', label: 'Editor', hint: 'Create and edit content only' },
@@ -181,10 +181,20 @@ function GlassField({
 }
 
 // --- Custom animated role dropdown -----------------------------------------
-function RoleDropdown({ value, onChange }: { value: Role; onChange: (r: Role) => void }) {
+function RoleDropdown({
+  value,
+  onChange,
+  showSuperAdmin = false,
+}: {
+  value: Role;
+  onChange: (r: Role) => void;
+  showSuperAdmin?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const current = ASSIGNABLE_ROLES.find((r) => r.value === value) ?? ASSIGNABLE_ROLES[0];
+  const visibleRoles = ASSIGNABLE_ROLES.filter((r) => !r.superAdminOnly || showSuperAdmin);
+  const current = visibleRoles.find((r) => r.value === value) ?? visibleRoles[0];
+  const isSuperAdminSelected = value === 'super_admin';
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -204,15 +214,23 @@ function RoleDropdown({ value, onChange }: { value: Role; onChange: (r: Role) =>
           className={cn(
             'w-full flex items-center gap-3 rounded-2xl border px-4 py-3 text-start transition-all duration-200',
             'bg-white/[0.04] backdrop-blur-xl',
-            open
+            isSuperAdminSelected
+              ? 'border-amber-400/40 shadow-[0_0_0_4px_rgba(251,191,36,0.12)]'
+              : open
               ? 'border-primary/60 shadow-[0_0_0_4px_rgba(124,58,237,0.15)]'
               : 'border-foreground/10 hover:border-foreground/20'
           )}
         >
-          <ShieldCheck className={cn('w-[18px] h-[18px] shrink-0', open ? 'text-primary' : 'text-foreground/40')} />
+          {isSuperAdminSelected ? (
+            <Crown className="w-[18px] h-[18px] shrink-0 text-amber-400" />
+          ) : (
+            <ShieldCheck className={cn('w-[18px] h-[18px] shrink-0', open ? 'text-primary' : 'text-foreground/40')} />
+          )}
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-foreground">{current.label}</div>
-            <div className="text-[11px] text-foreground/40 truncate">{current.hint}</div>
+            <div className={cn('text-sm font-medium', isSuperAdminSelected ? 'text-amber-300' : 'text-foreground')}>
+              {current?.label}
+            </div>
+            <div className="text-[11px] text-foreground/40 truncate">{current?.hint}</div>
           </div>
           <ChevronDown className={cn('w-4 h-4 text-foreground/40 transition-transform duration-200', open && 'rotate-180')} />
         </button>
@@ -225,24 +243,32 @@ function RoleDropdown({ value, onChange }: { value: Role; onChange: (r: Role) =>
               transition={{ duration: 0.15 }}
               className="absolute z-20 mt-2 w-full rounded-2xl border border-foreground/10 bg-background/95 backdrop-blur-2xl shadow-2xl overflow-hidden"
             >
-              {ASSIGNABLE_ROLES.map((r) => (
+              {visibleRoles.map((r) => (
                 <button
                   key={r.value}
                   type="button"
-                  onClick={() => {
-                    onChange(r.value);
-                    setOpen(false);
-                  }}
+                  onClick={() => { onChange(r.value); setOpen(false); }}
                   className={cn(
                     'w-full flex items-center gap-3 px-4 py-3 text-start transition-colors',
-                    r.value === value ? 'bg-primary/15' : 'hover:bg-foreground/5'
+                    r.value === value
+                      ? r.value === 'super_admin' ? 'bg-amber-400/10' : 'bg-primary/15'
+                      : r.value === 'super_admin' ? 'hover:bg-amber-400/5' : 'hover:bg-foreground/5'
                   )}
                 >
+                  {r.value === 'super_admin' ? (
+                    <Crown className="w-4 h-4 shrink-0 text-amber-400" />
+                  ) : (
+                    <div className="w-4 h-4 shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground">{r.label}</div>
+                    <div className={cn('text-sm font-medium', r.value === 'super_admin' ? 'text-amber-300' : 'text-foreground')}>
+                      {r.label}
+                    </div>
                     <div className="text-[11px] text-foreground/40">{r.hint}</div>
                   </div>
-                  {r.value === value && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  {r.value === value && (
+                    <Check className={cn('w-4 h-4 shrink-0', r.value === 'super_admin' ? 'text-amber-400' : 'text-primary')} />
+                  )}
                 </button>
               ))}
             </motion.div>
@@ -328,8 +354,9 @@ export default function AdminUsers() {
     permissions: DEFAULT_PERMISSIONS_BY_ROLE.admin,
   });
   const { toast } = useToast();
-  const { session } = useAuth();
+  const { session, role: currentRole } = useAuth();
   const currentUserId = session?.user.id;
+  const isSuperAdmin = currentRole === 'super_admin';
 
   async function loadUsers() {
     setLoading(true);
@@ -496,7 +523,16 @@ export default function AdminUsers() {
                 <tr key={user.id} className="border-t border-foreground/5">
                   <td className="p-4 text-foreground">{user.name}</td>
                   <td className="p-4 text-foreground/70" dir="ltr">{user.email}</td>
-                  <td className="p-4 text-foreground/70">{roleLabel[user.role]}</td>
+                  <td className="p-4">
+                    {user.role === 'super_admin' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/25">
+                        <Crown className="w-3 h-3" />
+                        Super Admin
+                      </span>
+                    ) : (
+                      <span className="text-foreground/70">{roleLabel[user.role]}</span>
+                    )}
+                  </td>
                   <td className="p-4">
                     {user.deleted_at ? (
                       <span className="text-red-600 dark:text-red-400">Inactive</span>
@@ -642,26 +678,40 @@ export default function AdminUsers() {
                       />
                     )}
 
-                    <RoleDropdown value={form.role} onChange={handleRoleChange} />
+                    <RoleDropdown value={form.role} onChange={handleRoleChange} showSuperAdmin={isSuperAdmin} />
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between ps-1">
-                        <label className="text-[10px] font-medium tracking-wide uppercase text-foreground/40">Permissions</label>
-                        <span className="text-[11px] text-foreground/35">{permissionCount} of {PERMISSION_CARDS.length} enabled</span>
+                    {form.role === 'super_admin' ? (
+                      <div className="rounded-2xl border border-amber-400/25 bg-amber-400/5 px-5 py-4 flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-400/15 flex items-center justify-center shrink-0 mt-0.5">
+                          <Infinity className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-amber-300 mb-0.5">صلاحيات غير محدودة</p>
+                          <p className="text-[12px] text-foreground/50 leading-relaxed">
+                            السوبر أدمن يملك كامل الصلاحيات تلقائياً — إدارة المستخدمين، المستندات، الاجتماعات، الأمان، ولوحة التحكم — بدون قيود.
+                          </p>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {PERMISSION_CARDS.map((p) => (
-                          <PermissionCard
-                            key={p.key}
-                            icon={p.icon}
-                            label={p.label}
-                            description={p.description}
-                            active={form.permissions[p.key]}
-                            onToggle={() => togglePermission(p.key)}
-                          />
-                        ))}
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between ps-1">
+                          <label className="text-[10px] font-medium tracking-wide uppercase text-foreground/40">Permissions</label>
+                          <span className="text-[11px] text-foreground/35">{permissionCount} of {PERMISSION_CARDS.length} enabled</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {PERMISSION_CARDS.map((p) => (
+                            <PermissionCard
+                              key={p.key}
+                              icon={p.icon}
+                              label={p.label}
+                              description={p.description}
+                              active={form.permissions[p.key]}
+                              onToggle={() => togglePermission(p.key)}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Footer */}

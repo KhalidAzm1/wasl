@@ -12,12 +12,10 @@ import adminUsersRouter from "./admin-users";
 import productTypesRouter from "./product-types";
 import auditLogsRouter from "./audit-logs";
 import archiveRouter from "./archive";
-import filesContentRouter from "./files-content";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
-router.use(filesContentRouter);
 router.use(banksRouter);
 router.use(productsRouter);
 router.use(productTypesRouter);

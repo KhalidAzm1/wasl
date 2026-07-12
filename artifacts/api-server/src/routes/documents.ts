@@ -18,20 +18,17 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
-import { uploadFileToOneDrive, moveOneDriveItem, type OneDriveFolder } from "../lib/onedrive";
-import { resignFileUrl } from "../lib/file-tokens";
+import { uploadToStorage, getSignedUrl, parseDataUrl } from "../lib/supabase-storage";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("documents"));
 
-const DEFAULT_FOLDER: OneDriveFolder = "Banks";
-
-// entityType -> OneDrive subfolder + the DB table/column used to verify the
-// parent record exists before we ever touch OneDrive or write a files row.
+// entityType -> the DB table/column used to verify the parent record exists
+// before writing a files row. No longer maps to OneDrive folders.
 const ENTITY_CONFIG = {
-  bank: { folder: "Banks" as OneDriveFolder, table: banksTable, idColumn: banksTable.id },
-  product: { folder: "Products" as OneDriveFolder, table: productsTable, idColumn: productsTable.id },
-  meeting: { folder: "Meetings" as OneDriveFolder, table: meetingsTable, idColumn: meetingsTable.id },
+  bank: { table: banksTable, idColumn: banksTable.id },
+  product: { table: productsTable, idColumn: productsTable.id },
+  meeting: { table: meetingsTable, idColumn: meetingsTable.id },
 } as const;
 type EntityType = keyof typeof ENTITY_CONFIG;
 
@@ -44,8 +41,7 @@ async function resolveEntity(
   entityId: string | undefined,
   bankId: string | undefined,
 ): Promise<{ entityType: EntityType; entityId: string } | { error: string }> {
-  // bankId is a deprecated alias kept for older clients -- treat it as
-  // entityType="bank" when no explicit entityType/entityId is given.
+  // bankId is a deprecated alias kept for older clients.
   const resolvedType = entityType ?? (bankId ? "bank" : undefined);
   const resolvedId = entityId ?? bankId;
   if (!resolvedType || !resolvedId) {
@@ -69,17 +65,36 @@ async function resolveEntity(
   return { entityType: resolvedType, entityId: String(resolvedId) };
 }
 
-// Bank documents were the only "entity type" with an upload UI originally,
-// so the wire format keeps exposing `bankId` (only populated for bank docs)
-// for backward compatibility, alongside the generic entityType/entityId.
-function toWire(row: typeof filesTable.$inferSelect) {
+/**
+ * Builds the wire representation of a file row for API responses.
+ * For rows with a Supabase storagePath a fresh 1-hour signed URL is generated
+ * on every read. Rows without a storagePath (link-only records or pre-migration
+ * legacy rows) get fileUrl = null; those documents will show "No link" in the UI.
+ */
+async function toWire(row: typeof filesTable.$inferSelect) {
+  let fileUrl: string | null = null;
+
+  if (row.storagePath) {
+    try {
+      fileUrl = await getSignedUrl(row.storagePath);
+    } catch {
+      // Signed-URL generation failed (e.g. object deleted from storage).
+      // Return null so the UI shows "No link" rather than crashing.
+      fileUrl = null;
+    }
+  }
+
   return {
     ...row,
     bankId: row.entityType === "bank" ? row.entityId : null,
-    oneDriveItemId: row.onedriveFileId,
-    oneDriveWebUrl: resignFileUrl(row.onedriveUrl),
+    fileUrl,
+    // Backward-compat alias still expected by older client code.
+    oneDriveWebUrl: fileUrl,
+    oneDriveItemId: row.onedriveFileId ?? null,
   };
 }
+
+// ─── List ─────────────────────────────────────────────────────────────────────
 
 router.get("/documents", async (req, res): Promise<void> => {
   const query = ListDocumentsQueryParams.safeParse(req.query);
@@ -96,8 +111,11 @@ router.get("/documents", async (req, res): Promise<void> => {
     .select()
     .from(filesTable)
     .where(and(...conditions));
-  res.json(ListDocumentsResponse.parse(toPlain(rows.map(toWire))));
+  const wired = await Promise.all(rows.map(toWire));
+  res.json(ListDocumentsResponse.parse(toPlain(wired)));
 });
+
+// ─── Create link-only record ──────────────────────────────────────────────────
 
 router.post("/documents", async (req, res): Promise<void> => {
   const parsed = CreateDocumentBody.safeParse(req.body);
@@ -128,8 +146,10 @@ router.post("/documents", async (req, res): Promise<void> => {
     entityId: row.id,
     entityLabel: row.title,
   });
-  res.status(201).json(CreateDocumentResponse.parse(toPlain(toWire(row))));
+  res.status(201).json(CreateDocumentResponse.parse(toPlain(await toWire(row))));
 });
+
+// ─── Upload file to Supabase Storage ─────────────────────────────────────────
 
 router.post("/documents/upload", async (req, res): Promise<void> => {
   const parsed = UploadDocumentBody.safeParse(req.body);
@@ -142,18 +162,28 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
     res.status(404).json({ error: resolved.error });
     return;
   }
-  const folder = ENTITY_CONFIG[resolved.entityType].folder;
-  // Files live directly under /Wasl Documents/<folder> (not per-entity
-  // folders); prefix with the entity type + id so identically-named uploads
-  // across different banks/products/meetings never collide.
-  const safeFileName = `${resolved.entityType}-${resolved.entityId}_${Date.now()}_${parsed.data.fileName}`;
-  let uploadResult;
+
+  // Parse the base64 data URL into a buffer + MIME type.
+  let contentType: string;
+  let buffer: Buffer;
   try {
-    uploadResult = await uploadFileToOneDrive(folder, safeFileName, parsed.data.fileDataBase64);
+    ({ contentType, buffer } = parseDataUrl(parsed.data.fileDataBase64));
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Invalid file data" });
+    return;
+  }
+
+  // Namespaced path: <entityType>/<entityId>/<timestamp>_<fileName>
+  // This prevents collisions across entities and timestamps.
+  const storagePath = `${resolved.entityType}/${resolved.entityId}/${Date.now()}_${parsed.data.fileName}`;
+
+  try {
+    await uploadToStorage(storagePath, buffer, contentType);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Upload failed" });
     return;
   }
+
   const [row] = await db
     .insert(filesTable)
     .values({
@@ -161,25 +191,26 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
       entityId: resolved.entityId,
       title: parsed.data.title,
       docType: parsed.data.docType,
-      folder,
       fileName: parsed.data.fileName,
-      fileType: uploadResult.contentType,
-      fileSize: uploadResult.size,
-      onedriveFileId: uploadResult.itemId,
-      onedriveUrl: `/api/files/content/${encodeURIComponent(uploadResult.itemId)}`,
+      fileType: contentType,
+      fileSize: buffer.byteLength,
+      storagePath,
       uploadedBy: req.authUser?.name ?? null,
       uploadedAt: new Date(),
     })
     .returning();
+
   await logAudit(req, {
     action: "CREATE",
     entityType: "document",
     entityId: row.id,
     entityLabel: row.title,
-    details: { source: "onedrive-upload" },
+    details: { source: "supabase-upload", storagePath },
   });
-  res.status(201).json(UploadDocumentResponse.parse(toPlain(toWire(row))));
+  res.status(201).json(UploadDocumentResponse.parse(toPlain(await toWire(row))));
 });
+
+// ─── Update metadata ──────────────────────────────────────────────────────────
 
 router.patch("/documents/:id", async (req, res): Promise<void> => {
   const params = UpdateDocumentParams.safeParse(req.params);
@@ -208,8 +239,10 @@ router.patch("/documents/:id", async (req, res): Promise<void> => {
     entityLabel: row.title,
     details: parsed.data,
   });
-  res.json(UpdateDocumentResponse.parse(toPlain(toWire(row))));
+  res.json(UpdateDocumentResponse.parse(toPlain(await toWire(row))));
 });
+
+// ─── Archive (soft delete) ────────────────────────────────────────────────────
 
 router.delete("/documents/:id", async (req, res): Promise<void> => {
   const params = DeleteDocumentParams.safeParse(req.params);
@@ -217,24 +250,18 @@ router.delete("/documents/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [existing] = await db.select().from(filesTable).where(eq(filesTable.id, params.data.id));
-  if (!existing) {
-    res.status(404).json({ error: "Document not found" });
-    return;
-  }
-  if (existing.onedriveFileId) {
-    try {
-      await moveOneDriveItem(existing.onedriveFileId, "Archive");
-    } catch (err) {
-      res.status(502).json({ error: err instanceof Error ? err.message : "Failed to archive OneDrive file" });
-      return;
-    }
-  }
+  // Archive = set isArchived flag only. The Supabase Storage object is NOT
+  // removed so the file can be restored later. A separate hard-delete /
+  // cleanup job would call deleteFromStorage() if permanent removal is needed.
   const [row] = await db
     .update(filesTable)
     .set({ isArchived: true, archivedAt: new Date(), archivedBy: req.authUser?.name ?? null })
-    .where(eq(filesTable.id, params.data.id))
+    .where(and(eq(filesTable.id, params.data.id), eq(filesTable.isArchived, false)))
     .returning();
+  if (!row) {
+    res.status(404).json({ error: "Document not found or already archived" });
+    return;
+  }
   await logAudit(req, {
     action: "ARCHIVE",
     entityType: "document",
@@ -244,41 +271,32 @@ router.delete("/documents/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+// ─── Restore ──────────────────────────────────────────────────────────────────
+
 router.post("/documents/:id/restore", async (req, res): Promise<void> => {
   const params = RestoreDocumentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [existing] = await db.select().from(filesTable).where(eq(filesTable.id, params.data.id));
-  if (!existing) {
-    res.status(404).json({ error: "Document not found" });
-    return;
-  }
-  if (existing.onedriveFileId) {
-    // Legacy rows migrated from the old per-bank-folder `documents` table
-    // never had a `folder` value -- fall back to the fixed Banks folder so
-    // restore always has somewhere valid to move the item back to.
-    const targetFolder = (existing.folder as OneDriveFolder) || DEFAULT_FOLDER;
-    try {
-      await moveOneDriveItem(existing.onedriveFileId, targetFolder);
-    } catch (err) {
-      res.status(502).json({ error: err instanceof Error ? err.message : "Failed to restore OneDrive file" });
-      return;
-    }
-  }
+  // Restore = un-archive. No storage operation needed — the Supabase Storage
+  // object was never removed during archive.
   const [row] = await db
     .update(filesTable)
-    .set({ isArchived: false, archivedAt: null, archivedBy: null, folder: existing.folder || DEFAULT_FOLDER })
-    .where(eq(filesTable.id, params.data.id))
+    .set({ isArchived: false, archivedAt: null, archivedBy: null })
+    .where(and(eq(filesTable.id, params.data.id), eq(filesTable.isArchived, true)))
     .returning();
+  if (!row) {
+    res.status(404).json({ error: "Document not found or not archived" });
+    return;
+  }
   await logAudit(req, {
     action: "RESTORE",
     entityType: "document",
     entityId: row.id,
     entityLabel: row.title,
   });
-  res.json(RestoreDocumentResponse.parse(toPlain(toWire(row))));
+  res.json(RestoreDocumentResponse.parse(toPlain(await toWire(row))));
 });
 
 export default router;

@@ -42,7 +42,7 @@ export default function Documents() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sortedDocs.map(doc => {
           const bank = banks?.find(b => b.id === doc.bankId);
-          const docUrl = doc.oneDriveWebUrl || doc.link;
+          const docUrl = doc.fileUrl || doc.oneDriveWebUrl || doc.link;
           return (
             <Card key={doc.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all flex flex-col h-full">
               <CardContent className="p-6 flex flex-col h-full">

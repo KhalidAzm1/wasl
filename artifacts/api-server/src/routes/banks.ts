@@ -32,17 +32,16 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
-import { uploadFileToOneDrive } from "../lib/onedrive";
-import { resignFileUrl } from "../lib/file-tokens";
+import { uploadToStorage, getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
-const DATA_URL_PATTERN = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,([A-Za-z0-9+/=]+)$/;
+const IMAGE_DATA_URL_PATTERN = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,([A-Za-z0-9+/=]+)$/;
 
 function validateImageDataUrl(dataUrl: string): string | null {
-  const match = DATA_URL_PATTERN.exec(dataUrl);
+  const match = IMAGE_DATA_URL_PATTERN.exec(dataUrl);
   if (!match) {
     return "Image must be a base64 data URL (png, jpg, webp, gif, or svg)";
   }
@@ -55,9 +54,11 @@ function validateImageDataUrl(dataUrl: string): string | null {
 }
 
 /**
- * Uploads a base64 logo/hero image to OneDrive (never stored as base64 in
- * Postgres) and records the metadata in the generic `files` table. Returns
- * the stable proxy URL to store on the bank row, or null on failure.
+ * Uploads a base64 image data URL to Supabase Storage under
+ * `bank-images/<bankId>/<kind>_<timestamp>`. Records the upload in the
+ * `files` table for audit purposes and returns the storage path (to be
+ * stored on the bank row as `logoUrl` / `heroImageUrl`). Returns null on
+ * any error.
  */
 async function uploadBankImage(
   bankId: string,
@@ -65,33 +66,36 @@ async function uploadBankImage(
   dataUrl: string,
   uploadedBy: string | null,
 ): Promise<string | null> {
-  const safeFileName = `${bankId}_${kind}_${Date.now()}`;
-  let uploadResult;
+  const match = IMAGE_DATA_URL_PATTERN.exec(dataUrl);
+  if (!match) return null;
+  const contentType = `image/${match[1]}`;
+  const buffer = Buffer.from(match[2], "base64");
+
+  const timestamp = Date.now();
+  const storagePath = `bank-images/${bankId}/${kind}_${timestamp}`;
+
   try {
-    uploadResult = await uploadFileToOneDrive("Banks", safeFileName, dataUrl);
+    await uploadToStorage(storagePath, buffer, contentType);
   } catch {
     return null;
   }
-  const onedriveUrl = `/api/files/content/${encodeURIComponent(uploadResult.itemId)}`;
+
+  // Track in the files table for auditing. entityType="bank_image" keeps
+  // these rows out of normal document lists.
   await db.insert(filesTable).values({
-    // A distinct entityType from "bank" (used for actual bank documents) so
-    // logo/hero uploads never show up in document lists, bank-detail
-    // document tabs, or the dashboard activity feed -- they're metadata
-    // rows purely for OneDrive audit/archive tracking, not user documents.
     entityType: "bank_image",
     entityId: bankId,
     title: kind === "logo" ? "Logo" : "Hero image",
     docType: kind,
-    folder: "Banks",
-    fileName: safeFileName,
-    fileType: uploadResult.contentType,
-    fileSize: uploadResult.size,
-    onedriveFileId: uploadResult.itemId,
-    onedriveUrl,
+    fileName: `${bankId}_${kind}_${timestamp}`,
+    fileType: contentType,
+    fileSize: buffer.byteLength,
+    storagePath,
     uploadedBy,
     uploadedAt: new Date(),
   });
-  return onedriveUrl;
+
+  return storagePath;
 }
 
 async function getProductTypeIds(bankId: string): Promise<number[]> {
@@ -102,8 +106,15 @@ async function getProductTypeIds(bankId: string): Promise<number[]> {
   return rows.map((row) => row.productTypeId);
 }
 
-function withResignedImages<T extends { logoUrl: string | null; heroImageUrl: string | null }>(bank: T): T {
-  return { ...bank, logoUrl: resignFileUrl(bank.logoUrl) ?? null, heroImageUrl: resignFileUrl(bank.heroImageUrl) ?? null };
+/** Replaces stored logo/hero paths with fresh Supabase signed URLs. */
+async function withSignedImageUrls<T extends { logoUrl: string | null; heroImageUrl: string | null }>(
+  bank: T,
+): Promise<T> {
+  const [logoUrl, heroImageUrl] = await Promise.all([
+    resolveStoredUrl(bank.logoUrl),
+    resolveStoredUrl(bank.heroImageUrl),
+  ]);
+  return { ...bank, logoUrl, heroImageUrl };
 }
 
 async function syncProductTypes(bankId: string, productTypeIds: number[]): Promise<void> {
@@ -115,6 +126,27 @@ async function syncProductTypes(bankId: string, productTypeIds: number[]): Promi
   }
 }
 
+/** Builds the wire representation of a file row for bank document lists. */
+async function fileToWire(row: typeof filesTable.$inferSelect) {
+  let fileUrl: string | null = null;
+  if (row.storagePath) {
+    try {
+      fileUrl = await getSignedUrl(row.storagePath);
+    } catch {
+      fileUrl = null;
+    }
+  }
+  return {
+    ...row,
+    bankId: row.entityId,
+    fileUrl,
+    oneDriveWebUrl: fileUrl, // backward-compat alias
+    oneDriveItemId: row.onedriveFileId ?? null,
+  };
+}
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
 router.get("/banks", async (_req, res): Promise<void> => {
   const banks = await db
     .select()
@@ -122,7 +154,9 @@ router.get("/banks", async (_req, res): Promise<void> => {
     .where(eq(banksTable.isArchived, false))
     .orderBy(banksTable.nameEn);
   const withProductTypes = await Promise.all(
-    banks.map(async (bank) => withResignedImages({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),
+    banks.map(async (bank) =>
+      withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) }),
+    ),
   );
   res.json(ListBanksResponse.parse(toPlain(withProductTypes)));
 });
@@ -149,7 +183,9 @@ router.post("/banks", async (req, res): Promise<void> => {
     entityLabel: bank.nameEn,
   });
   res.status(201).json(
-    CreateBankResponse.parse(toPlain(withResignedImages({ ...bank, productTypeIds: productTypeIds ?? [] }))),
+    CreateBankResponse.parse(
+      toPlain(await withSignedImageUrls({ ...bank, productTypeIds: productTypeIds ?? [] })),
+    ),
   );
 });
 
@@ -167,37 +203,31 @@ router.get("/banks/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Bank not found" });
     return;
   }
-  const [products, meetings, risks, actionItems, documents, productTypeIds] =
-    await Promise.all([
-      db
-        .select()
-        .from(productsTable)
-        .where(eq(productsTable.bankId, bank.id)),
-      db
-        .select()
-        .from(meetingsTable)
-        .where(and(eq(meetingsTable.bankId, bank.id), eq(meetingsTable.isArchived, false))),
-      db.select().from(risksTable).where(eq(risksTable.bankId, bank.id)),
-      db
-        .select()
-        .from(actionItemsTable)
-        .where(eq(actionItemsTable.bankId, bank.id)),
-      db
-        .select()
-        .from(filesTable)
-        .where(and(eq(filesTable.entityType, "bank"), eq(filesTable.entityId, bank.id), eq(filesTable.isArchived, false))),
-      getProductTypeIds(bank.id),
-    ]);
-  const documentsWire = documents.map((row) => ({
-    ...row,
-    bankId: row.entityId,
-    oneDriveItemId: row.onedriveFileId,
-    oneDriveWebUrl: resignFileUrl(row.onedriveUrl),
-  }));
+  const [products, meetings, risks, actionItems, documents, productTypeIds] = await Promise.all([
+    db.select().from(productsTable).where(eq(productsTable.bankId, bank.id)),
+    db
+      .select()
+      .from(meetingsTable)
+      .where(and(eq(meetingsTable.bankId, bank.id), eq(meetingsTable.isArchived, false))),
+    db.select().from(risksTable).where(eq(risksTable.bankId, bank.id)),
+    db.select().from(actionItemsTable).where(eq(actionItemsTable.bankId, bank.id)),
+    db
+      .select()
+      .from(filesTable)
+      .where(
+        and(
+          eq(filesTable.entityType, "bank"),
+          eq(filesTable.entityId, bank.id),
+          eq(filesTable.isArchived, false),
+        ),
+      ),
+    getProductTypeIds(bank.id),
+  ]);
+  const documentsWire = await Promise.all(documents.map(fileToWire));
   res.json(
     GetBankResponse.parse(
       toPlain(
-        withResignedImages({
+        await withSignedImageUrls({
           ...bank,
           productTypeIds,
           products,
@@ -222,24 +252,51 @@ router.patch("/banks/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  if (parsed.data.logoUrl) {
-    const imageError = validateImageDataUrl(parsed.data.logoUrl);
-    if (imageError) {
-      res.status(400).json({ error: imageError });
-      return;
+
+  // When a logo/hero is provided as a base64 data URL, upload it to Supabase
+  // Storage and replace the base64 with the storage path before saving to DB.
+  const { productTypeIds, logoUrl: rawLogoUrl, heroImageUrl: rawHeroImageUrl, ...restUpdate } = parsed.data;
+  const bankUpdate: Record<string, unknown> = { ...restUpdate };
+
+  if (rawLogoUrl) {
+    if (rawLogoUrl.startsWith("data:")) {
+      const imageError = validateImageDataUrl(rawLogoUrl);
+      if (imageError) {
+        res.status(400).json({ error: imageError });
+        return;
+      }
+      const storagePath = await uploadBankImage(params.data.id, "logo", rawLogoUrl, req.authUser?.name ?? null);
+      if (!storagePath) {
+        res.status(502).json({ error: "Failed to upload logo — please try again" });
+        return;
+      }
+      bankUpdate.logoUrl = storagePath;
+    } else {
+      bankUpdate.logoUrl = rawLogoUrl; // already a storage path
     }
   }
-  if (parsed.data.heroImageUrl) {
-    const imageError = validateImageDataUrl(parsed.data.heroImageUrl);
-    if (imageError) {
-      res.status(400).json({ error: imageError });
-      return;
+
+  if (rawHeroImageUrl) {
+    if (rawHeroImageUrl.startsWith("data:")) {
+      const imageError = validateImageDataUrl(rawHeroImageUrl);
+      if (imageError) {
+        res.status(400).json({ error: imageError });
+        return;
+      }
+      const storagePath = await uploadBankImage(params.data.id, "hero", rawHeroImageUrl, req.authUser?.name ?? null);
+      if (!storagePath) {
+        res.status(502).json({ error: "Failed to upload hero image — please try again" });
+        return;
+      }
+      bankUpdate.heroImageUrl = storagePath;
+    } else {
+      bankUpdate.heroImageUrl = rawHeroImageUrl;
     }
   }
-  const { productTypeIds, ...bankUpdate } = parsed.data;
+
   const [bank] = await db
     .update(banksTable)
-    .set({ ...bankUpdate, updatedBy: req.authUser?.name ?? null })
+    .set({ ...bankUpdate, updatedBy: req.authUser?.name ?? null } as any)
     .where(eq(banksTable.id, params.data.id))
     .returning();
   if (!bank) {
@@ -257,7 +314,11 @@ router.patch("/banks/:id", async (req, res): Promise<void> => {
     details: parsed.data,
   });
   const finalProductTypeIds = productTypeIds ?? (await getProductTypeIds(bank.id));
-  res.json(UpdateBankResponse.parse(toPlain(withResignedImages({ ...bank, productTypeIds: finalProductTypeIds }))));
+  res.json(
+    UpdateBankResponse.parse(
+      toPlain(await withSignedImageUrls({ ...bank, productTypeIds: finalProductTypeIds })),
+    ),
+  );
 });
 
 router.delete("/banks/:id", async (req, res): Promise<void> => {
@@ -268,11 +329,7 @@ router.delete("/banks/:id", async (req, res): Promise<void> => {
   }
   const [bank] = await db
     .update(banksTable)
-    .set({
-      isArchived: true,
-      archivedAt: new Date(),
-      archivedBy: req.authUser?.name ?? null,
-    })
+    .set({ isArchived: true, archivedAt: new Date(), archivedBy: req.authUser?.name ?? null })
     .where(eq(banksTable.id, params.data.id))
     .returning();
   if (!bank) {
@@ -309,7 +366,11 @@ router.post("/banks/:id/restore", async (req, res): Promise<void> => {
     entityId: bank.id,
     entityLabel: bank.nameEn,
   });
-  res.json(RestoreBankResponse.parse(toPlain(withResignedImages({ ...bank, productTypeIds: await getProductTypeIds(bank.id) }))));
+  res.json(
+    RestoreBankResponse.parse(
+      toPlain(await withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),
+    ),
+  );
 });
 
 router.put("/banks/:id/logo", async (req, res): Promise<void> => {
@@ -335,7 +396,7 @@ router.put("/banks/:id/logo", async (req, res): Promise<void> => {
   }
   const logoUrl = await uploadBankImage(params.data.id, "logo", parsed.data.dataUrl, req.authUser?.name ?? null);
   if (!logoUrl) {
-    res.status(400).json({ error: "Failed to upload logo to OneDrive" });
+    res.status(400).json({ error: "Failed to upload logo" });
     return;
   }
   const [bank] = await db
@@ -349,7 +410,7 @@ router.put("/banks/:id/logo", async (req, res): Promise<void> => {
   }
   res.json(
     SetBankLogoResponse.parse(
-      toPlain({ ...bank, logoUrl: resignFileUrl(bank.logoUrl), heroImageUrl: resignFileUrl(bank.heroImageUrl), productTypeIds: await getProductTypeIds(bank.id) }),
+      toPlain(await withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),
     ),
   );
 });
@@ -377,7 +438,7 @@ router.put("/banks/:id/hero", async (req, res): Promise<void> => {
   }
   const heroImageUrl = await uploadBankImage(params.data.id, "hero", parsed.data.dataUrl, req.authUser?.name ?? null);
   if (!heroImageUrl) {
-    res.status(400).json({ error: "Failed to upload hero image to OneDrive" });
+    res.status(400).json({ error: "Failed to upload hero image" });
     return;
   }
   const [bank] = await db
@@ -391,7 +452,7 @@ router.put("/banks/:id/hero", async (req, res): Promise<void> => {
   }
   res.json(
     SetBankHeroImageResponse.parse(
-      toPlain({ ...bank, logoUrl: resignFileUrl(bank.logoUrl), heroImageUrl: resignFileUrl(bank.heroImageUrl), productTypeIds: await getProductTypeIds(bank.id) }),
+      toPlain(await withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),
     ),
   );
 });

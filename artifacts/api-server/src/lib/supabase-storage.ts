@@ -1,0 +1,125 @@
+import { getSupabaseAdmin } from "@workspace/supabase";
+
+const BUCKET = "wasl-documents";
+/** Maximum file size accepted (binary). */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+/** Signed-URL time-to-live in seconds (1 hour). */
+const SIGNED_URL_TTL = 3600;
+
+const DATA_URL_PATTERN = /^data:([^;]+);base64,(.+)$/;
+
+export interface ParsedDataUrl {
+  contentType: string;
+  buffer: Buffer;
+}
+
+/**
+ * Parses a base64 data URL into a content-type string and raw buffer.
+ * Throws if the format is invalid or the file exceeds the size limit.
+ */
+export function parseDataUrl(dataUrl: string): ParsedDataUrl {
+  const match = DATA_URL_PATTERN.exec(dataUrl);
+  if (!match) {
+    throw new Error("fileDataBase64 must be a base64 data URL (e.g. data:application/pdf;base64,...)");
+  }
+  const contentType = match[1] || "application/octet-stream";
+  const buffer = Buffer.from(match[2], "base64");
+  if (buffer.byteLength > MAX_UPLOAD_BYTES) {
+    throw new Error(
+      `File exceeds the ${MAX_UPLOAD_BYTES / 1024 / 1024}MB upload limit`,
+    );
+  }
+  return { contentType, buffer };
+}
+
+/**
+ * Uploads a file buffer to Supabase Storage under the given path.
+ * Throws on any storage error; the caller is responsible for DB cleanup.
+ *
+ * Returns the storage path (same as the `path` argument), which should be
+ * persisted in the `files.storage_path` column.
+ */
+export async function uploadToStorage(
+  path: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<string> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
+    contentType,
+    upsert: false,
+  });
+  if (error) {
+    throw new Error(`Storage upload failed: ${error.message}`);
+  }
+  return path;
+}
+
+/**
+ * Generates a fresh signed URL for the given Supabase Storage path.
+ * The URL is valid for SIGNED_URL_TTL seconds and does not require
+ * additional authentication — it is safe to embed in `<a>` / `<img>` tags
+ * and send to the client.
+ */
+export async function getSignedUrl(storagePath: string): Promise<string> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(storagePath, SIGNED_URL_TTL);
+  if (error || !data?.signedUrl) {
+    throw new Error(
+      `Failed to sign storage URL: ${error?.message ?? "no URL returned"}`,
+    );
+  }
+  return data.signedUrl;
+}
+
+/**
+ * Permanently removes an object from Supabase Storage.
+ * Only call this on hard-delete — archive (soft-delete) should NOT remove
+ * the storage object so it can be restored later.
+ */
+export async function deleteFromStorage(storagePath: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.storage.from(BUCKET).remove([storagePath]);
+  if (error) {
+    throw new Error(`Storage delete failed: ${error.message}`);
+  }
+}
+
+/**
+ * Resolves a stored URL/path from the database to a fresh signed URL:
+ * - Supabase storage path (e.g. `bank-images/abc/logo_123`) → signed URL
+ * - Inline base64 data URL (starts with `data:`) → returned as-is
+ * - Legacy OneDrive proxy URL (`/api/files/content/...`) → null (no longer resolvable)
+ * - null / undefined → null
+ */
+export async function resolveStoredUrl(storedValue: string | null | undefined): Promise<string | null> {
+  if (!storedValue) return null;
+  // Inline base64 data URL — no signing needed, return directly
+  if (storedValue.startsWith("data:")) return storedValue;
+  // Legacy OneDrive proxy URL — no longer resolvable after OneDrive removal
+  if (storedValue.startsWith("/api/files/content/")) return null;
+  // Supabase storage path — generate a fresh 1-hour signed URL
+  try {
+    return await getSignedUrl(storedValue);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ensures the `wasl-documents` bucket exists. Safe to call repeatedly;
+ * a "Duplicate" / "already exists" error is silently ignored.
+ * Call once at server startup so upload routes never fail on a missing bucket.
+ */
+export async function ensureStorageBucket(): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.storage.createBucket(BUCKET, {
+    public: false,
+    fileSizeLimit: MAX_UPLOAD_BYTES,
+  });
+  if (error && !error.message.toLowerCase().includes("already exists") && !error.message.toLowerCase().includes("duplicate")) {
+    throw new Error(`Failed to create storage bucket: ${error.message}`);
+  }
+}

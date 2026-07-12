@@ -2,10 +2,9 @@ import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-// Generic file/attachment metadata table. Supabase stores ONLY this metadata --
-// the actual file bytes always live in Microsoft OneDrive (see lib/onedrive.ts).
-// `entityType` + `entityId` let this back bank documents today and product /
-// meeting attachments later without further schema churn.
+// Generic file/attachment metadata table. The actual file bytes are stored in
+// Supabase Storage (bucket: wasl-documents); only metadata lives here.
+// `entityType` + `entityId` link a file to a bank, product, or meeting.
 export const filesTable = pgTable("files", {
   id: serial("id").primaryKey(),
   entityType: text("entity_type").notNull(), // 'bank' | 'product' | 'meeting'
@@ -13,10 +12,16 @@ export const filesTable = pgTable("files", {
   title: text("title").notNull(),
   docType: text("doc_type"),
   link: text("link"), // for link-only records registered without a file upload
-  folder: text("folder"), // OneDrive subfolder this file's item lives in (Banks/Products/Meetings) -- used to restore from Archive
+  folder: text("folder"), // legacy: OneDrive subfolder (kept for old rows; unused for new uploads)
   fileName: text("file_name"),
   fileType: text("file_type"),
   fileSize: integer("file_size"),
+  // Supabase Storage path (e.g. bank/42/1720700000_report.pdf).
+  // Null for link-only records and pre-migration legacy rows.
+  storagePath: text("storage_path"),
+  // Legacy OneDrive fields — kept so old rows remain readable. Not populated
+  // for new uploads. Will be dropped in a future migration once all legacy
+  // rows have been cleaned up.
   onedriveFileId: text("onedrive_file_id"),
   onedriveUrl: text("onedrive_url"),
   uploadedBy: text("uploaded_by"),

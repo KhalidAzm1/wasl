@@ -22,7 +22,12 @@ export interface Document {
   /** @nullable */
   docType?: string | null;
   /**
-     * Link to open the file in OneDrive/SharePoint
+   * Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.
+   * @nullable
+   */
+  fileUrl?: string | null;
+  /**
+     * Deprecated. Same value as fileUrl. Kept for backward compatibility.
      * @nullable
      */
   oneDriveWebUrl?: string | null;

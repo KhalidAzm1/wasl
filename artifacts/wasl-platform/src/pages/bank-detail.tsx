@@ -59,7 +59,7 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
         invalidate();
         setUploadFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        toast({ title: 'Upload Successful', description: 'The file has been uploaded to OneDrive.' });
+        toast({ title: 'Upload Successful', description: 'The file has been uploaded successfully.' });
       },
       onError: (err: any) => {
         toast({ title: 'Upload Failed', description: err?.message || 'Failed to upload the file.', variant: 'destructive' });
@@ -80,13 +80,18 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
           <div className="space-y-4 py-2">
             <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
             <Button variant="outline" size="sm" className="gap-2 w-full" onClick={() => fileInputRef.current?.click()}>
-              <UploadCloud className="w-4 h-4" /> Upload to OneDrive
+              <UploadCloud className="w-4 h-4" /> Upload File
             </Button>
             {uploadFile && (
               <div className="p-3 rounded-xl bg-foreground/5 border border-primary/30 space-y-2">
                 <span className="text-sm text-foreground/70">File: {uploadFile.name}</span>
                 <Input placeholder="Title" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} />
                 <Input placeholder="Type (Contract, Report...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} />
+                {uploadDoc.isPending && (
+                  <div className="w-full h-1 rounded-full overflow-hidden bg-primary/20">
+                    <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button size="sm" onClick={handleUpload} disabled={uploadDoc.isPending}>{uploadDoc.isPending ? 'Uploading...' : 'Confirm Upload'}</Button>
                   <Button size="sm" variant="ghost" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Cancel</Button>
@@ -96,7 +101,7 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {docs.map(d => (
                 <div key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-foreground/5 border border-foreground/10">
-                  <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => { const url = d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
+                  <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => { const url = (d as any).fileUrl || d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
                     <FileText className="w-5 h-5 text-primary/70 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium truncate text-sm">{d.title}</p>
@@ -671,7 +676,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
         setUploadFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        toast({ title: 'Upload Successful', description: 'The document has been uploaded to OneDrive.' });
+        toast({ title: 'Upload Successful', description: 'The document has been uploaded successfully.' });
       },
       onError: (err: any) => {
         toast({ title: 'Upload Failed', description: err?.message || 'Failed to upload the document.', variant: 'destructive' });
@@ -686,7 +691,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
         <div className="flex gap-2">
           <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
           <Button variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
-            <UploadCloud className="w-4 h-4" /> Upload to OneDrive
+            <UploadCloud className="w-4 h-4" /> Upload File
           </Button>
           <Button onClick={() => { setEditing({}); setIsOpen(true); }} size="sm" className="gap-2">
             <Plus className="w-4 h-4" /> New Link
@@ -695,20 +700,27 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
       </div>
 
       {uploadFile && (
-        <div className="p-4 rounded-xl bg-foreground/5 border border-primary/30 flex flex-col md:flex-row gap-3 md:items-center">
+        <div className="p-4 rounded-xl bg-foreground/5 border border-primary/30 flex flex-col gap-3">
           <span className="text-sm text-foreground/70 shrink-0">File: {uploadFile.name}</span>
-          <Input placeholder="Document Title" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} className="max-w-xs" />
-          <Input placeholder="Document Type (Contract, Report...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} className="max-w-xs" />
-          <div className="flex gap-2 md:ml-auto">
-            <Button size="sm" onClick={handleUpload} disabled={uploadDoc.isPending}>{uploadDoc.isPending ? 'Uploading...' : 'Confirm Upload'}</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Cancel</Button>
+          {uploadDoc.isPending && (
+            <div className="w-full h-1 rounded-full overflow-hidden bg-primary/20">
+              <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
+            </div>
+          )}
+          <div className="flex flex-col md:flex-row gap-3 md:items-center">
+            <Input placeholder="Document Title" value={uploadFile.title} onChange={e => setUploadFile({ ...uploadFile, title: e.target.value })} className="max-w-xs" />
+            <Input placeholder="Document Type (Contract, Report...)" value={uploadFile.docType} onChange={e => setUploadFile({ ...uploadFile, docType: e.target.value })} className="max-w-xs" />
+            <div className="flex gap-2 md:ml-auto">
+              <Button size="sm" onClick={handleUpload} disabled={uploadDoc.isPending}>{uploadDoc.isPending ? 'Uploading...' : 'Confirm Upload'}</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Cancel</Button>
+            </div>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {documents.map(d => (
-          <Card key={d.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all cursor-pointer" onClick={() => { const url = d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
+          <Card key={d.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all cursor-pointer" onClick={() => { const url = (d as any).fileUrl || d.oneDriveWebUrl || d.link; if (url) window.open(url, '_blank'); }}>
             <CardContent className="p-5 flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <FileText className="w-8 h-8 text-primary/70 shrink-0" />
@@ -717,7 +729,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
                   <p className="text-sm text-foreground/50">{d.docType}</p>
                   {(d.uploadedBy || d.updatedBy) && (
                     <p className="text-xs text-foreground/30 mt-1">
-                      {d.oneDriveItemId ? 'Uploaded by' : 'Added by'} {d.uploadedBy || d.updatedBy}
+                      {(d as any).fileUrl || d.oneDriveItemId ? 'Uploaded by' : 'Added by'} {d.uploadedBy || d.updatedBy}
                     </p>
                   )}
                 </div>

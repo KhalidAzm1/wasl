@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { ensureWaslFolders } from "./lib/onedrive";
+import { ensureStorageBucket } from "./lib/supabase-storage";
 
 const rawPort = process.env["PORT"];
 
@@ -24,9 +24,9 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Best-effort: make sure the Wasl Documents/Banks/Products/Meetings/Archive
-  // folder structure exists in OneDrive. Never blocks server startup.
-  ensureWaslFolders().catch((err) => {
-    logger.warn({ err }, "Failed to ensure OneDrive folder structure");
+  // Best-effort: ensure the Supabase Storage bucket exists so upload routes
+  // never fail on a missing bucket. Never blocks server startup.
+  ensureStorageBucket().catch((err) => {
+    logger.warn({ err }, "Failed to ensure Supabase Storage bucket");
   });
 });

@@ -23,7 +23,7 @@ tags:
   - name: actionItems
     description: Action items / follow-ups per bank
   - name: documents
-    description: Documents / links per bank, stored in Microsoft OneDrive
+    description: Documents / file attachments per bank, stored in Supabase Storage
   - name: dashboard
     description: Executive dashboard aggregates
   - name: settings
@@ -590,7 +590,7 @@ paths:
     post:
       operationId: uploadDocument
       tags: [documents]
-      summary: Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+      summary: Upload a file to Supabase Storage and register the document. File bytes are stored in Supabase Storage; only metadata (name, type, size, path) is stored in the database.
       requestBody:
         required: true
         content:
@@ -628,7 +628,7 @@ paths:
     delete:
       operationId: deleteDocument
       tags: [documents]
-      summary: Archive a document record (soft delete). The OneDrive file itself is left untouched.
+      summary: Archive a document record (soft delete). The Supabase Storage object is preserved and can be restored.
       parameters:
         - $ref: "#/components/parameters/EntityId"
       responses:
@@ -1094,8 +1094,9 @@ components:
         title: { type: string }
         link: { type: ["string", "null"] }
         docType: { type: ["string", "null"] }
-        oneDriveWebUrl: { type: ["string", "null"], description: "Link to open the file in OneDrive/SharePoint" }
-        oneDriveItemId: { type: ["string", "null"] }
+        fileUrl: { type: ["string", "null"], description: "Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour." }
+        oneDriveWebUrl: { type: ["string", "null"], description: "Deprecated. Same value as fileUrl. Kept for backward compatibility." }
+        oneDriveItemId: { type: ["string", "null"], description: "Deprecated. Legacy OneDrive item ID. Null for new uploads." }
         uploadedBy: { type: ["string", "null"], description: "Display name of the user who uploaded this file" }
         uploadedAt: { type: ["string", "null"] }
         updatedBy: { type: ["string", "null"] }

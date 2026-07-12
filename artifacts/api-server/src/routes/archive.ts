@@ -4,7 +4,7 @@ import { db, banksTable, filesTable, meetingsTable, bankProductTypesTable } from
 import { GetArchiveResponse } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission } from "../middlewares/auth";
-import { resignFileUrl } from "../lib/file-tokens";
+import { getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
@@ -15,6 +15,7 @@ router.get("/archive", async (_req, res): Promise<void> => {
     db.select().from(filesTable).where(eq(filesTable.isArchived, true)),
     db.select().from(meetingsTable).where(eq(meetingsTable.isArchived, true)),
   ]);
+
   const banksWithProductTypes = await Promise.all(
     banks.map(async (bank) => {
       const rows = await db
@@ -24,17 +25,37 @@ router.get("/archive", async (_req, res): Promise<void> => {
       return { ...bank, productTypeIds: rows.map((row) => row.productTypeId) };
     }),
   );
-  const documentsWire = documents.map((row) => ({
-    ...row,
-    bankId: row.entityId,
-    oneDriveItemId: row.onedriveFileId,
-    oneDriveWebUrl: resignFileUrl(row.onedriveUrl),
-  }));
-  const banksWire = banksWithProductTypes.map((bank) => ({
-    ...bank,
-    logoUrl: resignFileUrl(bank.logoUrl),
-    heroImageUrl: resignFileUrl(bank.heroImageUrl),
-  }));
+
+  const documentsWire = await Promise.all(
+    documents.map(async (row) => {
+      let fileUrl: string | null = null;
+      if (row.storagePath) {
+        try {
+          fileUrl = await getSignedUrl(row.storagePath);
+        } catch {
+          fileUrl = null;
+        }
+      }
+      return {
+        ...row,
+        bankId: row.entityId,
+        fileUrl,
+        oneDriveWebUrl: fileUrl, // backward-compat alias
+        oneDriveItemId: row.onedriveFileId ?? null,
+      };
+    }),
+  );
+
+  const banksWire = await Promise.all(
+    banksWithProductTypes.map(async (bank) => {
+      const [logoUrl, heroImageUrl] = await Promise.all([
+        resolveStoredUrl(bank.logoUrl),
+        resolveStoredUrl(bank.heroImageUrl),
+      ]);
+      return { ...bank, logoUrl, heroImageUrl };
+    }),
+  );
+
   res.json(GetArchiveResponse.parse(toPlain({ banks: banksWire, documents: documentsWire, meetings })));
 });
 

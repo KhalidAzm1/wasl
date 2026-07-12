@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getSupabaseAdmin, DEFAULT_PERMISSIONS, type UserRole, type UserPermissions } from "@workspace/supabase";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -288,23 +289,62 @@ function recordPinAttempt(userId: string): void {
 // A second factor gating access to the Admin Panel itself, on top of
 // super_admin auth. Kept separate from Supabase auth so a leaked/guessed
 // login alone can't reach user management.
-router.post("/admin/verify-pin", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
+// NOTE: requireRole is applied inline (not as middleware) so that we can emit
+// diagnostic log lines at every stage — middleware failures are otherwise
+// invisible in the handler and make root-cause analysis impossible.
+router.post("/admin/verify-pin", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.authUser!.id;
+  const userRole = req.authUser!.role;
+
+  // Stage 1: role check (mirrors requireRole("super_admin"))
+  if (userRole !== "super_admin") {
+    logger.warn({ userId, userRole }, "verify-pin: insufficient role");
+    res.status(403).json({ error: "Insufficient role" });
+    return;
+  }
+
+  // Stage 2: parse body
   const parsed = verifyPinBody.safeParse(req.body);
   if (!parsed.success) {
+    logger.warn({ userId }, "verify-pin: missing or invalid pin field in body");
     res.status(400).json({ error: "Missing PIN" });
     return;
   }
-  const userId = req.authUser!.id;
+
+  // Stage 3: rate-limit check
   if (isPinRateLimited(userId)) {
+    logger.warn({ userId, attempts: pinAttempts.get(userId)?.count }, "verify-pin: rate limited");
     res.status(429).json({ error: "محاولات كثيرة جدًا، حاول لاحقًا" });
     return;
   }
+
+  // Stage 4: env-var presence
   const expected = process.env.ADMIN_PANEL_PIN;
-  if (!expected) {
+  const pinConfigured = !!expected;
+  const enteredPin = parsed.data.pin.trim();
+  const expectedPin = (expected ?? "").trim();
+
+  logger.info(
+    {
+      userId,
+      pinConfigured,
+      enteredLen: enteredPin.length,
+      expectedLen: expectedPin.length,
+    },
+    "verify-pin: comparison",
+  );
+
+  if (!pinConfigured) {
+    logger.error("verify-pin: ADMIN_PANEL_PIN is not set in environment");
     res.status(500).json({ error: "Admin panel PIN is not configured" });
     return;
   }
-  if (parsed.data.pin !== expected) {
+
+  // Stage 5: PIN comparison (both sides trimmed)
+  const match = enteredPin === expectedPin;
+  logger.info({ userId, match }, "verify-pin: result");
+
+  if (!match) {
     recordPinAttempt(userId);
     res.status(403).json({ error: "رقم سري غير صحيح" });
     return;
@@ -313,8 +353,10 @@ router.post("/admin/verify-pin", requireAuth, requireRole("super_admin"), async 
   try {
     const expiresAt = Date.now() + PIN_TOKEN_TTL_MS;
     const token = signPinToken(userId, expiresAt);
+    logger.info({ userId }, "verify-pin: success — token issued");
     res.json({ ok: true, token, expiresAt });
   } catch (err) {
+    logger.error({ err }, "verify-pin: failed to sign token");
     res.status(500).json({ error: (err as Error).message });
   }
 });

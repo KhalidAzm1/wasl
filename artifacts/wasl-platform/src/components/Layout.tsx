@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X, Sun, Moon, Activity, FlaskConical } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
@@ -27,6 +27,11 @@ const contentNavItems = [
   { href: '/admin/users', icon: Users, label: 'User Management', roles: ['super_admin'], permission: 'user_management' as const },
   { href: '/meetings', icon: Calendar, label: 'Meetings', roles: null, permission: 'meetings' as const },
   { href: '/documents', icon: FileText, label: 'Documents', roles: null, permission: 'documents' as const },
+];
+
+const adminNavItems = [
+  { href: '/admin/system-health', icon: Activity, label: 'System Health', roles: ['super_admin'], permission: 'user_management' as const },
+  { href: '/admin/system-tests', icon: FlaskConical, label: 'System Tests', roles: ['super_admin'], permission: 'user_management' as const },
 ];
 
 const systemNavItems = [
@@ -191,6 +196,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="flex-1 overflow-y-auto px-4 py-6 hide-scrollbar">
                 {renderNavSection(mainNavItems)}
                 {renderNavSection(contentNavItems, 'Content')}
+                {renderNavSection(adminNavItems, 'Admin')}
                 {renderNavSection(systemNavItems, 'System')}
               </div>
 

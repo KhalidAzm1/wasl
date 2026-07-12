@@ -18,6 +18,9 @@ import Security from '@/pages/security';
 import Login from '@/pages/login';
 import ChangePassword from '@/pages/change-password';
 import AdminUsers from '@/pages/admin-users';
+import AdminSystemHealth from '@/pages/admin-system-health';
+import AdminSystemTests from '@/pages/admin-system-tests';
+import AdminSystemTestsReports from '@/pages/admin-system-tests-reports';
 import { AdminPinGate } from '@/components/AdminPinGate';
 import { PostHogProvider } from '@/providers/PostHogProvider';
 
@@ -79,6 +82,33 @@ function AppRoutes() {
           <Layout>
             <AdminPinGate>
               <AdminUsers />
+            </AdminPinGate>
+          </Layout>
+        </RequireAuth>
+      </Route>
+      <Route path="/admin/system-health">
+        <RequireAuth roles={['super_admin']} permission="user_management">
+          <Layout>
+            <AdminPinGate>
+              <AdminSystemHealth />
+            </AdminPinGate>
+          </Layout>
+        </RequireAuth>
+      </Route>
+      <Route path="/admin/system-tests/reports">
+        <RequireAuth roles={['super_admin']} permission="user_management">
+          <Layout>
+            <AdminPinGate>
+              <AdminSystemTestsReports />
+            </AdminPinGate>
+          </Layout>
+        </RequireAuth>
+      </Route>
+      <Route path="/admin/system-tests">
+        <RequireAuth roles={['super_admin']} permission="user_management">
+          <Layout>
+            <AdminPinGate>
+              <AdminSystemTests />
             </AdminPinGate>
           </Layout>
         </RequireAuth>

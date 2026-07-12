@@ -573,8 +573,8 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] bg-background/95 backdrop-blur-3xl border-foreground/10 text-foreground max-h-[85vh] overflow-y-auto !rounded-3xl shadow-[0_0_50px_-12px_rgba(79,50,214,0.15)]" dir="ltr" onClick={e => e.stopPropagation()}>
-        <DialogHeader className="border-b border-foreground/5 pb-4">
+      <DialogContent className="sm:max-w-[650px] bg-background/95 backdrop-blur-3xl border-foreground/10 text-foreground !rounded-3xl shadow-[0_0_50px_-12px_rgba(79,50,214,0.15)]" dir="ltr" onClick={e => e.stopPropagation()}>
+        <DialogHeader className="border-b border-foreground/5 pb-4 shrink-0">
           <DialogTitle className="flex items-center gap-3 text-xl font-light tracking-wide">
              <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
                <Pencil className="w-4 h-4 text-primary" />
@@ -582,6 +582,7 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
              Edit {bank.nameAr}
           </DialogTitle>
         </DialogHeader>
+        <div className="overflow-y-auto flex-1 min-h-0 -mx-6 px-6">
         <div className="grid gap-5 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -677,7 +678,8 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
             </Button>
           </div>
         </div>
-        <DialogFooter className="pt-2 border-t border-foreground/5">
+        </div>
+        <DialogFooter className="pt-2 border-t border-foreground/5 shrink-0">
           <Button onClick={handleSave} className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/80 font-bold rounded-xl h-[42px] transition-colors shadow-[0_0_15px_-3px_rgba(79,50,214,0.4)]" disabled={updateBank.isPending}>
             <Save className="w-4 h-4" /> {updateBank.isPending ? 'Saving...' : 'Save Changes'}
           </Button>

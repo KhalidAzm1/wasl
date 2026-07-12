@@ -180,9 +180,10 @@ function BanksManager() {
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[600px] bg-card border-foreground/10 text-foreground" dir="ltr">
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             <DialogTitle>{editingBank?.id ? 'Edit Bank' : 'Add New Bank'}</DialogTitle>
           </DialogHeader>
+          <div className="overflow-y-auto flex-1 min-h-0 -mx-6 px-6">
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -282,7 +283,8 @@ function BanksManager() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          </div>
+          <DialogFooter className="shrink-0 pt-4">
             <Button onClick={handleSave} className="w-full gap-2"><Save className="w-4 h-4" /> Save</Button>
           </DialogFooter>
         </DialogContent>

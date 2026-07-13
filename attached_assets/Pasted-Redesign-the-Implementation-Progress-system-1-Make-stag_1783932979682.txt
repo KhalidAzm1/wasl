@@ -1,0 +1,134 @@
+Redesign the Implementation Progress system.
+
+1. Make stages fully configurable and reorderable.
+Allow Admin to:
+- Change stage order.
+- Drag and drop stages.
+- Add new stages.
+- Delete stages.
+- Rename stages.
+- Add sub-stages.
+
+2. Add "Skip Stage" functionality.
+
+Rules:
+- Any stage can be marked as:
+  - Not Started
+  - In Progress
+  - Completed
+  - Skipped
+
+3. If a stage is skipped:
+- Its percentage should be redistributed automatically to the remaining stages.
+- Progress should always total 100%.
+
+Example:
+
+8 stages = 12.5% each.
+
+If one stage is skipped:
+7 stages remain.
+Each remaining stage becomes:
+14.29%.
+
+If two stages are skipped:
+6 stages remain.
+Each remaining stage becomes:
+16.67%.
+
+4. Add a setting:
+
+Implementation Progress Mode:
+○ Fixed Percentages
+○ Dynamic Percentages (recommended)
+
+Dynamic mode:
+Automatically recalculates percentages when stages are skipped.
+
+5. UI Changes
+
+Each stage should have:
+
+✓ Complete
+⏳ In Progress
+⏭ Skip
+
+Show skipped stages with:
+- Gray color
+- "Skipped" badge
+- Strikethrough title
+
+Example:
+
+✓ Initial Engagement
+⏭ NDA (Skipped)
+✓ Agreement
+
+6. Portfolio Card
+
+Remove the circular percentage indicators completely.
+
+Instead show:
+
+Implementation
+████████░░ 63%
+
+or
+
+63%
+Progress Bar
+
+No percentage circles anywhere.
+
+7. Dashboard
+
+Show:
+
+Completed Stages
+Remaining Stages
+Skipped Stages
+Effective Progress %
+
+8. Database
+
+ImplementationStage:
+- id
+- bankId
+- name
+- order
+- percentage
+- status
+- skipped
+- completed
+- completedAt
+- owner
+- notes
+
+ImplementationSubStage:
+- id
+- stageId
+- name
+- order
+- status
+- skipped
+- completed
+- completedAt
+- owner
+- notes
+
+9. Add Admin Settings page:
+
+/admin/implementation-settings
+
+Allow:
+- Reorder stages
+- Enable/disable dynamic percentages
+- Manage default stages
+- Add templates
+
+10. PostHog Events:
+- Stage Skipped
+- Stage Reordered
+- Stage Added
+- Stage Deleted
+- Dynamic Progress Recalculated

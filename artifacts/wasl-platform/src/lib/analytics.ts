@@ -405,4 +405,30 @@ export const analytics = {
   }): void {
     this.trackEvent('Slow Update Warning', props);
   },
+
+  // ── Implementation v2 (configurable stages) ─────────────────────────────
+
+  stageSkipped(props: { bank_id: string; stage_id: number; stage_name: string }): void {
+    this.trackEvent('Stage Skipped', props);
+  },
+
+  stageReordered(props: { bank_id: string; stage_count: number }): void {
+    this.trackEvent('Stage Reordered', props);
+  },
+
+  stageAdded(props: { bank_id: string; stage_name: string }): void {
+    this.trackEvent('Stage Added', props);
+  },
+
+  stageDeleted(props: { bank_id: string; stage_id: number; stage_name: string }): void {
+    this.trackEvent('Stage Deleted', props);
+  },
+
+  dynamicProgressRecalculated(props: { bank_id: string; non_skipped_count: number; completion_percentage: number }): void {
+    this.trackEvent('Dynamic Progress Recalculated', props);
+  },
+
+  implSettingsChanged(props: { percentage_mode: string }): void {
+    this.trackEvent('Implementation Settings Changed', props);
+  },
 };

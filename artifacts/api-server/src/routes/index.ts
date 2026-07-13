@@ -14,6 +14,7 @@ import auditLogsRouter from "./audit-logs";
 import archiveRouter from "./archive";
 import systemRouter from "./system";
 import implementationRouter from "./implementation";
+import implementationV2Router from "./implementation-v2";
 import adminPerfRouter from "./admin-perf";
 
 const router: IRouter = Router();
@@ -33,6 +34,7 @@ router.use(auditLogsRouter);
 router.use(archiveRouter);
 router.use(systemRouter);
 router.use(implementationRouter);
+router.use(implementationV2Router);
 router.use(adminPerfRouter);
 
 export default router;

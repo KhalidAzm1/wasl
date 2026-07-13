@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useGetDashboardSummary, useListBanks, useListProducts, useListProductTypes, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey, useGetImplementationSummary } from '@workspace/api-client-react';
-import type { Bank, BankImplementationSummary } from '@workspace/api-client-react';
+import { useGetDashboardSummary, useListBanks, useListProducts, useListProductTypes, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey, useGetImplSummaryV2 } from '@workspace/api-client-react';
+import type { Bank, BankSummaryV2 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Link } from 'wouter';
@@ -249,7 +249,7 @@ export default function Dashboard() {
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
   const { data: banks, isLoading: isLoadingBanks } = useListBanks();
   const { data: products, isLoading: isLoadingProducts } = useListProducts();
-  const { data: implSummaries } = useGetImplementationSummary();
+  const { data: implSummaries } = useGetImplSummaryV2();
   
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
@@ -332,16 +332,16 @@ export default function Dashboard() {
   }
 
   // ── Implementation progress map & KPIs ─────────────────────────────────
-  const implByBank = new Map<string, BankImplementationSummary>();
+  const implByBank = new Map<string, BankSummaryV2>();
   for (const s of implSummaries || []) implByBank.set(s.bankId, s);
 
-  const testingStages = new Set(['integration_testing_stg', 'user_acceptance_testing_uat', 'penetration_testing_pt_av']);
+  const testingKeywords = ['integration', 'testing', 'uat', 'pt', 'penetration'];
   const allImplPct = banks.map(b => implByBank.get(b.id)?.completionPercentage ?? 0);
   const avgImplProgress = Math.round(allImplPct.reduce((a, v) => a + v, 0) / Math.max(banks.length, 1));
   const banksInProduction = banks.filter(b => (implByBank.get(b.id)?.completionPercentage ?? 0) === 100).length;
   const banksInTesting = banks.filter(b => {
-    const cs = implByBank.get(b.id)?.currentStage;
-    return cs ? testingStages.has(cs) : false;
+    const cs = implByBank.get(b.id)?.currentStageName?.toLowerCase() ?? '';
+    return testingKeywords.some(kw => cs.includes(kw));
   }).length;
   const banksBlocked = banks.filter(b => implByBank.get(b.id)?.isBlocked).length;
   const banksReadyForGoLive = banks.filter(b => {
@@ -362,7 +362,7 @@ export default function Dashboard() {
     // Implementation filters
     const impl = implByBank.get(bank.id);
     if (kpiFilter === 'implInProduction') return (impl?.completionPercentage ?? 0) === 100;
-    if (kpiFilter === 'implInTesting') return impl ? testingStages.has(impl.currentStage ?? '') : false;
+    if (kpiFilter === 'implInTesting') return impl ? testingKeywords.some(kw => (impl.currentStageName ?? '').toLowerCase().includes(kw)) : false;
     if (kpiFilter === 'implBlocked') return impl?.isBlocked ?? false;
     if (kpiFilter === 'implReadyForGoLive') { const pct = impl?.completionPercentage ?? 0; return pct >= 87.5 && pct < 100; }
     return true;
@@ -808,7 +808,7 @@ function CompactBankCard({
   setHoveredId: (id: string | null) => void;
   viewMode: 'grid' | 'list' | 'kanban';
   productCodes: string[];
-  implProgress?: BankImplementationSummary;
+  implProgress?: BankSummaryV2;
   onNavigate?: () => void;
 }) {
   const { data: bankDetail } = useGetBank(bankSummary.id, {

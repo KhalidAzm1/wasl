@@ -10,11 +10,19 @@ import {
   useCreateActionItem, useUpdateActionItem, useDeleteActionItem,
   useCreateDocument, useUploadDocument, useDeleteDocument,
   useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey,
-  useGetBankImplementation, usePatchImplementationStage, getGetBankImplementationQueryKey,
-  type PatchImplementationStageBody,
-  type ImplementationStageRow,
+  useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
+  useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
+  type StageV2, type BankStagesViewV2, type PatchStageBodyV2,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -29,11 +37,12 @@ import {
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
   CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip,
   Maximize2, BarChart2, CheckCircle2, Circle, Ban, Clock, Flag, Loader2,
+  GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw,
 } from 'lucide-react';
 
 // ── Implementation progress badge (used in the bank header) ──────────────
 function ImplProgressBadge({ bankId }: { bankId: string }) {
-  const { data } = useGetBankImplementation(bankId);
+  const { data } = useGetBankStagesV2(bankId);
   if (!data) return null;
   const pct = data.completionPercentage;
   const color = pct === 100
@@ -828,304 +837,450 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
   );
 }
 
-// ── Stage status helpers ──────────────────────────────────────────────────
+// ── Implementation v2 — status config ────────────────────────────────────
 
-const STATUS_CONFIG = {
-  not_started: { label: 'Not Started', color: 'text-foreground/40', dot: 'bg-foreground/30', bar: 'bg-foreground/20', ring: 'border-foreground/20' },
-  in_progress: { label: 'In Progress', color: 'text-blue-500', dot: 'bg-blue-500', bar: 'bg-blue-500', ring: 'border-blue-400' },
-  completed:   { label: 'Completed',   color: 'text-emerald-500', dot: 'bg-emerald-500', bar: 'bg-emerald-500', ring: 'border-emerald-400' },
-  blocked:     { label: 'Blocked',     color: 'text-red-500', dot: 'bg-red-500', bar: 'bg-red-500', ring: 'border-red-400' },
-};
+const STATUS_CONFIG_V2 = {
+  not_started: { label: 'Not Started', color: 'text-foreground/40', ring: 'border-foreground/20', rowBg: 'bg-foreground/5 border-foreground/10' },
+  in_progress:  { label: 'In Progress', color: 'text-blue-500',      ring: 'border-blue-400',      rowBg: 'bg-blue-500/5 border-blue-500/20' },
+  completed:    { label: 'Completed',   color: 'text-emerald-500',   ring: 'border-emerald-400',   rowBg: 'bg-emerald-500/5 border-emerald-500/20' },
+  blocked:      { label: 'Blocked',     color: 'text-red-500',       ring: 'border-red-400',       rowBg: 'bg-red-500/5 border-red-500/20' },
+  skipped:      { label: 'Skipped',     color: 'text-foreground/25', ring: 'border-foreground/10', rowBg: 'bg-foreground/3 border-foreground/5' },
+} as const;
 
-function StatusIcon({ status }: { status: string }) {
-  if (status === 'completed')  return <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />;
-  if (status === 'in_progress') return <Loader2 className="w-4 h-4 text-blue-500 shrink-0 animate-spin" />;
-  if (status === 'blocked')    return <Ban className="w-4 h-4 text-red-500 shrink-0" />;
-  return <Circle className="w-4 h-4 text-foreground/30 shrink-0" />;
-}
+type StatusKey = keyof typeof STATUS_CONFIG_V2;
 
-// ── ImplementationProgressTab ─────────────────────────────────────────────
+// ── Sub-stages panel ──────────────────────────────────────────────────────
 
-interface StageRowProps {
-  s: ImplementationStageRow;
-  isUpdating: boolean;
-  notesOpen: boolean;
-  onUpdate: (stage: ImplementationStageRow, update: PatchImplementationStageBody) => void;
-  onDebouncedUpdate: (stage: ImplementationStageRow, update: PatchImplementationStageBody) => void;
-  onToggleNotes: (stageKey: string) => void;
-}
+function SubStagesPanel({ stageId }: { stageId: number }) {
+  const { data: subs, isLoading } = useGetSubStagesV2(stageId);
+  const addSub = useAddSubStageV2();
+  const patchSub = usePatchSubStageV2();
+  const deleteSub = useDeleteSubStageV2();
+  const [newName, setNewName] = useState('');
+  const { toast } = useToast();
 
-const StageRow = React.memo(function StageRow({ s, isUpdating, notesOpen, onUpdate, onDebouncedUpdate, onToggleNotes }: StageRowProps) {
-  const cfg = STATUS_CONFIG[s.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.not_started;
+  if (isLoading) return <div className="py-2 text-xs text-foreground/30 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>;
+
+  const items = subs ?? [];
   return (
-    <div className={cn(
-      'rounded-2xl border p-4 transition-all',
-      s.status === 'in_progress' ? 'bg-blue-500/5 border-blue-500/20' :
-      s.status === 'completed'   ? 'bg-emerald-500/5 border-emerald-500/20' :
-      s.status === 'blocked'     ? 'bg-red-500/5 border-red-500/20' :
-      'bg-foreground/5 border-foreground/10'
-    )}>
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
-        {/* Stage index + name */}
-        <div className="flex items-center gap-3 md:w-64 shrink-0">
-          <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 shrink-0', cfg.ring, s.completed ? 'bg-emerald-500/20' : 'bg-foreground/5')}>
-            {s.completed ? '✓' : <span className={cfg.color}>{s.stageIndex + 1}</span>}
+    <div className="mt-3 space-y-1.5">
+      {items.map((sub) => (
+        <div key={sub.id} className={cn('flex items-center gap-2 rounded-xl px-3 py-1.5 border text-xs', sub.skipped ? 'border-foreground/5 bg-foreground/3 opacity-50' : sub.completed ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-foreground/10 bg-foreground/5')}>
+          <input
+            type="checkbox"
+            checked={sub.completed}
+            className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
+            onChange={(e) => {
+              const checked = e.target.checked;
+              patchSub.mutate({ subStageId: sub.id, stageId, data: { completed: checked, status: checked ? 'completed' : 'not_started' } }, {
+                onError: () => toast({ title: 'Failed to save', variant: 'destructive' }),
+              });
+            }}
+          />
+          <span className={cn('flex-1', sub.skipped ? 'line-through text-foreground/30' : sub.completed ? 'text-foreground/60' : '')}>{sub.name}</span>
+          <button
+            onClick={() => deleteSub.mutate({ subStageId: sub.id, stageId }, { onError: () => toast({ title: 'Failed to delete', variant: 'destructive' }) })}
+            className="text-foreground/20 hover:text-red-500 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-1.5 mt-1">
+        <Input
+          placeholder="Add sub-stage…"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          className="h-7 text-xs bg-background/50 border-foreground/10 rounded-lg"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newName.trim()) {
+              addSub.mutate({ stageId, name: newName.trim() }, {
+                onSuccess: () => setNewName(''),
+                onError: () => toast({ title: 'Failed to add sub-stage', variant: 'destructive' }),
+              });
+            }
+          }}
+        />
+        <Button
+          variant="ghost" size="sm"
+          disabled={!newName.trim() || addSub.isPending}
+          className="h-7 px-2 text-xs shrink-0"
+          onClick={() => {
+            if (!newName.trim()) return;
+            addSub.mutate({ stageId, name: newName.trim() }, {
+              onSuccess: () => setNewName(''),
+              onError: () => toast({ title: 'Failed to add sub-stage', variant: 'destructive' }),
+            });
+          }}
+        >
+          <Plus className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Sortable stage row (v2) ───────────────────────────────────────────────
+
+interface StageRowV2Props {
+  stage: StageV2;
+  index: number;
+  isUpdating: boolean;
+  onPatch: (stageId: number, data: PatchStageBodyV2) => void;
+  onDelete: (stageId: number) => void;
+}
+
+const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, index, isUpdating, onPatch, onDelete }: StageRowV2Props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: s.id });
+  const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 20 : 1 };
+
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [subsOpen, setSubsOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const renameRef = useRef<HTMLInputElement>(null);
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const cfgKey = (s.skipped ? 'skipped' : s.status) as StatusKey;
+  const cfg = STATUS_CONFIG_V2[cfgKey] ?? STATUS_CONFIG_V2.not_started;
+
+  const debounce = (key: string, fn: () => void, ms = 500) => {
+    const t = debounceTimers.current.get(key);
+    if (t) clearTimeout(t);
+    debounceTimers.current.set(key, setTimeout(() => { fn(); debounceTimers.current.delete(key); }, ms));
+  };
+
+  const statusButton = (label: string, status: string, icon: React.ReactNode, activeColor: string) => (
+    <button
+      key={status}
+      disabled={isUpdating || s.skipped}
+      onClick={() => {
+        const data: PatchStageBodyV2 = { status, skipped: false };
+        if (status === 'completed') { data.completed = true; data.completedAt = data.completedAt ?? new Date().toISOString().split('T')[0]; }
+        else data.completed = false;
+        onPatch(s.id, data);
+      }}
+      className={cn(
+        'flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium border transition-all shrink-0',
+        (s.status === status && !s.skipped) ? `${activeColor} border-current/30 shadow-sm` : 'border-foreground/10 text-foreground/40 hover:text-foreground hover:border-foreground/20',
+        'disabled:opacity-40 disabled:cursor-not-allowed',
+      )}
+    >
+      {icon}{label}
+    </button>
+  );
+
+  return (
+    <div ref={setNodeRef} style={style} className={cn('rounded-2xl border p-4 transition-all', cfg.rowBg, s.skipped ? 'opacity-60' : '')}>
+      <div className="flex flex-col gap-3">
+        {/* Top row: drag handle + index + name + badges + delete */}
+        <div className="flex items-start gap-2">
+          <button {...listeners} {...attributes} className="mt-1 cursor-grab active:cursor-grabbing p-0.5 text-foreground/25 hover:text-foreground/60 shrink-0">
+            <GripVertical className="w-4 h-4" />
+          </button>
+
+          <div className={cn('w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 shrink-0 mt-0.5', cfg.ring, s.completed ? 'bg-emerald-500/20' : 'bg-foreground/5')}>
+            {s.completed && !s.skipped ? <span className="text-emerald-500">✓</span> : <span className={cfg.color}>{index + 1}</span>}
           </div>
-          <div>
-            <p className="font-semibold text-sm leading-tight">{s.stageName}</p>
-            {s.daysInCurrentStage !== null && s.status === 'in_progress' && (
-              <p className="text-xs text-blue-400 flex items-center gap-1 mt-0.5">
-                <Clock className="w-3 h-3" />{s.daysInCurrentStage}d in progress
+
+          {/* Name — click to rename */}
+          <div className="flex-1 min-w-0">
+            {renaming ? (
+              <input
+                ref={renameRef}
+                defaultValue={s.name}
+                autoFocus
+                className="w-full text-sm font-semibold bg-background/70 border border-primary/30 rounded-lg px-2 py-0.5 focus:outline-none"
+                onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== s.name) onPatch(s.id, { name: v }); setRenaming(false); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRenaming(false); }}
+              />
+            ) : (
+              <button onClick={() => setRenaming(true)} className="text-left group/rename w-full">
+                <p className={cn('font-semibold text-sm leading-tight flex items-center gap-1.5', s.skipped ? 'line-through text-foreground/30' : '')}>
+                  {s.name}
+                  <Pencil className="w-3 h-3 opacity-0 group-hover/rename:opacity-40 transition-opacity" />
+                </p>
+              </button>
+            )}
+            {s.daysInProgress !== null && s.daysInProgress > 0 && !s.skipped && (
+              <p className="text-[11px] text-blue-400 flex items-center gap-0.5 mt-0.5">
+                <Clock className="w-2.5 h-2.5" />{s.daysInProgress}d in progress
               </p>
             )}
           </div>
-        </div>
 
-        {/* Status selector with per-row spinner */}
-        <div className="md:w-44 shrink-0 relative">
-          <select
-            value={s.status}
+          {/* Badges */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {s.skipped && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground/40 border border-foreground/15">Skipped</span>}
+            {s.percentage > 0 && !s.skipped && (
+              <span className="text-[10px] font-mono text-foreground/30">{Math.round(s.percentage)}%</span>
+            )}
+            {isUpdating && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary/60" />}
+          </div>
+
+          {/* Delete */}
+          <button
+            onClick={() => onDelete(s.id)}
             disabled={isUpdating}
-            className={cn('w-full h-9 rounded-xl border px-3 text-xs font-medium bg-background/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed', cfg.ring)}
-            onChange={e => {
-              const newStatus = e.target.value;
-              const update: PatchImplementationStageBody = { status: newStatus };
-              if (newStatus === 'completed' && !s.completed) {
-                update.completed = true;
-                update.completedAt = new Date().toISOString().split('T')[0];
-              }
-              onUpdate(s, update);
-            }}
+            className="p-1 text-foreground/20 hover:text-red-500 transition-colors shrink-0 disabled:opacity-40"
           >
-            <option value="not_started">Not Started</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="blocked">Blocked</option>
-          </select>
-          {isUpdating && <Loader2 className="absolute right-2.5 top-2.5 w-4 h-4 animate-spin text-primary/60 pointer-events-none" />}
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Checkbox + date */}
-        <div className="flex items-center gap-3 md:w-48 shrink-0">
-          <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
-            <input
-              type="checkbox"
-              checked={s.completed}
+        {/* Status buttons row */}
+        <div className="flex flex-wrap gap-1.5 pl-10">
+          {statusButton('Not Started', 'not_started', <Circle className="w-3 h-3" />, 'text-foreground/50')}
+          {statusButton('In Progress', 'in_progress', <Loader2 className={cn('w-3 h-3', s.status === 'in_progress' && !s.skipped ? 'animate-spin' : '')} />, 'text-blue-500')}
+          {statusButton('Completed',   'completed',   <CheckCircle2 className="w-3 h-3" />, 'text-emerald-500')}
+          {statusButton('Blocked',     'blocked',     <Ban className="w-3 h-3" />, 'text-red-500')}
+
+          {/* Skip / Restore toggle */}
+          {s.skipped ? (
+            <button
               disabled={isUpdating}
-              className="w-4 h-4 rounded accent-emerald-500 cursor-pointer disabled:opacity-60"
-              onChange={e => {
-                const checked = e.target.checked;
-                const update: PatchImplementationStageBody = {
-                  completed: checked,
-                  ...(checked ? { status: 'completed', completedAt: new Date().toISOString().split('T')[0] } : {}),
-                };
-                onUpdate(s, update);
+              onClick={() => onPatch(s.id, { skipped: false, status: 'not_started' })}
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium border text-amber-500 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all disabled:opacity-40"
+            >
+              <RotateCcw className="w-3 h-3" />Restore
+            </button>
+          ) : (
+            <button
+              disabled={isUpdating}
+              onClick={() => {
+                onPatch(s.id, { skipped: true, status: 'skipped', completed: false });
+                analytics.stageSkipped({ bank_id: s.bankId, stage_id: s.id, stage_name: s.name });
               }}
-            />
-            <span className="text-xs text-foreground/60">Done</span>
-          </label>
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium border text-foreground/40 border-foreground/10 hover:text-foreground/60 hover:border-foreground/20 transition-all disabled:opacity-40"
+            >
+              <SkipForward className="w-3 h-3" />Skip
+            </button>
+          )}
+        </div>
+
+        {/* Date + Owner row */}
+        <div className="flex flex-wrap gap-2 pl-10">
           <Input
             type="date"
-            value={s.completedAt ?? ''}
-            disabled={isUpdating}
-            className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-36 disabled:opacity-60"
-            onChange={e => onUpdate(s, { completedAt: e.target.value || null })}
+            defaultValue={s.completedAt ?? ''}
+            key={`date-${s.id}-${s.completedAt}`}
+            disabled={isUpdating || s.skipped}
+            className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-36 disabled:opacity-50"
+            onBlur={(e) => { const v = e.target.value || null; if (v !== (s.completedAt ?? null)) onPatch(s.id, { completedAt: v }); }}
           />
-        </div>
-
-        {/* Owner — uncontrolled, debounced on blur (500ms) */}
-        <div className="flex-1 min-w-0">
           <Input
-            key={`owner-${s.stage}-${s.updatedAt}`}
-            placeholder="Responsible person..."
+            key={`owner-${s.id}-${s.updatedAt}`}
+            placeholder="Owner / responsible…"
             defaultValue={s.owner ?? ''}
-            disabled={isUpdating}
-            className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg disabled:opacity-60"
-            onBlur={e => { if (e.target.value !== (s.owner ?? '')) onDebouncedUpdate(s, { owner: e.target.value || null }); }}
+            disabled={isUpdating || s.skipped}
+            className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg flex-1 min-w-[140px] disabled:opacity-50"
+            onBlur={(e) => { const v = e.target.value || null; if (v !== (s.owner ?? null)) debounce(`owner-${s.id}`, () => onPatch(s.id, { owner: v })); }}
           />
+
+          {/* Notes toggle */}
+          <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-foreground/40 shrink-0" onClick={() => setNotesOpen(p => !p)}>
+            <FileText className="w-3 h-3 mr-1" />{notesOpen ? 'Hide' : 'Notes'}
+            {s.notes ? <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary/60 inline-block" /> : null}
+          </Button>
+          {/* Sub-stages toggle */}
+          <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-foreground/40 shrink-0" onClick={() => setSubsOpen(p => !p)}>
+            <CheckSquare className="w-3 h-3 mr-1" />Sub-stages
+            {subsOpen ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+          </Button>
         </div>
 
-        {/* Notes toggle */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-3 text-xs text-foreground/50 shrink-0"
-          onClick={() => onToggleNotes(s.stage)}
-        >
-          <FileText className="w-3 h-3 mr-1" />
-          {notesOpen ? 'Hide' : 'Notes'}
-        </Button>
+        {/* Notes */}
+        {notesOpen && (
+          <div className="pt-2 pl-10 border-t border-foreground/10">
+            <Textarea
+              key={`notes-${s.id}-${s.updatedAt}`}
+              placeholder="Add notes…"
+              defaultValue={s.notes ?? ''}
+              disabled={s.skipped}
+              className="text-sm bg-background/50 border-foreground/10 rounded-xl min-h-[80px] resize-none disabled:opacity-50"
+              onBlur={(e) => { const v = e.target.value || null; if (v !== (s.notes ?? null)) debounce(`notes-${s.id}`, () => onPatch(s.id, { notes: v })); }}
+            />
+          </div>
+        )}
+
+        {/* Sub-stages */}
+        {subsOpen && (
+          <div className="pl-10">
+            <SubStagesPanel stageId={s.id} />
+          </div>
+        )}
       </div>
-
-      {/* Expandable notes — debounced save on blur */}
-      {notesOpen && (
-        <div className="mt-3 pt-3 border-t border-foreground/10">
-          <Textarea
-            placeholder="Add notes about this stage..."
-            defaultValue={s.notes ?? ''}
-            key={`notes-${s.stage}-${s.updatedAt}`}
-            className="text-sm bg-background/50 border-foreground/10 rounded-xl min-h-[80px] resize-none"
-            onBlur={e => { if (e.target.value !== (s.notes ?? '')) onDebouncedUpdate(s, { notes: e.target.value || null }); }}
-          />
-        </div>
-      )}
     </div>
   );
 });
 
+// ── ImplementationProgressTab (v2) ────────────────────────────────────────
+
 function ImplementationProgressTab({ bankId }: { bankId: string }) {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data, isLoading } = useGetBankImplementation(bankId);
-  const patchStage = usePatchImplementationStage();
-  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
-  const [updatingStages, setUpdatingStages] = useState<Set<string>>(new Set());
-  const updateStartTimes = useRef<Map<string, number>>(new Map());
-  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const { data, isLoading } = useGetBankStagesV2(bankId);
+  const patchStage = usePatchStageV2(bankId);
+  const addStage = useAddStageV2(bankId);
+  const deleteStage = useDeleteStageV2(bankId);
+  const reorderStages = useReorderStagesV2(bankId);
 
-  // Core update — optimistic cache write + mutation
-  const handleUpdate = useCallback((stage: ImplementationStageRow, update: PatchImplementationStageBody) => {
-    const oldStatus = stage.status;
-    const startTime = performance.now();
-    updateStartTimes.current.set(stage.stage, startTime);
+  const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  const [newStageName, setNewStageName] = useState('');
+  const [addingStage, setAddingStage] = useState(false);
 
-    // 1. Immediately mark the row as updating
-    setUpdatingStages(prev => new Set([...prev, stage.stage]));
+  // Optimistic list order for DnD
+  const [localOrder, setLocalOrder] = useState<number[] | null>(null);
 
-    // 2. Optimistic cache update — UI reflects change before server responds
-    const queryKey = getGetBankImplementationQueryKey(bankId);
-    const previousData = queryClient.getQueryData(queryKey);
-    queryClient.setQueryData(queryKey, (old: any) => {
-      if (!old) return old;
-      return {
-        ...old,
-        stages: old.stages.map((row: ImplementationStageRow) =>
-          row.stage === stage.stage ? { ...row, ...update } : row
-        ),
-      };
-    });
+  const stages: StageV2[] = data?.stages ?? [];
+  // Merge server order with local override (for smooth DnD)
+  const displayStages = localOrder
+    ? localOrder.map(id => stages.find(s => s.id === id)).filter(Boolean) as StageV2[]
+    : stages;
 
-    patchStage.mutate({ bankId, stage: stage.stage, data: update }, {
-      onSuccess: (result) => {
-        const duration = Math.round(performance.now() - (updateStartTimes.current.get(stage.stage) ?? startTime));
-        updateStartTimes.current.delete(stage.stage);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-        // 3. Confirm with server-authoritative data
-        queryClient.setQueryData(queryKey, result);
-        setUpdatingStages(prev => { const next = new Set(prev); next.delete(stage.stage); return next; });
-
-        // 4. Analytics
-        const newStatus = update.status ?? oldStatus;
-        if (update.status && update.status !== oldStatus) {
-          if (update.status === 'in_progress')
-            analytics.implementationStageStarted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
-          else if (update.status === 'completed')
-            analytics.implementationStageCompleted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex, days_in_stage: stage.daysInCurrentStage });
-          else if (update.status === 'blocked')
-            analytics.implementationStageBlocked({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
-        }
-        analytics.implementationProgressUpdated({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, new_status: newStatus, completion_percentage: result.completionPercentage });
-        analytics.implementationStageUpdated({ bank_id: bankId, stage: stage.stage, update_duration_ms: duration });
-        if (duration > 500) analytics.slowUpdateWarning({ bank_id: bankId, stage: stage.stage, duration_ms: duration });
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = displayStages.map(s => s.id);
+    const oldIdx = ids.indexOf(Number(active.id));
+    const newIdx = ids.indexOf(Number(over.id));
+    if (oldIdx === -1 || newIdx === -1) return;
+    const newOrder = arrayMove(ids, oldIdx, newIdx);
+    setLocalOrder(newOrder);
+    reorderStages.mutate({ orderedIds: newOrder }, {
+      onSuccess: () => {
+        setLocalOrder(null);
+        analytics.stageReordered({ bank_id: bankId, stage_count: newOrder.length });
       },
       onError: () => {
-        // Rollback optimistic update
-        queryClient.setQueryData(queryKey, previousData);
-        updateStartTimes.current.delete(stage.stage);
-        setUpdatingStages(prev => { const next = new Set(prev); next.delete(stage.stage); return next; });
+        setLocalOrder(null);
+        toast({ title: 'Failed to reorder stages', variant: 'destructive' });
+      },
+    });
+  }, [displayStages, reorderStages, bankId, toast]);
+
+  const handlePatch = useCallback((stageId: number, patch: PatchStageBodyV2) => {
+    setUpdatingIds(prev => new Set([...prev, stageId]));
+    patchStage.mutate({ stageId, data: patch }, {
+      onSuccess: () => setUpdatingIds(prev => { const n = new Set(prev); n.delete(stageId); return n; }),
+      onError: () => {
+        setUpdatingIds(prev => { const n = new Set(prev); n.delete(stageId); return n; });
         toast({ title: 'Failed to save', variant: 'destructive' });
       },
     });
-  }, [bankId, queryClient, patchStage, toast]);
+  }, [patchStage, toast]);
 
-  // Debounced wrapper — used for text inputs (owner, notes) to avoid rapid-fire requests
-  const debouncedUpdate = useCallback((stage: ImplementationStageRow, update: PatchImplementationStageBody) => {
-    const key = stage.stage;
-    const existing = debounceTimers.current.get(key);
-    if (existing) clearTimeout(existing);
-    const timer = setTimeout(() => {
-      handleUpdate(stage, update);
-      debounceTimers.current.delete(key);
-    }, 500);
-    debounceTimers.current.set(key, timer);
-  }, [handleUpdate]);
-
-  const toggleNotes = useCallback((stageKey: string) => {
-    setExpandedNotes(prev => {
-      const next = new Set(prev);
-      if (next.has(stageKey)) next.delete(stageKey); else next.add(stageKey);
-      return next;
+  const handleDelete = useCallback((stageId: number) => {
+    const s = stages.find(x => x.id === stageId);
+    setUpdatingIds(prev => new Set([...prev, stageId]));
+    deleteStage.mutate({ stageId }, {
+      onSuccess: () => {
+        setUpdatingIds(prev => { const n = new Set(prev); n.delete(stageId); return n; });
+        toast({ title: 'Stage deleted' });
+        if (s) analytics.stageDeleted({ bank_id: bankId, stage_id: stageId, stage_name: s.name });
+      },
+      onError: () => {
+        setUpdatingIds(prev => { const n = new Set(prev); n.delete(stageId); return n; });
+        toast({ title: 'Failed to delete', variant: 'destructive' });
+      },
     });
-  }, []);
+  }, [deleteStage, stages, bankId, toast]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 gap-3 text-foreground/40">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        <span>Loading implementation progress...</span>
-      </div>
-    );
-  }
+  const handleAddStage = () => {
+    const name = newStageName.trim();
+    if (!name) return;
+    addStage.mutate({ name }, {
+      onSuccess: () => {
+        setNewStageName('');
+        setAddingStage(false);
+        toast({ title: 'Stage added' });
+        analytics.stageAdded({ bank_id: bankId, stage_name: name });
+      },
+      onError: () => toast({ title: 'Failed to add stage', variant: 'destructive' }),
+    });
+  };
 
-  const stages = data?.stages ?? [];
-  const completionPercentage = data?.completionPercentage ?? 0;
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-16 gap-3 text-foreground/40">
+      <Loader2 className="w-5 h-5 animate-spin" />
+      <span>Loading implementation progress…</span>
+    </div>
+  );
+
+  const pct = data?.completionPercentage ?? 0;
+  const completedCount = data?.completedStages ?? 0;
+  const totalCount = data?.totalStages ?? 0;
+  const skippedCount = data?.skippedStages ?? 0;
+  const remaining = data?.remainingStages ?? 0;
   const currentStageName = data?.currentStageName ?? null;
-  const remainingStages = data?.remainingStages ?? 8;
-  const completedCount = stages.filter(s => s.completed).length;
-  const progressColor = completionPercentage === 100 ? 'bg-emerald-500' : completionPercentage >= 75 ? 'bg-blue-500' : completionPercentage >= 50 ? 'bg-yellow-500' : completionPercentage >= 25 ? 'bg-orange-500' : 'bg-foreground/30';
+  const isBlocked = data?.isBlocked ?? false;
+  const percentageMode = data?.percentageMode ?? 'dynamic';
+  const progressColor = pct === 100 ? 'bg-emerald-500' : isBlocked ? 'bg-red-500' : pct >= 75 ? 'bg-blue-500' : pct >= 50 ? 'bg-yellow-500' : pct >= 25 ? 'bg-orange-500' : 'bg-foreground/30';
 
   return (
     <div className="space-y-8">
-      {/* Summary header */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="md:col-span-2 p-5 rounded-2xl bg-foreground/5 border border-foreground/10 space-y-3">
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Completion */}
+        <div className="col-span-2 p-5 rounded-2xl bg-foreground/5 border border-foreground/10 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-foreground/50 font-medium">Overall Completion</span>
-            <span className="text-2xl font-mono font-bold text-foreground">{Math.round(completionPercentage)}%</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-foreground/15 text-foreground/40 uppercase tracking-widest">
+                {percentageMode}
+              </span>
+              <span className="text-2xl font-mono font-bold">{Math.round(pct)}%</span>
+            </div>
           </div>
           <div className="w-full h-3 rounded-full bg-foreground/10 overflow-hidden">
-            <div className={cn('h-full rounded-full transition-all duration-700', progressColor)} style={{ width: `${completionPercentage}%` }} />
+            <div className={cn('h-full rounded-full transition-all duration-700', progressColor)} style={{ width: `${pct}%` }} />
           </div>
           <div className="flex items-center justify-between text-xs text-foreground/40">
-            <span>{completedCount} / 8 stages completed</span>
-            <span>{remainingStages} remaining</span>
+            <span>{completedCount}/{totalCount} stages completed</span>
+            {skippedCount > 0 && <span className="text-foreground/30">{skippedCount} skipped</span>}
+            <span>{remaining} remaining</span>
           </div>
         </div>
+
         <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 flex flex-col justify-center gap-1">
           <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Current Stage</span>
-          <span className="font-semibold text-sm leading-snug">{currentStageName ?? (completionPercentage === 100 ? '✓ All Complete' : 'Not Started')}</span>
+          <span className="font-semibold text-sm leading-snug">
+            {isBlocked ? <span className="text-red-400">⛔ Blocked</span> : currentStageName ?? (pct === 100 ? '✓ All Complete' : 'Not Started')}
+          </span>
         </div>
+
         <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 flex flex-col justify-center gap-1">
-          <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Remaining Stages</span>
-          <span className="font-mono text-2xl font-bold">{remainingStages}</span>
+          <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Remaining</span>
+          <span className="font-mono text-2xl font-bold">{remaining}</span>
+          {skippedCount > 0 && <span className="text-xs text-foreground/30">{skippedCount} skipped</span>}
         </div>
       </div>
 
-      {/* Timeline visualization */}
+      {/* Timeline strip */}
       <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 overflow-x-auto">
         <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold mb-4">Implementation Timeline</p>
         <div className="flex items-center min-w-max gap-0">
-          {stages.map((s, idx) => {
-            const cfg = STATUS_CONFIG[s.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.not_started;
-            const isActive = s.status === 'in_progress';
+          {displayStages.map((s, idx) => {
+            const cfgKey = (s.skipped ? 'skipped' : s.status) as StatusKey;
+            const cfg = STATUS_CONFIG_V2[cfgKey] ?? STATUS_CONFIG_V2.not_started;
             return (
-              <React.Fragment key={s.stage}>
+              <React.Fragment key={s.id}>
                 <div className="flex flex-col items-center gap-2 w-[100px]">
                   <div className={cn(
                     'w-9 h-9 rounded-full flex items-center justify-center border-2 text-xs font-bold transition-all',
-                    isActive ? 'scale-110 shadow-[0_0_12px_0_rgba(59,130,246,0.5)]' : '',
+                    s.status === 'in_progress' && !s.skipped ? 'scale-110 shadow-[0_0_12px_0_rgba(59,130,246,0.5)]' : '',
                     cfg.ring,
-                    s.completed ? 'bg-emerald-500/20' : s.status === 'in_progress' ? 'bg-blue-500/20' : s.status === 'blocked' ? 'bg-red-500/20' : 'bg-foreground/5',
+                    s.skipped ? 'bg-foreground/5' : s.completed ? 'bg-emerald-500/20' : s.status === 'in_progress' ? 'bg-blue-500/20' : s.status === 'blocked' ? 'bg-red-500/20' : 'bg-foreground/5',
                   )}>
-                    {s.completed ? '✓' : <span className={cfg.color}>{idx + 1}</span>}
+                    {s.skipped ? <SkipForward className="w-3.5 h-3.5 text-foreground/25" /> : s.completed ? <span className="text-emerald-500">✓</span> : <span className={cfg.color}>{idx + 1}</span>}
                   </div>
                   <div className="text-center">
-                    <p className={cn('text-[10px] font-semibold leading-tight text-center max-w-[90px]', cfg.color)}>{s.stageName}</p>
-                    {s.completedAt && <p className="text-[9px] text-foreground/30 mt-0.5">{s.completedAt}</p>}
+                    <p className={cn('text-[10px] font-semibold leading-tight text-center max-w-[90px]', cfg.color, s.skipped ? 'line-through' : '')}>{s.name}</p>
+                    {s.completedAt && !s.skipped && <p className="text-[9px] text-foreground/30 mt-0.5">{s.completedAt}</p>}
                   </div>
                 </div>
-                {idx < stages.length - 1 && (
-                  <div className={cn('flex-1 h-0.5 min-w-[12px] transition-all', s.completed ? 'bg-emerald-500/60' : 'bg-foreground/10')} />
+                {idx < displayStages.length - 1 && (
+                  <div className={cn('flex-1 h-0.5 min-w-[12px] transition-all', s.completed && !s.skipped ? 'bg-emerald-500/60' : s.skipped ? 'bg-foreground/5' : 'bg-foreground/10')} />
                 )}
               </React.Fragment>
             );
@@ -1133,20 +1288,56 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
         </div>
       </div>
 
-      {/* Stage table — memoized rows */}
+      {/* DnD stage list */}
       <div className="space-y-3">
-        <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Stage Details</p>
-        {stages.map((s) => (
-          <StageRow
-            key={s.stage}
-            s={s}
-            isUpdating={updatingStages.has(s.stage)}
-            notesOpen={expandedNotes.has(s.stage)}
-            onUpdate={handleUpdate}
-            onDebouncedUpdate={debouncedUpdate}
-            onToggleNotes={toggleNotes}
-          />
-        ))}
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Stage Details</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => setAddingStage(true)}
+          >
+            <Plus className="w-3 h-3 mr-1" /> Add Stage
+          </Button>
+        </div>
+
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={displayStages.map(s => s.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {displayStages.map((s, idx) => (
+                <SortableStageRowV2
+                  key={s.id}
+                  stage={s}
+                  index={idx}
+                  isUpdating={updatingIds.has(s.id)}
+                  onPatch={handlePatch}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        {/* Add stage inline form */}
+        {addingStage && (
+          <div className="flex gap-2 p-3 rounded-2xl border border-primary/20 bg-primary/5">
+            <Input
+              autoFocus
+              placeholder="New stage name…"
+              value={newStageName}
+              onChange={(e) => setNewStageName(e.target.value)}
+              className="h-9 text-sm"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddStage(); if (e.key === 'Escape') { setAddingStage(false); setNewStageName(''); } }}
+            />
+            <Button size="sm" className="h-9 shrink-0" disabled={!newStageName.trim() || addStage.isPending} onClick={handleAddStage}>
+              {addStage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-9 shrink-0" onClick={() => { setAddingStage(false); setNewStageName(''); }}>
+              Cancel
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

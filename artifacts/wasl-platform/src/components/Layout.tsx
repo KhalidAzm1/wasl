@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X, Sun, Moon, Activity, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X, Sun, Moon, Activity, FlaskConical, Layers } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
@@ -32,6 +32,7 @@ const contentNavItems = [
 const adminNavItems = [
   { href: '/admin/system-health', icon: Activity, label: 'System Health', roles: ['super_admin'], permission: 'user_management' as const },
   { href: '/admin/system-tests', icon: FlaskConical, label: 'System Tests', roles: ['super_admin'], permission: 'user_management' as const },
+  { href: '/admin/implementation-settings', icon: Layers, label: 'Implementation Stages', roles: ['super_admin'], permission: 'user_management' as const },
 ];
 
 const systemNavItems = [

@@ -118,7 +118,7 @@ export default function AdminSystemHealth() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-foreground/40">
-            Last checked: {lastRefreshed.toLocaleTimeString()}
+            Last checked: {lastRefreshed.toLocaleTimeString('en-US')}
           </span>
           <Button onClick={handleRefresh} variant="outline" size="sm" className="gap-2" disabled={isFetching}>
             <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
@@ -222,7 +222,7 @@ export default function AdminSystemHealth() {
                   </div>
                   <span className="text-xs text-foreground/50">
                     {health.reports?.lastReportDate
-                      ? new Date(health.reports.lastReportDate).toLocaleDateString()
+                      ? new Date(health.reports.lastReportDate).toLocaleDateString('en-US')
                       : 'Never'}
                   </span>
                 </div>

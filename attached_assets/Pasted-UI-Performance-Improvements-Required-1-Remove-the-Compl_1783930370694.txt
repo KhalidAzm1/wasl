@@ -1,0 +1,126 @@
+UI & Performance Improvements Required
+
+1. Remove the "Completion" card completely from the bank header.
+Implementation Progress should be the only progress indicator in the system.
+
+2. Force all dates across the application to English.
+
+Locale:
+en-US
+
+Display formats:
+- July 13, 2026
+- 13 Jul 2026
+- MM/DD/YYYY
+
+Replace all Arabic placeholders such as:
+yyyy/شهر/يوم
+
+Apply this to:
+- Implementation Progress
+- Meetings
+- Documents
+- Dashboard
+- Reports
+- Activity Logs
+- Date Pickers
+- Exports (PDF/Excel)
+
+--------------------------------------------------
+
+PERFORMANCE OPTIMIZATION
+
+The Implementation Progress page is slow when:
+- Changing stage status
+- Clicking Done checkbox
+- Updating dates
+- Saving notes
+
+Optimize it as follows:
+
+1. Use optimistic UI updates.
+Changes should appear instantly before database confirmation.
+
+2. Do not reload the entire page after each update.
+
+3. Update only the modified stage row.
+
+4. Debounce updates by 500ms.
+
+5. Batch multiple updates into a single request.
+
+6. Cache implementation data.
+
+7. Prevent unnecessary React renders using:
+- React.memo
+- useMemo
+- useCallback
+
+8. Add loading indicators only for the row being updated.
+
+9. Create endpoint:
+
+PATCH /api/banks/:bankId/implementation-stage/:stageId
+
+Update only:
+- status
+- completed
+- completedAt
+- notes
+- owner
+
+10. Add database indexes:
+- bankId
+- stage
+- completed
+
+11. Use React Query / TanStack Query caching.
+
+12. Recalculate automatically:
+- Implementation %
+- Current Stage
+- Remaining Stages
+
+without page refresh.
+
+Performance target:
+- Checkbox update < 200ms
+- Status update < 300ms
+- No visible page refresh.
+
+--------------------------------------------------
+
+Create Performance Monitoring page:
+
+/admin/performance
+
+Show:
+- Average update time
+- Slow queries
+- Database response times
+- API response times
+- React render times
+
+--------------------------------------------------
+
+Track these PostHog events:
+
+- Implementation Stage Updated
+- Stage Completed
+- Stage Started
+- Update Duration
+- Slow Update Warning (>500ms)
+
+--------------------------------------------------
+
+Generate a Performance Report that can be downloaded as:
+
+- PDF
+- Excel
+
+Include:
+- Performance metrics
+- Slow endpoints
+- Recommendations
+- Database statistics
+- Frontend rendering statistics

@@ -21,6 +21,7 @@ import AdminUsers from '@/pages/admin-users';
 import AdminSystemHealth from '@/pages/admin-system-health';
 import AdminSystemTests from '@/pages/admin-system-tests';
 import AdminSystemTestsReports from '@/pages/admin-system-tests-reports';
+import AdminPerformance from '@/pages/admin-performance';
 import { AdminPinGate } from '@/components/AdminPinGate';
 import { PostHogProvider } from '@/providers/PostHogProvider';
 
@@ -109,6 +110,15 @@ function AppRoutes() {
           <Layout>
             <AdminPinGate>
               <AdminSystemTests />
+            </AdminPinGate>
+          </Layout>
+        </RequireAuth>
+      </Route>
+      <Route path="/admin/performance">
+        <RequireAuth roles={['super_admin']} permission="user_management">
+          <Layout>
+            <AdminPinGate>
+              <AdminPerformance />
             </AdminPinGate>
           </Layout>
         </RequireAuth>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'wouter';
 import { BankLogo } from '@/components/BankLogo';
 import { NavControls } from '@/components/NavControls';
@@ -181,10 +181,6 @@ export default function BankDetail() {
 
   if (!bank) return <div className="p-8 text-center text-foreground/50">Bank not found</div>;
 
-  const avgProgress = bank.products?.length 
-    ? bank.products.reduce((acc, p) => acc + p.progressPercent, 0) / bank.products.length 
-    : 0;
-
   return (
     <div className="p-8 pb-24 max-w-7xl mx-auto w-full space-y-8">
       {/* Header */}
@@ -224,12 +220,6 @@ export default function BankDetail() {
           <p className="text-foreground/50 text-lg">{bank.nameEn}</p>
         </div>
 
-        <div className="flex gap-6 text-center shrink-0">
-          <div className="px-6 py-3 rounded-xl bg-foreground/5 border border-foreground/10 backdrop-blur-md">
-            <p className="text-foreground/40 text-sm mb-1">Completion</p>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{formatPercentage(avgProgress)}</p>
-          </div>
-        </div>
       </div>
 
       <Tabs defaultValue="overview" className="w-full" onValueChange={(tab) => analytics.bankDetailsViewed({ bank_id: bank.id, bank_name_en: bank.nameEn, tab })}>
@@ -856,12 +846,217 @@ function StatusIcon({ status }: { status: string }) {
 
 // ── ImplementationProgressTab ─────────────────────────────────────────────
 
+interface StageRowProps {
+  s: ImplementationStageRow;
+  isUpdating: boolean;
+  notesOpen: boolean;
+  onUpdate: (stage: ImplementationStageRow, update: PatchImplementationStageBody) => void;
+  onDebouncedUpdate: (stage: ImplementationStageRow, update: PatchImplementationStageBody) => void;
+  onToggleNotes: (stageKey: string) => void;
+}
+
+const StageRow = React.memo(function StageRow({ s, isUpdating, notesOpen, onUpdate, onDebouncedUpdate, onToggleNotes }: StageRowProps) {
+  const cfg = STATUS_CONFIG[s.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.not_started;
+  return (
+    <div className={cn(
+      'rounded-2xl border p-4 transition-all',
+      s.status === 'in_progress' ? 'bg-blue-500/5 border-blue-500/20' :
+      s.status === 'completed'   ? 'bg-emerald-500/5 border-emerald-500/20' :
+      s.status === 'blocked'     ? 'bg-red-500/5 border-red-500/20' :
+      'bg-foreground/5 border-foreground/10'
+    )}>
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
+        {/* Stage index + name */}
+        <div className="flex items-center gap-3 md:w-64 shrink-0">
+          <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 shrink-0', cfg.ring, s.completed ? 'bg-emerald-500/20' : 'bg-foreground/5')}>
+            {s.completed ? '✓' : <span className={cfg.color}>{s.stageIndex + 1}</span>}
+          </div>
+          <div>
+            <p className="font-semibold text-sm leading-tight">{s.stageName}</p>
+            {s.daysInCurrentStage !== null && s.status === 'in_progress' && (
+              <p className="text-xs text-blue-400 flex items-center gap-1 mt-0.5">
+                <Clock className="w-3 h-3" />{s.daysInCurrentStage}d in progress
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Status selector with per-row spinner */}
+        <div className="md:w-44 shrink-0 relative">
+          <select
+            value={s.status}
+            disabled={isUpdating}
+            className={cn('w-full h-9 rounded-xl border px-3 text-xs font-medium bg-background/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed', cfg.ring)}
+            onChange={e => {
+              const newStatus = e.target.value;
+              const update: PatchImplementationStageBody = { status: newStatus };
+              if (newStatus === 'completed' && !s.completed) {
+                update.completed = true;
+                update.completedAt = new Date().toISOString().split('T')[0];
+              }
+              onUpdate(s, update);
+            }}
+          >
+            <option value="not_started">Not Started</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="blocked">Blocked</option>
+          </select>
+          {isUpdating && <Loader2 className="absolute right-2.5 top-2.5 w-4 h-4 animate-spin text-primary/60 pointer-events-none" />}
+        </div>
+
+        {/* Checkbox + date */}
+        <div className="flex items-center gap-3 md:w-48 shrink-0">
+          <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
+            <input
+              type="checkbox"
+              checked={s.completed}
+              disabled={isUpdating}
+              className="w-4 h-4 rounded accent-emerald-500 cursor-pointer disabled:opacity-60"
+              onChange={e => {
+                const checked = e.target.checked;
+                const update: PatchImplementationStageBody = {
+                  completed: checked,
+                  ...(checked ? { status: 'completed', completedAt: new Date().toISOString().split('T')[0] } : {}),
+                };
+                onUpdate(s, update);
+              }}
+            />
+            <span className="text-xs text-foreground/60">Done</span>
+          </label>
+          <Input
+            type="date"
+            value={s.completedAt ?? ''}
+            disabled={isUpdating}
+            className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-36 disabled:opacity-60"
+            onChange={e => onUpdate(s, { completedAt: e.target.value || null })}
+          />
+        </div>
+
+        {/* Owner — uncontrolled, debounced on blur (500ms) */}
+        <div className="flex-1 min-w-0">
+          <Input
+            key={`owner-${s.stage}-${s.updatedAt}`}
+            placeholder="Responsible person..."
+            defaultValue={s.owner ?? ''}
+            disabled={isUpdating}
+            className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg disabled:opacity-60"
+            onBlur={e => { if (e.target.value !== (s.owner ?? '')) onDebouncedUpdate(s, { owner: e.target.value || null }); }}
+          />
+        </div>
+
+        {/* Notes toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 px-3 text-xs text-foreground/50 shrink-0"
+          onClick={() => onToggleNotes(s.stage)}
+        >
+          <FileText className="w-3 h-3 mr-1" />
+          {notesOpen ? 'Hide' : 'Notes'}
+        </Button>
+      </div>
+
+      {/* Expandable notes — debounced save on blur */}
+      {notesOpen && (
+        <div className="mt-3 pt-3 border-t border-foreground/10">
+          <Textarea
+            placeholder="Add notes about this stage..."
+            defaultValue={s.notes ?? ''}
+            key={`notes-${s.stage}-${s.updatedAt}`}
+            className="text-sm bg-background/50 border-foreground/10 rounded-xl min-h-[80px] resize-none"
+            onBlur={e => { if (e.target.value !== (s.notes ?? '')) onDebouncedUpdate(s, { notes: e.target.value || null }); }}
+          />
+        </div>
+      )}
+    </div>
+  );
+});
+
 function ImplementationProgressTab({ bankId }: { bankId: string }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data, isLoading } = useGetBankImplementation(bankId);
   const patchStage = usePatchImplementationStage();
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [updatingStages, setUpdatingStages] = useState<Set<string>>(new Set());
+  const updateStartTimes = useRef<Map<string, number>>(new Map());
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Core update — optimistic cache write + mutation
+  const handleUpdate = useCallback((stage: ImplementationStageRow, update: PatchImplementationStageBody) => {
+    const oldStatus = stage.status;
+    const startTime = performance.now();
+    updateStartTimes.current.set(stage.stage, startTime);
+
+    // 1. Immediately mark the row as updating
+    setUpdatingStages(prev => new Set([...prev, stage.stage]));
+
+    // 2. Optimistic cache update — UI reflects change before server responds
+    const queryKey = getGetBankImplementationQueryKey(bankId);
+    const previousData = queryClient.getQueryData(queryKey);
+    queryClient.setQueryData(queryKey, (old: any) => {
+      if (!old) return old;
+      return {
+        ...old,
+        stages: old.stages.map((row: ImplementationStageRow) =>
+          row.stage === stage.stage ? { ...row, ...update } : row
+        ),
+      };
+    });
+
+    patchStage.mutate({ bankId, stage: stage.stage, data: update }, {
+      onSuccess: (result) => {
+        const duration = Math.round(performance.now() - (updateStartTimes.current.get(stage.stage) ?? startTime));
+        updateStartTimes.current.delete(stage.stage);
+
+        // 3. Confirm with server-authoritative data
+        queryClient.setQueryData(queryKey, result);
+        setUpdatingStages(prev => { const next = new Set(prev); next.delete(stage.stage); return next; });
+
+        // 4. Analytics
+        const newStatus = update.status ?? oldStatus;
+        if (update.status && update.status !== oldStatus) {
+          if (update.status === 'in_progress')
+            analytics.implementationStageStarted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
+          else if (update.status === 'completed')
+            analytics.implementationStageCompleted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex, days_in_stage: stage.daysInCurrentStage });
+          else if (update.status === 'blocked')
+            analytics.implementationStageBlocked({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
+        }
+        analytics.implementationProgressUpdated({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, new_status: newStatus, completion_percentage: result.completionPercentage });
+        analytics.implementationStageUpdated({ bank_id: bankId, stage: stage.stage, update_duration_ms: duration });
+        if (duration > 500) analytics.slowUpdateWarning({ bank_id: bankId, stage: stage.stage, duration_ms: duration });
+      },
+      onError: () => {
+        // Rollback optimistic update
+        queryClient.setQueryData(queryKey, previousData);
+        updateStartTimes.current.delete(stage.stage);
+        setUpdatingStages(prev => { const next = new Set(prev); next.delete(stage.stage); return next; });
+        toast({ title: 'Failed to save', variant: 'destructive' });
+      },
+    });
+  }, [bankId, queryClient, patchStage, toast]);
+
+  // Debounced wrapper — used for text inputs (owner, notes) to avoid rapid-fire requests
+  const debouncedUpdate = useCallback((stage: ImplementationStageRow, update: PatchImplementationStageBody) => {
+    const key = stage.stage;
+    const existing = debounceTimers.current.get(key);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      handleUpdate(stage, update);
+      debounceTimers.current.delete(key);
+    }, 500);
+    debounceTimers.current.set(key, timer);
+  }, [handleUpdate]);
+
+  const toggleNotes = useCallback((stageKey: string) => {
+    setExpandedNotes(prev => {
+      const next = new Set(prev);
+      if (next.has(stageKey)) next.delete(stageKey); else next.add(stageKey);
+      return next;
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -876,36 +1071,6 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
   const completionPercentage = data?.completionPercentage ?? 0;
   const currentStageName = data?.currentStageName ?? null;
   const remainingStages = data?.remainingStages ?? 8;
-
-  const handleUpdate = (stage: ImplementationStageRow, update: PatchImplementationStageBody) => {
-    const oldStatus = stage.status;
-    patchStage.mutate({ bankId, stage: stage.stage, data: update }, {
-      onSuccess: (result) => {
-        queryClient.setQueryData(getGetBankImplementationQueryKey(bankId), result);
-        const newStatus = update.status ?? oldStatus;
-        if (update.status && update.status !== oldStatus) {
-          if (update.status === 'in_progress') {
-            analytics.implementationStageStarted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
-          } else if (update.status === 'completed') {
-            analytics.implementationStageCompleted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex, days_in_stage: stage.daysInCurrentStage });
-          } else if (update.status === 'blocked') {
-            analytics.implementationStageBlocked({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
-          }
-        }
-        analytics.implementationProgressUpdated({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, new_status: newStatus, completion_percentage: result.completionPercentage });
-      },
-      onError: () => toast({ title: 'Failed to save', variant: 'destructive' }),
-    });
-  };
-
-  const toggleNotes = (stageKey: string) => {
-    setExpandedNotes(prev => {
-      const next = new Set(prev);
-      if (next.has(stageKey)) next.delete(stageKey); else next.add(stageKey);
-      return next;
-    });
-  };
-
   const completedCount = stages.filter(s => s.completed).length;
   const progressColor = completionPercentage === 100 ? 'bg-emerald-500' : completionPercentage >= 75 ? 'bg-blue-500' : completionPercentage >= 50 ? 'bg-yellow-500' : completionPercentage >= 25 ? 'bg-orange-500' : 'bg-foreground/30';
 
@@ -968,122 +1133,20 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
         </div>
       </div>
 
-      {/* Stage table */}
+      {/* Stage table — memoized rows */}
       <div className="space-y-3">
         <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Stage Details</p>
-        {stages.map((s) => {
-          const cfg = STATUS_CONFIG[s.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.not_started;
-          const notesOpen = expandedNotes.has(s.stage);
-          return (
-            <div key={s.stage} className={cn(
-              'rounded-2xl border p-4 transition-all',
-              s.status === 'in_progress' ? 'bg-blue-500/5 border-blue-500/20' :
-              s.status === 'completed' ? 'bg-emerald-500/5 border-emerald-500/20' :
-              s.status === 'blocked' ? 'bg-red-500/5 border-red-500/20' :
-              'bg-foreground/5 border-foreground/10'
-            )}>
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                {/* Stage index + name */}
-                <div className="flex items-center gap-3 md:w-64 shrink-0">
-                  <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 shrink-0', cfg.ring, s.completed ? 'bg-emerald-500/20' : 'bg-foreground/5')}>
-                    {s.completed ? '✓' : <span className={cfg.color}>{s.stageIndex + 1}</span>}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm leading-tight">{s.stageName}</p>
-                    {s.daysInCurrentStage !== null && s.status === 'in_progress' && (
-                      <p className="text-xs text-blue-400 flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3" />{s.daysInCurrentStage}d in progress
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Status selector */}
-                <div className="md:w-44 shrink-0">
-                  <select
-                    value={s.status}
-                    className={cn('w-full h-9 rounded-xl border px-3 text-xs font-medium bg-background/50 focus:outline-none focus:ring-2 focus:ring-primary/30', cfg.ring)}
-                    onChange={e => {
-                      const newStatus = e.target.value;
-                      const update: PatchImplementationStageBody = { status: newStatus };
-                      if (newStatus === 'completed' && !s.completed) {
-                        update.completed = true;
-                        update.completedAt = new Date().toISOString().split('T')[0];
-                      }
-                      handleUpdate(s, update);
-                    }}
-                  >
-                    <option value="not_started">Not Started</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="blocked">Blocked</option>
-                  </select>
-                </div>
-
-                {/* Checkbox + date */}
-                <div className="flex items-center gap-3 md:w-48 shrink-0">
-                  <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
-                    <input
-                      type="checkbox"
-                      checked={s.completed}
-                      className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
-                      onChange={e => {
-                        const checked = e.target.checked;
-                        const update: PatchImplementationStageBody = {
-                          completed: checked,
-                          ...(checked ? { status: 'completed', completedAt: new Date().toISOString().split('T')[0] } : {}),
-                        };
-                        handleUpdate(s, update);
-                      }}
-                    />
-                    <span className="text-xs text-foreground/60">Done</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={s.completedAt ?? ''}
-                    className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-36"
-                    onChange={e => handleUpdate(s, { completedAt: e.target.value || null })}
-                  />
-                </div>
-
-                {/* Owner — uncontrolled: saves on blur */}
-                <div className="flex-1 min-w-0">
-                  <Input
-                    key={`owner-${s.stage}-${s.updatedAt}`}
-                    placeholder="Responsible person..."
-                    defaultValue={s.owner ?? ''}
-                    className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg"
-                    onBlur={e => { if (e.target.value !== (s.owner ?? '')) handleUpdate(s, { owner: e.target.value || null }); }}
-                  />
-                </div>
-
-                {/* Notes toggle */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-3 text-xs text-foreground/50 shrink-0"
-                  onClick={() => toggleNotes(s.stage)}
-                >
-                  <FileText className="w-3 h-3 mr-1" />
-                  {notesOpen ? 'Hide' : 'Notes'}
-                </Button>
-              </div>
-
-              {/* Expandable notes */}
-              {notesOpen && (
-                <div className="mt-3 pt-3 border-t border-foreground/10">
-                  <Textarea
-                    placeholder="Add notes about this stage..."
-                    defaultValue={s.notes ?? ''}
-                    key={`notes-${s.stage}-${s.updatedAt}`}
-                    className="text-sm bg-background/50 border-foreground/10 rounded-xl min-h-[80px] resize-none"
-                    onBlur={e => { if (e.target.value !== (s.notes ?? '')) handleUpdate(s, { notes: e.target.value || null }); }}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {stages.map((s) => (
+          <StageRow
+            key={s.stage}
+            s={s}
+            isUpdating={updatingStages.has(s.stage)}
+            notesOpen={expandedNotes.has(s.stage)}
+            onUpdate={handleUpdate}
+            onDebouncedUpdate={debouncedUpdate}
+            onToggleNotes={toggleNotes}
+          />
+        ))}
       </div>
     </div>
   );

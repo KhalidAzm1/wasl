@@ -143,7 +143,7 @@ function ReportRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold capitalize">{report.suite.replace(/_/g, ' ')}</span>
-            <span className="text-xs text-foreground/40">{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>
+            <span className="text-xs text-foreground/40">{date.toLocaleDateString('en-US')} {date.toLocaleTimeString('en-US')}</span>
           </div>
           <div className="flex items-center gap-3 mt-1.5">
             <span className="flex items-center gap-1 text-xs text-green-500">
@@ -262,7 +262,7 @@ export default function AdminSystemTestsReports() {
     ? Math.round(reports!.reduce((s, r) => s + r.score, 0) / totalReports)
     : 0;
   const lastRun = reports?.[0]?.timestamp
-    ? new Date(reports[0].timestamp).toLocaleString()
+    ? new Date(reports[0].timestamp).toLocaleString('en-US')
     : 'Never';
 
   return (
@@ -298,7 +298,7 @@ export default function AdminSystemTestsReports() {
         {[
           { label: 'Total Reports', value: totalReports, icon: FileBarChart },
           { label: 'Average Score', value: totalReports ? `${avgScore}%` : '—', icon: CheckCircle2 },
-          { label: 'Last Run', value: reports?.[0] ? new Date(reports[0].timestamp).toLocaleDateString() : '—', icon: Clock },
+          { label: 'Last Run', value: reports?.[0] ? new Date(reports[0].timestamp).toLocaleDateString('en-US') : '—', icon: Clock },
           { label: 'Report Storage', value: `${totalReports} file(s)`, icon: FlaskConical },
         ].map(({ label, value, icon: Icon }) => (
           <Card key={label} className="glass-card">

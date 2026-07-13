@@ -193,6 +193,64 @@ router.patch("/banks/:bankId/implementation/:stage", async (req, res): Promise<v
   res.json(computeDerived(allRows));
 });
 
+// PATCH /api/banks/:bankId/implementation-stage/:stageId — update by numeric row ID
+router.patch("/banks/:bankId/implementation-stage/:stageId", async (req, res): Promise<void> => {
+  const { bankId, stageId: stageIdStr } = req.params;
+  const stageId = parseInt(stageIdStr, 10);
+
+  if (isNaN(stageId)) {
+    res.status(400).json({ error: "Invalid stageId" });
+    return;
+  }
+
+  const VALID_STATUSES = new Set(['not_started', 'in_progress', 'completed', 'blocked']);
+  const { status, completed, completedAt, notes, owner } = req.body as {
+    status?: string; completed?: boolean; completedAt?: string | null; notes?: string | null; owner?: string | null;
+  };
+
+  if (status !== undefined && !VALID_STATUSES.has(status)) {
+    res.status(400).json({ error: `Invalid status '${status}'.` });
+    return;
+  }
+  if (completedAt && !/^\d{4}-\d{2}-\d{2}$/.test(completedAt)) {
+    res.status(400).json({ error: "Invalid completedAt format. Expected YYYY-MM-DD" });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(bankImplementationProgressTable)
+    .where(and(eq(bankImplementationProgressTable.id, stageId), eq(bankImplementationProgressTable.bankId, bankId)));
+
+  if (!existing) {
+    res.status(404).json({ error: "Stage not found" });
+    return;
+  }
+
+  const update: Record<string, unknown> = { updatedAt: new Date() };
+  if (status !== undefined) update.status = status;
+  if (completed !== undefined) {
+    update.completed = completed;
+    if (completed && !completedAt) update.completedAt = new Date().toISOString().split("T")[0];
+  }
+  if (completedAt !== undefined) update.completedAt = completedAt;
+  if (notes !== undefined) update.notes = notes;
+  if (owner !== undefined) update.owner = owner;
+
+  await db.update(bankImplementationProgressTable).set(update as any).where(eq(bankImplementationProgressTable.id, stageId));
+
+  await logAudit(req, {
+    action: "UPDATE",
+    entityType: "implementation_stage",
+    entityId: `${bankId}:${existing.stage}`,
+    entityLabel: `${IMPLEMENTATION_STAGE_LABELS[existing.stage]} — ${status ?? existing.status}`,
+    details: update,
+  });
+
+  const allRows = await db.select().from(bankImplementationProgressTable).where(eq(bankImplementationProgressTable.bankId, bankId));
+  res.json(computeDerived(allRows));
+});
+
 // GET /api/implementation/summary — all banks' progress in one call (used by dashboard cards)
 router.get("/implementation/summary", async (_req, res): Promise<void> => {
   const activeBanks = await db

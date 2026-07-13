@@ -380,4 +380,29 @@ export const analytics = {
   }): void {
     this.trackEvent('Implementation Progress Updated', props);
   },
+
+  implementationStageUpdated(props: {
+    bank_id: string;
+    stage: string;
+    update_duration_ms: number;
+  }): void {
+    this.trackEvent('Implementation Stage Updated', props);
+  },
+
+  updateDuration(props: {
+    bank_id: string;
+    stage: string;
+    duration_ms: number;
+    endpoint: string;
+  }): void {
+    this.trackEvent('Update Duration', props);
+  },
+
+  slowUpdateWarning(props: {
+    bank_id: string;
+    stage: string;
+    duration_ms: number;
+  }): void {
+    this.trackEvent('Slow Update Warning', props);
+  },
 };

@@ -102,6 +102,14 @@ export const useGetBankImplementation = <TData = BankImplementationView, TError 
   return { ...query, queryKey } as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 };
 
+export function useGetAdminPerformanceStats() {
+  return useQuery({
+    queryKey: ['admin-performance-stats'],
+    queryFn: () => customFetch('/api/admin/performance-stats').then((r: Response) => r.json()),
+    staleTime: 30 * 1000,
+  });
+}
+
 export const useGetImplementationSummary = <TData = BankImplementationSummary[], TError = ErrorType<unknown>>(
   options?: { query?: Partial<UseQueryOptions<BankImplementationSummary[], TError, TData>> }
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {

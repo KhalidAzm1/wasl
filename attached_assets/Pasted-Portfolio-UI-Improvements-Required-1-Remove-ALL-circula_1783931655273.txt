@@ -1,0 +1,122 @@
+Portfolio UI Improvements Required
+
+1. Remove ALL circular percentage indicators completely.
+
+Delete:
+- Circular progress rings.
+- Small percentage circles (0%, 1%, 25%, etc.).
+- Duplicate completion percentages.
+- Any second implementation percentage indicator.
+
+There should only be ONE implementation percentage in the entire UI.
+
+--------------------------------------------------
+
+2. Keep only:
+
+Implementation
+████████░░░░ 63%
+
+Current Stage:
+Penetration Testing & Vulnerability Assessment (PT-AV)
+
+Display:
+- Progress bar
+- Percentage text on the right side
+- Current stage underneath.
+
+--------------------------------------------------
+
+3. In List View:
+Remove all circular indicators and add a simple text column:
+
+Implementation %
+
+Examples:
+25%
+50%
+75%
+100%
+
+--------------------------------------------------
+
+4. In Card View:
+Place the implementation percentage beside the progress bar.
+
+Example:
+
+Implementation
+████████░░░░ 63%
+
+Do not show any circles.
+
+--------------------------------------------------
+
+5. Fix card layout issue.
+
+Current problem:
+Cards are cropped from the bottom and some information is hidden.
+
+Fixes:
+- Remove fixed card heights.
+- Use auto height.
+- Increase minimum card height.
+- Allow cards to grow based on content.
+- Prevent overflow clipping.
+- Ensure all sections remain visible:
+  - Owner
+  - Risks
+  - Documents
+  - Updated Date
+  - Progress Bar
+  - Current Stage
+
+--------------------------------------------------
+
+6. Fix Grid View responsiveness.
+
+Requirements:
+- Cards should never be cropped.
+- Equal card heights.
+- Responsive layout for:
+  Desktop
+  Tablet
+  Mobile.
+
+--------------------------------------------------
+
+7. Add proper spacing:
+
+Card padding:
+24px
+
+Gap between cards:
+24px
+
+Bottom padding:
+32px
+
+--------------------------------------------------
+
+8. Ensure the page container allows scrolling and does not hide card content.
+
+Check:
+- overflow
+- height
+- min-height
+- flex settings
+
+--------------------------------------------------
+
+9. The implementation percentage must update live whenever stages change.
+
+--------------------------------------------------
+
+10. Create a cleaner executive design:
+
+- Remove unnecessary circles.
+- Emphasize implementation percentage.
+- Show progress bar prominently.
+- Improve readability for executive meetings and presentations.
+
+The implementation progress bar and its percentage should be the ONLY source of truth for bank completion status.

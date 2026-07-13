@@ -29,44 +29,6 @@ const itemVariants: Variants = {
   show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }
 };
 
-function ProgressRing({ progress, size = 48, strokeWidth = 4 }: { progress: number, size?: number, strokeWidth?: number }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / 100) * circumference;
-
-  return (
-    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="rotate-[-90deg]">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          fill="none"
-          className="text-foreground/10"
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.5, ease: "easeOut", delay: 0.1 }}
-          strokeLinecap="round"
-          className="text-primary drop-shadow-[0_0_6px_rgba(79,50,214,0.6)]"
-        />
-      </svg>
-      <div className="absolute text-[10px] font-mono font-bold text-foreground drop-shadow-md flex items-baseline">
-        {Math.round(progress)}<span className="text-[8px] text-foreground/60 ml-[1px]">%</span>
-      </div>
-    </div>
-  );
-}
 
 function CategoryFilter({ categories, value, onChange }: { categories: string[], value: string, onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -605,7 +567,7 @@ export default function Dashboard() {
                      </div>
                      <div className="flex flex-col gap-3">
                        {columnBanks.map(bank => (
-                          <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
+                          <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
                        ))}
                      </div>
                    </div>
@@ -619,17 +581,17 @@ export default function Dashboard() {
               className="flex flex-col gap-3 pb-24"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
               ))}
             </motion.div>
           ) : (
             <motion.div 
               key="grid"
               variants={containerVariants} initial="hidden" animate="show" exit={{ opacity: 0, transition: { duration: 0.2 } }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-24"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-[24px] pb-[32px]"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
               ))}
             </motion.div>
           )}
@@ -837,7 +799,6 @@ function CompactBankCard({
   hoveredId, 
   setHoveredId,
   viewMode,
-  avgProgress,
   productCodes,
   implProgress,
   onNavigate,
@@ -846,7 +807,6 @@ function CompactBankCard({
   hoveredId: string | null; 
   setHoveredId: (id: string | null) => void;
   viewMode: 'grid' | 'list' | 'kanban';
-  avgProgress: number;
   productCodes: string[];
   implProgress?: BankImplementationSummary;
   onNavigate?: () => void;
@@ -905,10 +865,18 @@ function CompactBankCard({
           </div>
 
           <div className="relative z-20 flex items-center gap-6 flex-1 justify-between sm:justify-start overflow-x-auto hide-scrollbar">
-            <div className="w-16 shrink-0">
-              <ProgressRing progress={avgProgress} size={36} strokeWidth={2.5} />
+            {/* Implementation % — text column */}
+            <div className="w-24 shrink-0">
+              {implProgress !== undefined ? (
+                <span className="text-sm font-mono font-bold text-foreground/80">
+                  {Math.round(implProgress.completionPercentage)}%
+                </span>
+              ) : (
+                <span className="text-sm text-foreground/20">—</span>
+              )}
+              <p className="text-[9px] text-foreground/30 uppercase tracking-widest mt-0.5">Implementation</p>
             </div>
-            
+
             <div className="w-36 shrink-0">
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-foreground/5 border border-foreground/5 w-max text-[11px] font-medium backdrop-blur-md">
                 <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_8px_currentColor]`} />
@@ -957,7 +925,11 @@ function CompactBankCard({
             <div className="w-10 h-10 rounded-xl bg-foreground/5 border border-foreground/10 p-1.5 shrink-0 shadow-inner">
                <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
             </div>
-            <ProgressRing progress={avgProgress} size={36} strokeWidth={2.5} />
+            {implProgress !== undefined && (
+              <span className="text-sm font-mono font-bold text-foreground/70">
+                {Math.round(implProgress.completionPercentage)}%
+              </span>
+            )}
           </div>
           
           <div className="relative z-20 min-w-0">
@@ -991,7 +963,7 @@ function CompactBankCard({
         onMouseLeave={() => setHoveredId(null)}
         animate={{ scale: isHovered ? 1.02 : 1, y: isHovered ? -4 : 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full h-[320px] rounded-[24px] overflow-hidden glass-card cursor-pointer group"
+        className="relative w-full min-h-[340px] rounded-[24px] glass-card cursor-pointer group"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-transparent transition-all duration-700 pointer-events-none" />
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-b from-white/50 to-transparent pointer-events-none transition-opacity duration-300 dark:hidden rounded-[24px]" />
@@ -1007,13 +979,12 @@ function CompactBankCard({
           </div>
         )}
 
-        <div className="relative z-20 h-full p-6 flex flex-col">
+        <div className="relative z-20 p-6 flex flex-col">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-2xl bg-white/50 dark:bg-foreground/5 border border-foreground/10 p-2.5 flex items-center justify-center shadow-sm backdrop-blur-md">
                  <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
               </div>
-              <ProgressRing progress={avgProgress} size={44} strokeWidth={3} />
             </div>
             <EditButton className="w-8 h-8 bg-background/60 backdrop-blur-md border border-foreground/10 text-foreground/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 hover:text-primary hover:bg-primary/15 hover:border-primary/40 transition-all text-[14px]" />
           </div>
@@ -1034,31 +1005,36 @@ function CompactBankCard({
             </div>
           </div>
 
-          {/* Implementation progress bar */}
-          {implProgress !== undefined && (
-            <div className="mt-2 space-y-1">
-              <div className="flex items-center justify-between text-[9px] text-foreground/40">
-                <span className="uppercase tracking-[0.15em] font-semibold">Implementation</span>
-                <span className="font-mono font-bold text-foreground/60">{Math.round(implProgress.completionPercentage)}%</span>
-              </div>
-              <div className="w-full h-1.5 rounded-full bg-foreground/10 overflow-hidden">
+          {/* Implementation progress — bar + % side by side */}
+          <div className="mt-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Implementation</span>
+              <span className="text-sm font-mono font-bold text-foreground/80">
+                {implProgress !== undefined ? `${Math.round(implProgress.completionPercentage)}%` : '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-2 rounded-full bg-foreground/10 overflow-hidden">
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-700',
+                    implProgress === undefined ? 'bg-foreground/20' :
                     implProgress.completionPercentage === 100 ? 'bg-emerald-500' :
                     implProgress.isBlocked ? 'bg-red-500' :
                     implProgress.completionPercentage >= 75 ? 'bg-blue-500' :
                     implProgress.completionPercentage >= 50 ? 'bg-yellow-500' :
                     implProgress.completionPercentage > 0 ? 'bg-orange-500' : 'bg-foreground/20'
                   )}
-                  style={{ width: `${implProgress.completionPercentage}%` }}
+                  style={{ width: `${implProgress?.completionPercentage ?? 0}%` }}
                 />
               </div>
-              {implProgress.currentStageName && implProgress.completionPercentage < 100 && (
-                <p className="text-[9px] text-foreground/30 truncate">{implProgress.currentStageName}</p>
-              )}
             </div>
-          )}
+            {implProgress?.currentStageName && implProgress.completionPercentage < 100 && (
+              <p className="text-[10px] text-foreground/40 leading-tight">
+                {implProgress.currentStageName}
+              </p>
+            )}
+          </div>
 
           <div className="mt-auto pt-4 border-t border-foreground/5 grid grid-cols-2 gap-y-3 gap-x-2">
             <div className="flex flex-col gap-1">

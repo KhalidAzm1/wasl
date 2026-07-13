@@ -1152,26 +1152,49 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
         setLocalOrder(null);
         analytics.stageReordered({ bank_id: bankId, stage_count: newOrder.length });
       },
-      onError: () => {
+      onError: (err: any) => {
+        // Roll back to server order
         setLocalOrder(null);
-        toast({ title: 'Failed to reorder stages', variant: 'destructive' });
+        toast({
+          title: 'Failed to reorder stages',
+          description: err?.message || 'The order was not saved. Your original order has been restored.',
+          variant: 'destructive',
+        });
       },
     });
   }, [displayStages, reorderStages, bankId, toast]);
 
   const handlePatch = useCallback((stageId: number, patch: PatchStageBodyV2) => {
     setUpdatingIds(prev => new Set([...prev, stageId]));
+    const stageName = stages.find(x => x.id === stageId)?.name ?? 'stage';
     patchStage.mutate({ stageId, data: patch }, {
       onSuccess: () => setUpdatingIds(prev => { const n = new Set(prev); n.delete(stageId); return n; }),
-      onError: () => {
+      onError: (err: any) => {
         setUpdatingIds(prev => { const n = new Set(prev); n.delete(stageId); return n; });
-        toast({ title: 'Failed to save', variant: 'destructive' });
+        toast({
+          title: `Could not save "${stageName}"`,
+          description: err?.message || 'The server rejected the change. Your edit was not applied — please try again.',
+          variant: 'destructive',
+        });
       },
     });
-  }, [patchStage, toast]);
+  }, [patchStage, stages, toast]);
 
   const handleDelete = useCallback((stageId: number) => {
     const s = stages.find(x => x.id === stageId);
+
+    // Guard: block deleting the only remaining non-skipped stage so banks
+    // never end up with an all-skipped (or empty) implementation plan.
+    const activeStages = stages.filter(x => !x.skipped);
+    if (activeStages.length === 1 && activeStages[0].id === stageId) {
+      toast({
+        title: 'Cannot delete the last active stage',
+        description: 'At least one non-skipped stage must remain. Mark this stage as "Skipped" instead, or add another stage first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setUpdatingIds(prev => new Set([...prev, stageId]));
     deleteStage.mutate({ stageId }, {
       onSuccess: () => {
@@ -1179,9 +1202,13 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
         toast({ title: 'Stage deleted' });
         if (s) analytics.stageDeleted({ bank_id: bankId, stage_id: stageId, stage_name: s.name });
       },
-      onError: () => {
+      onError: (err: any) => {
         setUpdatingIds(prev => { const n = new Set(prev); n.delete(stageId); return n; });
-        toast({ title: 'Failed to delete', variant: 'destructive' });
+        toast({
+          title: `Could not delete "${s?.name ?? 'stage'}"`,
+          description: err?.message || 'The server could not complete the deletion. Please try again.',
+          variant: 'destructive',
+        });
       },
     });
   }, [deleteStage, stages, bankId, toast]);

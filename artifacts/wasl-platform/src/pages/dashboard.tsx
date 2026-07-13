@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useGetDashboardSummary, useListBanks, useListProducts, useListProductTypes, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey } from '@workspace/api-client-react';
-import type { Bank } from '@workspace/api-client-react';
+import { useGetDashboardSummary, useListBanks, useListProducts, useListProductTypes, useGetBank, useUpdateBank, getGetBankQueryKey, getListBanksQueryKey, useGetImplementationSummary } from '@workspace/api-client-react';
+import type { Bank, BankImplementationSummary } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Link } from 'wouter';
@@ -287,6 +287,7 @@ export default function Dashboard() {
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
   const { data: banks, isLoading: isLoadingBanks } = useListBanks();
   const { data: products, isLoading: isLoadingProducts } = useListProducts();
+  const { data: implSummaries } = useGetImplementationSummary();
   
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
@@ -295,7 +296,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [filterRisk, setFilterRisk] = useState<string>('All');
-  const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk'>('all');
+  const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk' | 'implInProduction' | 'implInTesting' | 'implBlocked' | 'implReadyForGoLive'>('all');
+  const [implProgressFilter, setImplProgressFilter] = useState<'all' | '0-25' | '26-50' | '51-75' | '76-100'>('all');
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
 
   // ── Analytics: Dashboard Loaded ─────────────────────────────────────────
@@ -367,6 +369,24 @@ export default function Dashboard() {
     if (arr && p.productCode && !arr.includes(p.productCode)) arr.push(p.productCode);
   }
 
+  // ── Implementation progress map & KPIs ─────────────────────────────────
+  const implByBank = new Map<string, BankImplementationSummary>();
+  for (const s of implSummaries || []) implByBank.set(s.bankId, s);
+
+  const testingStages = new Set(['integration_testing_stg', 'user_acceptance_testing_uat', 'penetration_testing_pt_av']);
+  const allImplPct = banks.map(b => implByBank.get(b.id)?.completionPercentage ?? 0);
+  const avgImplProgress = Math.round(allImplPct.reduce((a, v) => a + v, 0) / Math.max(banks.length, 1));
+  const banksInProduction = banks.filter(b => (implByBank.get(b.id)?.completionPercentage ?? 0) === 100).length;
+  const banksInTesting = banks.filter(b => {
+    const cs = implByBank.get(b.id)?.currentStage;
+    return cs ? testingStages.has(cs) : false;
+  }).length;
+  const banksBlocked = banks.filter(b => implByBank.get(b.id)?.isBlocked).length;
+  const banksReadyForGoLive = banks.filter(b => {
+    const pct = implByBank.get(b.id)?.completionPercentage ?? 0;
+    return pct >= 87.5 && pct < 100;
+  }).length;
+
   const categories = ["All", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
 
   const normalizeStatus = (s: string) => s.toLowerCase();
@@ -377,6 +397,22 @@ export default function Dashboard() {
     if (kpiFilter === 'completed') return status.includes('complet');
     if (kpiFilter === 'delayed') return status.includes('delay');
     if (kpiFilter === 'inProgress') return status.includes('progress');
+    // Implementation filters
+    const impl = implByBank.get(bank.id);
+    if (kpiFilter === 'implInProduction') return (impl?.completionPercentage ?? 0) === 100;
+    if (kpiFilter === 'implInTesting') return impl ? testingStages.has(impl.currentStage ?? '') : false;
+    if (kpiFilter === 'implBlocked') return impl?.isBlocked ?? false;
+    if (kpiFilter === 'implReadyForGoLive') { const pct = impl?.completionPercentage ?? 0; return pct >= 87.5 && pct < 100; }
+    return true;
+  };
+
+  const matchesImplProgressFilter = (bank: Bank) => {
+    if (implProgressFilter === 'all') return true;
+    const pct = implByBank.get(bank.id)?.completionPercentage ?? 0;
+    if (implProgressFilter === '0-25') return pct <= 25;
+    if (implProgressFilter === '26-50') return pct > 25 && pct <= 50;
+    if (implProgressFilter === '51-75') return pct > 50 && pct <= 75;
+    if (implProgressFilter === '76-100') return pct > 75;
     return true;
   };
 
@@ -387,6 +423,7 @@ export default function Dashboard() {
       if (filterCategory !== 'All' && b.category !== filterCategory) return false;
       if (filterRisk !== 'All' && b.riskLevel !== filterRisk) return false;
       if (!matchesKpi(b)) return false;
+      if (!matchesImplProgressFilter(b)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -420,6 +457,7 @@ export default function Dashboard() {
            <p className="text-[11px] text-foreground/40 uppercase tracking-[0.2em] font-medium">Banking Intelligence Platform</p>
         </div>
 
+        {/* Bank status KPIs */}
         <div className="flex md:flex-wrap items-center justify-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0 w-full">
           <KpiButton label="Total Banks" value={summary.totalBanks} colorClass="text-foreground" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
           <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
@@ -431,19 +469,35 @@ export default function Dashboard() {
           <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
           <KpiButton label="High Risk" value={highRiskBankCount} colorClass="text-red-600 dark:text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
         </div>
+
+        {/* Implementation progress KPIs */}
+        <div className="flex md:flex-wrap items-center justify-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-1 md:pb-0 w-full border-t border-foreground/5 pt-4">
+          <div className="text-[10px] text-foreground/30 uppercase tracking-[0.2em] font-bold shrink-0 hidden md:block">Implementation</div>
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="Avg Progress" value={avgImplProgress} colorClass="text-purple-500 dark:text-purple-400" active={false} onClick={() => {}} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="In Production" value={banksInProduction} colorClass="text-emerald-600 dark:text-emerald-400" active={kpiFilter === 'implInProduction'} onClick={() => setKpiFilter(kpiFilter === 'implInProduction' ? 'all' : 'implInProduction')} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="In Testing" value={banksInTesting} colorClass="text-blue-600 dark:text-blue-400" active={kpiFilter === 'implInTesting'} onClick={() => setKpiFilter(kpiFilter === 'implInTesting' ? 'all' : 'implInTesting')} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="Blocked" value={banksBlocked} colorClass="text-red-600 dark:text-red-400" active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} />
+          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
+          <KpiButton label="Ready for Go-Live" value={banksReadyForGoLive} colorClass="text-amber-500 dark:text-amber-400" active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} />
+        </div>
       </div>
 
-      {(kpiFilter !== 'all' || filterCategory !== 'All' || filterRisk !== 'All' || searchQuery !== '') && (
+      {(kpiFilter !== 'all' || filterCategory !== 'All' || filterRisk !== 'All' || searchQuery !== '' || implProgressFilter !== 'all') && (
         <div className="px-8 md:px-10 max-w-[1920px] mx-auto w-full -mb-4 pt-6">
           <div className="flex flex-wrap items-center gap-3">
              <span className="text-[10px] text-foreground/40 uppercase tracking-[0.2em] font-bold">Active Filters:</span>
-             {kpiFilter !== 'all' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Status: {kpiFilter}</span>}
+             {kpiFilter !== 'all' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">KPI: {kpiFilter}</span>}
              {filterCategory !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Category: {filterCategory}</span>}
              {filterRisk !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Risk: {filterRisk}</span>}
              {searchQuery !== '' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Search: {searchQuery}</span>}
+             {implProgressFilter !== 'all' && <span className="text-[11px] font-medium bg-purple-500/10 text-purple-500 border border-purple-500/30 px-3 py-1 rounded-full">Impl: {implProgressFilter}%</span>}
 
              <button
-               onClick={() => { setKpiFilter('all'); setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); }}
+               onClick={() => { setKpiFilter('all'); setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); setImplProgressFilter('all'); }}
                className="text-[11px] font-medium text-foreground/50 hover:text-primary transition-colors ml-1 px-2"
              >
                Clear All
@@ -487,6 +541,23 @@ export default function Dashboard() {
             >
               <SlidersHorizontal className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Implementation progress range filter */}
+          <div className="flex items-center gap-1 p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0">
+            <span className="text-[9px] text-foreground/30 uppercase tracking-wider font-bold px-2 hidden xl:block">Impl%</span>
+            {(['all', '0-25', '26-50', '51-75', '76-100'] as const).map(range => (
+              <button
+                key={range}
+                onClick={() => setImplProgressFilter(range)}
+                className={cn(
+                  'px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors focus:outline-none',
+                  implProgressFilter === range ? 'bg-purple-500/20 text-purple-400 shadow-sm' : 'text-foreground/40 hover:text-foreground hover:bg-foreground/10'
+                )}
+              >
+                {range === 'all' ? 'All' : `${range}%`}
+              </button>
+            ))}
           </div>
 
           <div className="flex items-center p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0 w-max xl:w-auto">
@@ -534,7 +605,7 @@ export default function Dashboard() {
                      </div>
                      <div className="flex flex-col gap-3">
                        {columnBanks.map(bank => (
-                          <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
+                          <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="kanban" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
                        ))}
                      </div>
                    </div>
@@ -548,7 +619,7 @@ export default function Dashboard() {
               className="flex flex-col gap-3 pb-24"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="list" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
               ))}
             </motion.div>
           ) : (
@@ -558,7 +629,7 @@ export default function Dashboard() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-24"
             >
               {filteredBanks.map(bank => (
-                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
+                <CompactBankCard key={bank.id} bankSummary={bank} hoveredId={hoveredId} setHoveredId={setHoveredId} viewMode="grid" avgProgress={progressByBank.get(bank.id) || 0} productCodes={productCodesByBank.get(bank.id) ?? []} implProgress={implByBank.get(bank.id)} onNavigate={searchQuery ? () => analytics.searchResultClicked({ query: searchQuery, bank_id: bank.id, bank_name: bank.nameEn, result_position: filteredBanks.findIndex(b => b.id === bank.id) }) : undefined} />
               ))}
             </motion.div>
           )}
@@ -768,6 +839,7 @@ function CompactBankCard({
   viewMode,
   avgProgress,
   productCodes,
+  implProgress,
   onNavigate,
 }: { 
   bankSummary: Bank; 
@@ -776,6 +848,7 @@ function CompactBankCard({
   viewMode: 'grid' | 'list' | 'kanban';
   avgProgress: number;
   productCodes: string[];
+  implProgress?: BankImplementationSummary;
   onNavigate?: () => void;
 }) {
   const { data: bankDetail } = useGetBank(bankSummary.id, {
@@ -960,6 +1033,32 @@ function CompactBankCard({
               <span className="text-foreground/80">{displayBank.status}</span>
             </div>
           </div>
+
+          {/* Implementation progress bar */}
+          {implProgress !== undefined && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between text-[9px] text-foreground/40">
+                <span className="uppercase tracking-[0.15em] font-semibold">Implementation</span>
+                <span className="font-mono font-bold text-foreground/60">{Math.round(implProgress.completionPercentage)}%</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-foreground/10 overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-700',
+                    implProgress.completionPercentage === 100 ? 'bg-emerald-500' :
+                    implProgress.isBlocked ? 'bg-red-500' :
+                    implProgress.completionPercentage >= 75 ? 'bg-blue-500' :
+                    implProgress.completionPercentage >= 50 ? 'bg-yellow-500' :
+                    implProgress.completionPercentage > 0 ? 'bg-orange-500' : 'bg-foreground/20'
+                  )}
+                  style={{ width: `${implProgress.completionPercentage}%` }}
+                />
+              </div>
+              {implProgress.currentStageName && implProgress.completionPercentage < 100 && (
+                <p className="text-[9px] text-foreground/30 truncate">{implProgress.currentStageName}</p>
+              )}
+            </div>
+          )}
 
           <div className="mt-auto pt-4 border-t border-foreground/5 grid grid-cols-2 gap-y-3 gap-x-2">
             <div className="flex flex-col gap-1">

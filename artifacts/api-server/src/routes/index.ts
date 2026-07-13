@@ -13,6 +13,7 @@ import productTypesRouter from "./product-types";
 import auditLogsRouter from "./audit-logs";
 import archiveRouter from "./archive";
 import systemRouter from "./system";
+import implementationRouter from "./implementation";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(adminUsersRouter);
 router.use(auditLogsRouter);
 router.use(archiveRouter);
 router.use(systemRouter);
+router.use(implementationRouter);
 
 export default router;

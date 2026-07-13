@@ -340,4 +340,44 @@ export const analytics = {
   executivePresentationModeEnabled(props: { bank_id?: string; bank_name?: string }): void {
     this.trackEvent('Executive Presentation Mode Enabled', props);
   },
+
+  // ── Implementation Progress ─────────────────────────────────────────────
+
+  implementationStageStarted(props: {
+    bank_id: string;
+    stage: string;
+    stage_name: string;
+    stage_index: number;
+  }): void {
+    this.trackEvent('Implementation Stage Started', props);
+  },
+
+  implementationStageCompleted(props: {
+    bank_id: string;
+    stage: string;
+    stage_name: string;
+    stage_index: number;
+    days_in_stage?: number | null;
+  }): void {
+    this.trackEvent('Implementation Stage Completed', props);
+  },
+
+  implementationStageBlocked(props: {
+    bank_id: string;
+    stage: string;
+    stage_name: string;
+    stage_index: number;
+  }): void {
+    this.trackEvent('Implementation Stage Blocked', props);
+  },
+
+  implementationProgressUpdated(props: {
+    bank_id: string;
+    stage: string;
+    stage_name: string;
+    new_status?: string;
+    completion_percentage?: number;
+  }): void {
+    this.trackEvent('Implementation Progress Updated', props);
+  },
 };

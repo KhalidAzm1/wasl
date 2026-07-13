@@ -9,7 +9,10 @@ import {
   useCreateRisk, useUpdateRisk, useDeleteRisk,
   useCreateActionItem, useUpdateActionItem, useDeleteActionItem,
   useCreateDocument, useUploadDocument, useDeleteDocument,
-  useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey
+  useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey,
+  useGetBankImplementation, usePatchImplementationStage, getGetBankImplementationQueryKey,
+  type PatchImplementationStageBody,
+  type ImplementationStageRow,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,13 +23,35 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate, formatDateTime, formatPercentage, getStatusColor } from '@/lib/utils';
+import { formatDate, formatDateTime, formatPercentage, getStatusColor, cn } from '@/lib/utils';
 import { analytics } from '@/lib/analytics';
 import { 
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
   CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip,
-  Maximize2,
+  Maximize2, BarChart2, CheckCircle2, Circle, Ban, Clock, Flag, Loader2,
 } from 'lucide-react';
+
+// ── Implementation progress badge (used in the bank header) ──────────────
+function ImplProgressBadge({ bankId }: { bankId: string }) {
+  const { data } = useGetBankImplementation(bankId);
+  if (!data) return null;
+  const pct = data.completionPercentage;
+  const color = pct === 100
+    ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30'
+    : pct >= 75
+    ? 'bg-blue-500/20 text-blue-500 border-blue-500/30'
+    : pct >= 50
+    ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+    : pct > 0
+    ? 'bg-orange-500/20 text-orange-500 border-orange-500/30'
+    : 'bg-foreground/5 text-foreground/40 border-foreground/10';
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold', color)}>
+      <BarChart2 className="w-3 h-3" />
+      {Math.round(pct)}% Implementation
+    </span>
+  );
+}
 
 // Generic attachment button + dialog for entities other than banks (products,
 // meetings). Mirrors the bank Documents tab but scoped to a single
@@ -192,6 +217,7 @@ export default function BankDetail() {
               <span className={`w-2 h-2 rounded-full shrink-0 ${getStatusColor(bank.status).dot}`} />
               {bank.status}
             </span>
+            <ImplProgressBadge bankId={bank.id} />
             {bank.riskLevel === 'High' && <Badge variant="destructive">High Risk</Badge>}
             {bank.priorityImpact === 'HOT' && <Badge variant="warning">Top Priority</Badge>}
           </div>
@@ -220,11 +246,14 @@ export default function BankDetail() {
           <TabsTrigger value="actions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
             <CheckSquare className="w-4 h-4" /> Actions
           </TabsTrigger>
-          <TabsTrigger value="risks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
-            <AlertTriangle className="w-4 h-4" /> Risks
-          </TabsTrigger>
           <TabsTrigger value="documents" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
             <FileText className="w-4 h-4" /> Documents
+          </TabsTrigger>
+          <TabsTrigger value="implementation" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
+            <BarChart2 className="w-4 h-4" /> Implementation Progress
+          </TabsTrigger>
+          <TabsTrigger value="risks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2">
+            <AlertTriangle className="w-4 h-4" /> Risks
           </TabsTrigger>
         </TabsList>
 
@@ -358,12 +387,16 @@ export default function BankDetail() {
           <ActionsTab bankId={bank.id} actionItems={bank.actionItems || []} />
         </TabsContent>
 
-        <TabsContent value="risks">
-          <RisksTab bankId={bank.id} risks={bank.risks || []} />
-        </TabsContent>
-
         <TabsContent value="documents">
           <DocumentsTab bankId={bank.id} documents={bank.documents || []} />
+        </TabsContent>
+
+        <TabsContent value="implementation">
+          <ImplementationProgressTab bankId={bank.id} />
+        </TabsContent>
+
+        <TabsContent value="risks">
+          <RisksTab bankId={bank.id} risks={bank.risks || []} />
         </TabsContent>
       </Tabs>
     </div>
@@ -801,6 +834,257 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
           <DialogFooter><Button onClick={handleSave} disabled={createDoc.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ── Stage status helpers ──────────────────────────────────────────────────
+
+const STATUS_CONFIG = {
+  not_started: { label: 'Not Started', color: 'text-foreground/40', dot: 'bg-foreground/30', bar: 'bg-foreground/20', ring: 'border-foreground/20' },
+  in_progress: { label: 'In Progress', color: 'text-blue-500', dot: 'bg-blue-500', bar: 'bg-blue-500', ring: 'border-blue-400' },
+  completed:   { label: 'Completed',   color: 'text-emerald-500', dot: 'bg-emerald-500', bar: 'bg-emerald-500', ring: 'border-emerald-400' },
+  blocked:     { label: 'Blocked',     color: 'text-red-500', dot: 'bg-red-500', bar: 'bg-red-500', ring: 'border-red-400' },
+};
+
+function StatusIcon({ status }: { status: string }) {
+  if (status === 'completed')  return <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />;
+  if (status === 'in_progress') return <Loader2 className="w-4 h-4 text-blue-500 shrink-0 animate-spin" />;
+  if (status === 'blocked')    return <Ban className="w-4 h-4 text-red-500 shrink-0" />;
+  return <Circle className="w-4 h-4 text-foreground/30 shrink-0" />;
+}
+
+// ── ImplementationProgressTab ─────────────────────────────────────────────
+
+function ImplementationProgressTab({ bankId }: { bankId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data, isLoading } = useGetBankImplementation(bankId);
+  const patchStage = usePatchImplementationStage();
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 gap-3 text-foreground/40">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span>Loading implementation progress...</span>
+      </div>
+    );
+  }
+
+  const stages = data?.stages ?? [];
+  const completionPercentage = data?.completionPercentage ?? 0;
+  const currentStageName = data?.currentStageName ?? null;
+  const remainingStages = data?.remainingStages ?? 8;
+
+  const handleUpdate = (stage: ImplementationStageRow, update: PatchImplementationStageBody) => {
+    const oldStatus = stage.status;
+    patchStage.mutate({ bankId, stage: stage.stage, data: update }, {
+      onSuccess: (result) => {
+        queryClient.setQueryData(getGetBankImplementationQueryKey(bankId), result);
+        const newStatus = update.status ?? oldStatus;
+        if (update.status && update.status !== oldStatus) {
+          if (update.status === 'in_progress') {
+            analytics.implementationStageStarted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
+          } else if (update.status === 'completed') {
+            analytics.implementationStageCompleted({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex, days_in_stage: stage.daysInCurrentStage });
+          } else if (update.status === 'blocked') {
+            analytics.implementationStageBlocked({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, stage_index: stage.stageIndex });
+          }
+        }
+        analytics.implementationProgressUpdated({ bank_id: bankId, stage: stage.stage, stage_name: stage.stageName, new_status: newStatus, completion_percentage: result.completionPercentage });
+      },
+      onError: () => toast({ title: 'Failed to save', variant: 'destructive' }),
+    });
+  };
+
+  const toggleNotes = (stageKey: string) => {
+    setExpandedNotes(prev => {
+      const next = new Set(prev);
+      if (next.has(stageKey)) next.delete(stageKey); else next.add(stageKey);
+      return next;
+    });
+  };
+
+  const completedCount = stages.filter(s => s.completed).length;
+  const progressColor = completionPercentage === 100 ? 'bg-emerald-500' : completionPercentage >= 75 ? 'bg-blue-500' : completionPercentage >= 50 ? 'bg-yellow-500' : completionPercentage >= 25 ? 'bg-orange-500' : 'bg-foreground/30';
+
+  return (
+    <div className="space-y-8">
+      {/* Summary header */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="md:col-span-2 p-5 rounded-2xl bg-foreground/5 border border-foreground/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-foreground/50 font-medium">Overall Completion</span>
+            <span className="text-2xl font-mono font-bold text-foreground">{Math.round(completionPercentage)}%</span>
+          </div>
+          <div className="w-full h-3 rounded-full bg-foreground/10 overflow-hidden">
+            <div className={cn('h-full rounded-full transition-all duration-700', progressColor)} style={{ width: `${completionPercentage}%` }} />
+          </div>
+          <div className="flex items-center justify-between text-xs text-foreground/40">
+            <span>{completedCount} / 8 stages completed</span>
+            <span>{remainingStages} remaining</span>
+          </div>
+        </div>
+        <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 flex flex-col justify-center gap-1">
+          <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Current Stage</span>
+          <span className="font-semibold text-sm leading-snug">{currentStageName ?? (completionPercentage === 100 ? '✓ All Complete' : 'Not Started')}</span>
+        </div>
+        <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 flex flex-col justify-center gap-1">
+          <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Remaining Stages</span>
+          <span className="font-mono text-2xl font-bold">{remainingStages}</span>
+        </div>
+      </div>
+
+      {/* Timeline visualization */}
+      <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 overflow-x-auto">
+        <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold mb-4">Implementation Timeline</p>
+        <div className="flex items-center min-w-max gap-0">
+          {stages.map((s, idx) => {
+            const cfg = STATUS_CONFIG[s.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.not_started;
+            const isActive = s.status === 'in_progress';
+            return (
+              <React.Fragment key={s.stage}>
+                <div className="flex flex-col items-center gap-2 w-[100px]">
+                  <div className={cn(
+                    'w-9 h-9 rounded-full flex items-center justify-center border-2 text-xs font-bold transition-all',
+                    isActive ? 'scale-110 shadow-[0_0_12px_0_rgba(59,130,246,0.5)]' : '',
+                    cfg.ring,
+                    s.completed ? 'bg-emerald-500/20' : s.status === 'in_progress' ? 'bg-blue-500/20' : s.status === 'blocked' ? 'bg-red-500/20' : 'bg-foreground/5',
+                  )}>
+                    {s.completed ? '✓' : <span className={cfg.color}>{idx + 1}</span>}
+                  </div>
+                  <div className="text-center">
+                    <p className={cn('text-[10px] font-semibold leading-tight text-center max-w-[90px]', cfg.color)}>{s.stageName}</p>
+                    {s.completedAt && <p className="text-[9px] text-foreground/30 mt-0.5">{s.completedAt}</p>}
+                  </div>
+                </div>
+                {idx < stages.length - 1 && (
+                  <div className={cn('flex-1 h-0.5 min-w-[12px] transition-all', s.completed ? 'bg-emerald-500/60' : 'bg-foreground/10')} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Stage table */}
+      <div className="space-y-3">
+        <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Stage Details</p>
+        {stages.map((s) => {
+          const cfg = STATUS_CONFIG[s.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.not_started;
+          const notesOpen = expandedNotes.has(s.stage);
+          return (
+            <div key={s.stage} className={cn(
+              'rounded-2xl border p-4 transition-all',
+              s.status === 'in_progress' ? 'bg-blue-500/5 border-blue-500/20' :
+              s.status === 'completed' ? 'bg-emerald-500/5 border-emerald-500/20' :
+              s.status === 'blocked' ? 'bg-red-500/5 border-red-500/20' :
+              'bg-foreground/5 border-foreground/10'
+            )}>
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                {/* Stage index + name */}
+                <div className="flex items-center gap-3 md:w-64 shrink-0">
+                  <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 shrink-0', cfg.ring, s.completed ? 'bg-emerald-500/20' : 'bg-foreground/5')}>
+                    {s.completed ? '✓' : <span className={cfg.color}>{s.stageIndex + 1}</span>}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm leading-tight">{s.stageName}</p>
+                    {s.daysInCurrentStage !== null && s.status === 'in_progress' && (
+                      <p className="text-xs text-blue-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />{s.daysInCurrentStage}d in progress
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status selector */}
+                <div className="md:w-44 shrink-0">
+                  <select
+                    value={s.status}
+                    className={cn('w-full h-9 rounded-xl border px-3 text-xs font-medium bg-background/50 focus:outline-none focus:ring-2 focus:ring-primary/30', cfg.ring)}
+                    onChange={e => {
+                      const newStatus = e.target.value;
+                      const update: PatchImplementationStageBody = { status: newStatus };
+                      if (newStatus === 'completed' && !s.completed) {
+                        update.completed = true;
+                        update.completedAt = new Date().toISOString().split('T')[0];
+                      }
+                      handleUpdate(s, update);
+                    }}
+                  >
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
+                </div>
+
+                {/* Checkbox + date */}
+                <div className="flex items-center gap-3 md:w-48 shrink-0">
+                  <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
+                    <input
+                      type="checkbox"
+                      checked={s.completed}
+                      className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        const update: PatchImplementationStageBody = {
+                          completed: checked,
+                          ...(checked ? { status: 'completed', completedAt: new Date().toISOString().split('T')[0] } : {}),
+                        };
+                        handleUpdate(s, update);
+                      }}
+                    />
+                    <span className="text-xs text-foreground/60">Done</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={s.completedAt ?? ''}
+                    className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-36"
+                    onChange={e => handleUpdate(s, { completedAt: e.target.value || null })}
+                  />
+                </div>
+
+                {/* Owner — uncontrolled: saves on blur */}
+                <div className="flex-1 min-w-0">
+                  <Input
+                    key={`owner-${s.stage}-${s.updatedAt}`}
+                    placeholder="Responsible person..."
+                    defaultValue={s.owner ?? ''}
+                    className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg"
+                    onBlur={e => { if (e.target.value !== (s.owner ?? '')) handleUpdate(s, { owner: e.target.value || null }); }}
+                  />
+                </div>
+
+                {/* Notes toggle */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-xs text-foreground/50 shrink-0"
+                  onClick={() => toggleNotes(s.stage)}
+                >
+                  <FileText className="w-3 h-3 mr-1" />
+                  {notesOpen ? 'Hide' : 'Notes'}
+                </Button>
+              </div>
+
+              {/* Expandable notes */}
+              {notesOpen && (
+                <div className="mt-3 pt-3 border-t border-foreground/10">
+                  <Textarea
+                    placeholder="Add notes about this stage..."
+                    defaultValue={s.notes ?? ''}
+                    key={`notes-${s.stage}-${s.updatedAt}`}
+                    className="text-sm bg-background/50 border-foreground/10 rounded-xl min-h-[80px] resize-none"
+                    onBlur={e => { if (e.target.value !== (s.notes ?? '')) handleUpdate(s, { notes: e.target.value || null }); }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

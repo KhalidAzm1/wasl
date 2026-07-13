@@ -50,6 +50,8 @@ export type PercentageMode = "dynamic" | "fixed";
 
 export const DEFAULT_STAGE_NAMES = [
   "Initial Engagement",
+  "NDA",
+  "Agreement",
   "Business Analysis",
   "Technical Development",
   "Integration Testing (STG)",

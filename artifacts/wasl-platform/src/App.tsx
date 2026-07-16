@@ -17,6 +17,8 @@ import Documents from '@/pages/documents';
 import Security from '@/pages/security';
 import Login from '@/pages/login';
 import ChangePassword from '@/pages/change-password';
+import ForgotPassword from '@/pages/forgot-password';
+import ResetPassword from '@/pages/reset-password';
 import AdminUsers from '@/pages/admin-users';
 import AdminSystemHealth from '@/pages/admin-system-health';
 import AdminSystemTests from '@/pages/admin-system-tests';
@@ -39,6 +41,8 @@ function AppRoutes() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/change-password">
         <RequireAuth allowMustChangePassword>
           <ChangePassword />

@@ -36,23 +36,25 @@ router.use(requireAuth);
 
 type Stage = typeof implementationStagesTable.$inferSelect;
 
+/** Load all implementation settings in one query, return as a keyed map */
+async function getAllSettings(): Promise<Record<string, string>> {
+  const rows = await db.select().from(implementationSettingsTable);
+  const map: Record<string, string> = {};
+  for (const r of rows) map[r.key] = r.value;
+  return map;
+}
+
 /** Load the percentage mode from settings (default: dynamic) */
 async function getPercentageMode(): Promise<"dynamic" | "fixed"> {
-  const [row] = await db
-    .select()
-    .from(implementationSettingsTable)
-    .where(eq(implementationSettingsTable.key, "percentage_mode"));
-  return (row?.value ?? "dynamic") as "dynamic" | "fixed";
+  const s = await getAllSettings();
+  return (s["percentage_mode"] ?? "dynamic") as "dynamic" | "fixed";
 }
 
 /** Load default stage names from settings (falls back to hardcoded list) */
 async function getDefaultStageNames(): Promise<string[]> {
-  const [row] = await db
-    .select()
-    .from(implementationSettingsTable)
-    .where(eq(implementationSettingsTable.key, "default_stages"));
-  if (!row) return DEFAULT_STAGE_NAMES;
-  try { return JSON.parse(row.value); } catch { return DEFAULT_STAGE_NAMES; }
+  const s = await getAllSettings();
+  if (!s["default_stages"]) return DEFAULT_STAGE_NAMES;
+  try { return JSON.parse(s["default_stages"]); } catch { return DEFAULT_STAGE_NAMES; }
 }
 
 /** Compute effective percentage & derived rollup from a set of stages */

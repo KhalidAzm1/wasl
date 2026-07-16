@@ -153,9 +153,21 @@ router.get("/banks", async (_req, res): Promise<void> => {
     .from(banksTable)
     .where(eq(banksTable.isArchived, false))
     .orderBy(banksTable.nameEn);
+
+  // Batch-load all product-type mappings in ONE query instead of N
+  const allMappings = await db
+    .select({ bankId: bankProductTypesTable.bankId, productTypeId: bankProductTypesTable.productTypeId })
+    .from(bankProductTypesTable);
+  const ptByBank = new Map<string, number[]>();
+  for (const { bankId, productTypeId } of allMappings) {
+    if (!ptByBank.has(bankId)) ptByBank.set(bankId, []);
+    ptByBank.get(bankId)!.push(productTypeId);
+  }
+
+  // Resolve signed image URLs in parallel across all banks
   const withProductTypes = await Promise.all(
-    banks.map(async (bank) =>
-      withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) }),
+    banks.map((bank) =>
+      withSignedImageUrls({ ...bank, productTypeIds: ptByBank.get(bank.id) ?? [] }),
     ),
   );
   res.json(ListBanksResponse.parse(toPlain(withProductTypes)));

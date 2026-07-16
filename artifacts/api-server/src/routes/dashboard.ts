@@ -21,10 +21,15 @@ const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
 
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
-  const banks = await db.select().from(banksTable).where(eq(banksTable.isArchived, false));
+  // Load everything in parallel; filter risks/products in SQL, not in JS
+  const [banks, risks, products] = await Promise.all([
+    db.select().from(banksTable).where(eq(banksTable.isArchived, false)),
+    db.select({ bankId: risksTable.bankId, level: risksTable.level, status: risksTable.status }).from(risksTable),
+    db.select({ bankId: productsTable.bankId, progressPercent: productsTable.progressPercent, status: productsTable.status }).from(productsTable),
+  ]);
   const activeBankIds = new Set(banks.map((b) => b.id));
-  const risks = (await db.select().from(risksTable)).filter((r) => activeBankIds.has(r.bankId));
-  const products = (await db.select().from(productsTable)).filter((p) => activeBankIds.has(p.bankId));
+  const activeRisks = risks.filter((r) => activeBankIds.has(r.bankId));
+  const activeProducts = products.filter((p) => activeBankIds.has(p.bankId));
 
   const normalize = (s: string) => s.toLowerCase();
   const inProgress = banks.filter((b) =>
@@ -49,13 +54,13 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     return !Number.isNaN(d.getTime()) && d.getTime() >= now.getTime();
   }).length;
 
-  const highRisks = risks.filter(
+  const highRisks = activeRisks.filter(
     (r) => normalize(r.level) === "high" && normalize(r.status) !== "closed",
   ).length;
 
-  const averageProgress = products.length
-    ? products.reduce((sum, p) => sum + p.progressPercent, 0) /
-      products.length
+  const averageProgress = activeProducts.length
+    ? activeProducts.reduce((sum, p) => sum + p.progressPercent, 0) /
+      activeProducts.length
     : 0;
 
   const countBy = (values: string[]) => {

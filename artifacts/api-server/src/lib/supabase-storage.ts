@@ -6,6 +6,20 @@ export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 /** Signed-URL time-to-live in seconds (1 hour). */
 const SIGNED_URL_TTL = 3600;
 
+// ── Signed-URL in-process cache ───────────────────────────────────────────────
+// Supabase Storage signed URLs are valid for 1 hour (SIGNED_URL_TTL).
+// Caching them for 55 minutes eliminates repeated Supabase API calls when
+// the same logo/hero image is loaded on the bank list, bank detail, and
+// dashboard in the same session.
+const SIGNED_URL_CACHE_TTL_MS = 55 * 60 * 1000; // 55 min
+interface CachedUrl { url: string; expiresAt: number }
+const signedUrlCache = new Map<string, CachedUrl>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of signedUrlCache) { if (v.expiresAt <= now) signedUrlCache.delete(k); }
+}, 5 * 60 * 1000).unref();
+
 const DATA_URL_PATTERN = /^data:([^;]+);base64,(.+)$/;
 
 export interface ParsedDataUrl {
@@ -62,6 +76,9 @@ export async function uploadToStorage(
  * and send to the client.
  */
 export async function getSignedUrl(storagePath: string): Promise<string> {
+  const cached = signedUrlCache.get(storagePath);
+  if (cached && cached.expiresAt > Date.now()) return cached.url;
+
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.storage
     .from(BUCKET)
@@ -71,6 +88,7 @@ export async function getSignedUrl(storagePath: string): Promise<string> {
       `Failed to sign storage URL: ${error?.message ?? "no URL returned"}`,
     );
   }
+  signedUrlCache.set(storagePath, { url: data.signedUrl, expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS });
   return data.signedUrl;
 }
 

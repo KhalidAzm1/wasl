@@ -56,6 +56,8 @@ Rules:
 5. You can perform actions (create banks, update bank fields) when the user explicitly asks — use the provided functions.
 6. When giving status summaries, be insightful — highlight what needs attention, not just raw data.
 7. For Arabic responses, use formal but clear Arabic (Modern Standard with Gulf-friendly phrasing).
+8. COMPLETENESS RULE — CRITICAL: When asked to list ALL banks (حالة جميع البنوك, all banks, كل البنوك, etc.), you MUST include EVERY SINGLE bank in the live data — no exceptions. Do NOT stop at 10, 15, or 20. If there are 30 banks, list all 30. Never say "وهكذا" or "..." or trail off — finish the complete list.
+9. CONTINUE RULE: If the user says "كمل" or "continue" or "أكمل", they mean your previous response was cut short. Look at which banks were already listed and continue from where you left off, covering ALL remaining banks.
 
 CRITICAL RULES FOR ACTIONS (create/update):
 - ALWAYS call the actual function — never pretend an action was done without calling it.
@@ -441,7 +443,7 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
       messages: openaiMessages,
       tools: AGENT_FUNCTIONS,
       tool_choice: "auto",
-      max_tokens: 1024,
+      max_tokens: 4096,
       temperature: 0.3,
     });
 
@@ -479,7 +481,7 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
         messages: openaiMessages,
         tools: AGENT_FUNCTIONS,
         tool_choice: "auto",
-        max_tokens: 1024,
+        max_tokens: 4096,
         temperature: 0.3,
       });
       choice = response.choices[0];

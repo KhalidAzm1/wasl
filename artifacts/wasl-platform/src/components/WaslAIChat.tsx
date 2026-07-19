@@ -25,10 +25,12 @@ async function authedPost(path: string, body: unknown) {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  isWelcome?: boolean; // flag to exclude from API history
 }
 
 const WELCOME: Message = {
   role: 'assistant',
+  isWelcome: true,
   content: `مرحباً! أنا **Wasl AI** 🏦
 
 أنا مساعدك الذكي المتخصص في بيانات البنوك على منصة وصل. يمكنني مساعدتك في:
@@ -41,12 +43,20 @@ const WELCOME: Message = {
 اسألني بالعربي أو الإنجليزي!`,
 };
 
+/** Safe inline markdown renderer — no dangerouslySetInnerHTML, no XSS risk */
+function renderMarkdown(text: string): React.ReactNode[] {
+  return text.split('\n').map((line, i) => {
+    // Bold: **text**
+    const parts = line.split(/\*\*(.+?)\*\*/g);
+    const rendered = parts.map((part, j) =>
+      j % 2 === 1 ? <strong key={j}>{part}</strong> : part
+    );
+    return <React.Fragment key={i}>{rendered}{i < text.split('\n').length - 1 && <br />}</React.Fragment>;
+  });
+}
+
 function MessageBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user';
-  // Simple markdown: bold, newlines, bullet points
-  const formatted = msg.content
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br/>');
 
   return (
     <div className={cn('flex gap-2 items-start', isUser ? 'flex-row-reverse' : 'flex-row')}>
@@ -63,9 +73,9 @@ function MessageBubble({ msg }: { msg: Message }) {
         isUser
           ? 'bg-primary text-primary-foreground rounded-tr-sm'
           : 'bg-card border border-foreground/10 text-foreground rounded-tl-sm'
-      )}
-        dangerouslySetInnerHTML={{ __html: formatted }}
-      />
+      )}>
+        {renderMarkdown(msg.content)}
+      </div>
     </div>
   );
 }
@@ -111,12 +121,12 @@ export function WaslAIChat() {
     if (!text || loading) return;
 
     const userMsg: Message = { role: 'user', content: text };
-    const history = [...messages.filter((m) => m !== WELCOME || messages.length === 1), userMsg];
-    // Keep non-welcome history for context (last 10 turns)
+    // Exclude the welcome message from API context (it's UI-only), keep last 10 turns
     const contextHistory = messages
-      .filter((m) => m.content !== WELCOME.content)
+      .filter((m) => !m.isWelcome)
       .concat(userMsg)
-      .slice(-10);
+      .slice(-10)
+      .map(({ role, content }) => ({ role, content })); // strip UI-only fields
 
     setMessages((prev) => [...prev, userMsg]);
     setInput('');

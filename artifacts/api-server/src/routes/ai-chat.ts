@@ -25,11 +25,22 @@ import { requireAuth } from "../middlewares/auth";
 const router: IRouter = Router();
 router.use(requireAuth);
 
-// ── OpenAI client ──────────────────────────────────────────────────────────────
+// ── OpenAI-compatible client ───────────────────────────────────────────────────
+// Supports both OpenAI (sk-...) and OpenRouter (sk-or-v1-...) keys transparently.
 function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
-  return new OpenAI({ apiKey });
+
+  const isOpenRouter = apiKey.startsWith("sk-or-");
+  return new OpenAI({
+    apiKey,
+    ...(isOpenRouter
+      ? {
+          baseURL: "https://openrouter.ai/api/v1",
+          defaultHeaders: { "HTTP-Referer": "https://wasl.app", "X-Title": "Wasl AI" },
+        }
+      : {}),
+  });
 }
 
 // ── System prompt ──────────────────────────────────────────────────────────────
@@ -107,7 +118,7 @@ async function buildBankContext() {
       next_meeting_date: bank.nextMeetingDate,
       next_meeting_topic: bank.nextMeetingTopic,
       last_meeting_date: bank.lastMeetingDate,
-      last_meeting_summary: bank.lastMeetingDate ? bank.lastMeetingDate : null,
+      last_meeting_summary: bank.lastMeetingSummary ?? null,
       executive_summary: bank.executiveSummary,
       implementation: {
         total_stages: bankStages.length,
@@ -212,7 +223,7 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
     }
     return {
       total_banks: total,
-      avg_implementation_pct: Math.round(totalPct / total),
+      avg_implementation_pct: total > 0 ? Math.round(totalPct / total) : 0,
       by_status: Object.fromEntries(byStatus),
       by_risk: Object.fromEntries(byRisk),
       high_risk_banks: allBanks.filter((b) => b.risk_level === "High").map((b) => b.name_ar || b.name_en),
@@ -228,14 +239,22 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
   }
 
   if (name === "get_bank_details") {
-    const q = (args.bank_query as string ?? "").toLowerCase().trim();
+    // Normalize Arabic: strip diacritics and normalize Alef/Yaa variants for robust matching
+    const normalizeAr = (s: string) =>
+      s.toLowerCase()
+        .replace(/[أإآا]/g, "ا")
+        .replace(/[يى]/g, "ي")
+        .replace(/ة/g, "ه")
+        .replace(/[\u064B-\u065F]/g, ""); // strip tashkeel
+
+    const q = normalizeAr(args.bank_query as string ?? "").trim();
     const bank = allBanks.find(
       (b) =>
         b.id.toLowerCase() === q ||
-        b.name_ar?.toLowerCase().includes(q) ||
-        b.name_en?.toLowerCase().includes(q),
+        normalizeAr(b.name_ar ?? "").includes(q) ||
+        (b.name_en ?? "").toLowerCase().includes(q),
     );
-    if (!bank) return { error: `Bank not found: ${args.bank_query}` };
+    if (!bank) return { error: `Bank not found: ${args.bank_query}. Available banks: ${allBanks.map((b) => b.name_ar || b.name_en).join(", ")}` };
     return bank;
   }
 

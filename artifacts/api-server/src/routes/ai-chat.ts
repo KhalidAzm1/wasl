@@ -58,6 +58,17 @@ Rules:
 7. For Arabic responses, use formal but clear Arabic (Modern Standard with Gulf-friendly phrasing).
 8. COMPLETENESS RULE — CRITICAL: When asked to list ALL banks (حالة جميع البنوك, all banks, كل البنوك, etc.), you MUST include EVERY SINGLE bank in the live data — no exceptions. Do NOT stop at 10, 15, or 20. If there are 30 banks, list all 30. Never say "وهكذا" or "..." or trail off — finish the complete list.
 9. CONTINUE RULE: If the user says "كمل" or "continue" or "أكمل", they mean your previous response was cut short. Look at which banks were already listed and continue from where you left off, covering ALL remaining banks.
+10. WEEKLY REPORT RULE: When the user asks for a weekly report, executive summary, تقرير أسبوعي, ملخص أسبوعي, or general platform overview — ALWAYS call generate_weekly_report first, then format the result as a structured Arabic report with these EXACT section headers (use ## for each):
+    ## 📊 نظرة عامة
+    ## 🚨 بنوك تحتاج تدخل عاجل
+    ## 📅 اجتماعات هذا الأسبوع
+    ## ⏰ إجراءات متأخرة
+    ## 🏆 الأكثر تقدماً
+    ## 🐢 الأقل تقدماً
+    ## 💤 بنوك متوقفة
+    ## 💡 توصيات
+    Under "## 💡 توصيات" write 3–5 numbered, actionable recommendations based on the data.
+    End the report with the EXACT line: **تاريخ إنشاء التقرير:** YYYY-MM-DD (use the report_generated_at value verbatim).
 
 CRITICAL RULES FOR ACTIONS (create/update):
 - ALWAYS call the actual function — never pretend an action was done without calling it.
@@ -257,6 +268,14 @@ const AGENT_FUNCTIONS: OpenAI.Chat.ChatCompletionTool[] = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "generate_weekly_report",
+      description: "Generate a comprehensive weekly executive report covering all banks: overall progress, critical banks needing attention, upcoming meetings this week, overdue action items, top/bottom performers, stalled banks, and smart recommendations. Use this whenever the user asks for a weekly report, executive summary, weekly status, or general platform health overview.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 // ── Arabic normalizer (shared) ─────────────────────────────────────────────────
@@ -407,6 +426,161 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
     };
   }
 
+  // ── generate_weekly_report ─────────────────────────────────────────────────
+  if (name === "generate_weekly_report") {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const in7Days = new Date(today);
+    in7Days.setDate(today.getDate() + 7);
+    const ago30Days = new Date(today);
+    ago30Days.setDate(today.getDate() - 30);
+
+    // ── Overall counts ────────────────────────────────────────────────────────
+    const total = allBanks.length;
+    const byStatus: Record<string, string[]> = {};
+    const byRisk: Record<string, string[]> = {};
+    let totalPct = 0;
+    let totalOpenActions = 0;
+
+    for (const b of allBanks) {
+      const label = b.name_ar || b.name_en || b.id;
+      byStatus[b.status] = [...(byStatus[b.status] ?? []), label];
+      byRisk[b.risk_level] = [...(byRisk[b.risk_level] ?? []), label];
+      totalPct += b.implementation.completion_pct;
+      totalOpenActions += b.open_actions.length;
+    }
+    const avgPct = total > 0 ? Math.round(totalPct / total) : 0;
+
+    // ── Critical: Delayed AND/OR High Risk ────────────────────────────────────
+    const criticalBanks = allBanks
+      .filter((b) => b.status === "Delayed" || b.risk_level === "High")
+      .map((b) => ({
+        name: b.name_ar || b.name_en,
+        status: b.status,
+        risk_level: b.risk_level,
+        completion_pct: b.implementation.completion_pct,
+        responsible_person: b.responsible_person,
+        open_actions_count: b.open_actions.length,
+        open_risks: b.risks.filter((r) => r.status !== "resolved" && r.status !== "closed").map((r) => r.description).slice(0, 3),
+      }));
+
+    // ── Upcoming meetings this week ───────────────────────────────────────────
+    const upcomingMeetings = allBanks
+      .filter((b) => {
+        if (!b.next_meeting_date) return false;
+        const d = new Date(b.next_meeting_date);
+        return d >= today && d <= in7Days;
+      })
+      .map((b) => ({
+        bank: b.name_ar || b.name_en,
+        date: b.next_meeting_date,
+        topic: b.next_meeting_topic ?? "غير محدد",
+        responsible_person: b.responsible_person,
+      }))
+      .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+
+    // ── Overdue action items (due_date < today, not done) ─────────────────────
+    const overdueActions: Array<{ bank: string; action: string; due_date: string | null; owner: string | null; days_overdue: number }> = [];
+    for (const b of allBanks) {
+      for (const a of b.open_actions) {
+        if (!a.due_date) continue;
+        const due = new Date(a.due_date);
+        due.setHours(0, 0, 0, 0);
+        if (due < today) {
+          const daysOverdue = Math.round((today.getTime() - due.getTime()) / 86_400_000);
+          overdueActions.push({
+            bank: b.name_ar || b.name_en || b.id,
+            action: a.description,
+            due_date: a.due_date,
+            owner: a.owner,
+            days_overdue: daysOverdue,
+          });
+        }
+      }
+    }
+    overdueActions.sort((a, b) => b.days_overdue - a.days_overdue);
+
+    // ── Top & bottom performers ────────────────────────────────────────────────
+    const sorted = [...allBanks].sort(
+      (a, b) => b.implementation.completion_pct - a.implementation.completion_pct,
+    );
+    const topPerformers = sorted.slice(0, 5).map((b) => ({
+      name: b.name_ar || b.name_en,
+      completion_pct: b.implementation.completion_pct,
+      status: b.status,
+    }));
+    const notCompleted = sorted.filter((b) => b.status !== "Completed");
+    const laggingBanks = [...notCompleted]
+      .sort((a, b) => a.implementation.completion_pct - b.implementation.completion_pct)
+      .slice(0, 5)
+      .map((b) => ({
+        name: b.name_ar || b.name_en,
+        completion_pct: b.implementation.completion_pct,
+        status: b.status,
+        risk_level: b.risk_level,
+      }));
+
+    // ── Stalled: Not Started or On Hold ───────────────────────────────────────
+    const stalledBanks = allBanks
+      .filter((b) => b.status === "Not Started" || b.status === "On Hold")
+      .map((b) => ({
+        name: b.name_ar || b.name_en,
+        status: b.status,
+        risk_level: b.risk_level,
+        responsible_person: b.responsible_person,
+      }));
+
+    // ── No meeting in 30+ days — top 10 most critical only ───────────────────
+    const riskOrder: Record<string, number> = { High: 0, Medium: 1, Low: 2, "Not Rated": 3 };
+    const noRecentMeetingAll = allBanks.filter((b) => {
+      if (!b.last_meeting_date) return true;
+      return new Date(b.last_meeting_date) < ago30Days;
+    });
+    const noRecentMeeting = noRecentMeetingAll
+      .sort((a, b) => (riskOrder[a.risk_level] ?? 3) - (riskOrder[b.risk_level] ?? 3))
+      .slice(0, 10)
+      .map((b) => ({
+        name: b.name_ar || b.name_en,
+        last_meeting_date: b.last_meeting_date ?? "لا يوجد",
+        status: b.status,
+        risk_level: b.risk_level,
+      }));
+
+    const reportDate = today.toISOString().split("T")[0];
+    return {
+      report_generated_at: reportDate,
+      report_week: `${reportDate} → ${in7Days.toISOString().split("T")[0]}`,
+      overview: {
+        total_banks: total,
+        avg_completion_pct: avgPct,
+        total_open_actions: totalOpenActions,
+        by_status: Object.fromEntries(
+          Object.entries(byStatus).map(([k, v]) => [k, { count: v.length, banks: v }]),
+        ),
+        by_risk: Object.fromEntries(
+          Object.entries(byRisk).map(([k, v]) => [k, v.length]),
+        ),
+      },
+      critical_banks: criticalBanks,
+      upcoming_meetings_7_days: upcomingMeetings,
+      overdue_actions: overdueActions,
+      top_performers: topPerformers,
+      lagging_banks: laggingBanks,
+      stalled_banks: stalledBanks,
+      banks_no_meeting_30_days: {
+        total: noRecentMeetingAll.length,
+        top_critical: noRecentMeeting,
+      },
+      // READ THIS LAST — MANDATORY FORMATTING RULES:
+      _MUST_follow: [
+        "Write the full report in Arabic using bullet points only — no tables, no long paragraphs.",
+        "Use EXACTLY these 8 section headers (## level) in this order: 📊 نظرة عامة | 🚨 بنوك تحتاج تدخل عاجل | 📅 اجتماعات هذا الأسبوع | ⏰ إجراءات متأخرة | 🏆 الأكثر تقدماً | 🐢 الأقل تقدماً | 💤 بنوك متوقفة | 💡 توصيات",
+        "## 💡 توصيات is NON-NEGOTIABLE — write exactly 5 numbered actionable recommendations. Do NOT skip it or replace it with الخلاصة.",
+        `End with EXACTLY: **تاريخ إنشاء التقرير:** ${reportDate}`,
+      ],
+    };
+  }
+
   return { error: `Unknown function: ${name}` };
 }
 
@@ -475,12 +649,43 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
       openaiMessages.push(...toolResults);
 
+      // After generate_weekly_report: inject a strict format instruction as a user turn
+      const calledReport = toolCalls.some(
+        (tc) => ((tc as any).function as { name: string }).name === "generate_weekly_report",
+      );
+      if (calledReport) {
+        // Extract the report date from the tool result so we can embed it
+        let reportDate = new Date().toISOString().split("T")[0];
+        try {
+          const parsed = JSON.parse(toolResults[0].content);
+          if (parsed.report_generated_at) reportDate = parsed.report_generated_at;
+        } catch { /* ignore */ }
+
+        openaiMessages.push({
+          role: "user",
+          content: `اكتب الآن التقرير الأسبوعي كاملاً بالعربي.
+يجب أن يحتوي بالضبط على هذه الأقسام الثمانية بهذا الترتيب — استخدم ## لكل قسم:
+
+## 📊 نظرة عامة
+## 🚨 بنوك تحتاج تدخل عاجل
+## 📅 اجتماعات هذا الأسبوع
+## ⏰ إجراءات متأخرة
+## 🏆 الأكثر تقدماً
+## 🐢 الأقل تقدماً
+## 💤 بنوك متوقفة
+## 💡 توصيات
+
+تحت "## 💡 توصيات" اكتب 5 توصيات مرقمة وقابلة للتنفيذ بناءً على البيانات.
+أختم التقرير بهذا السطر بالضبط: **تاريخ إنشاء التقرير:** ${reportDate}`,
+        });
+      }
+
       // Get next response
       response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: openaiMessages,
         tools: AGENT_FUNCTIONS,
-        tool_choice: "auto",
+        tool_choice: calledReport ? "none" : "auto",
         max_tokens: 4096,
         temperature: 0.3,
       });

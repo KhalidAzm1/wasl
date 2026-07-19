@@ -53,9 +53,15 @@ Rules:
 2. Be concise, factual, and professional. Use bullet points for lists.
 3. If asked about anything outside the banking/platform domain (cooking, sports, general knowledge, etc.), politely decline and say you are specialized in Wasl platform bank data only.
 4. When referencing data, cite specific bank names and numbers from the context provided.
-5. You can perform actions (update bank fields) when the user explicitly asks — use the provided functions.
+5. You can perform actions (create banks, update bank fields) when the user explicitly asks — use the provided functions.
 6. When giving status summaries, be insightful — highlight what needs attention, not just raw data.
 7. For Arabic responses, use formal but clear Arabic (Modern Standard with Gulf-friendly phrasing).
+
+CRITICAL RULES FOR ACTIONS (create/update):
+- ALWAYS call the actual function — never pretend an action was done without calling it.
+- After calling a function, check the result: if it contains "error", report the error clearly to the user. NEVER say "تم" or "done" if the function returned an error.
+- If the function returns { success: true }, confirm the action with the exact fields that were changed.
+- If you cannot identify which bank the user means, ask for clarification — do NOT guess.
 
 You have access to LIVE data about all banks in the system. The data is injected into each request.`;
 
@@ -174,16 +180,19 @@ const AGENT_FUNCTIONS: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "update_bank_status",
-      description: "Update the status or other fields of a specific bank",
+      name: "update_bank",
+      description: "Update one or more fields of an existing bank. ALWAYS pass the bank's Arabic or English name as bank_query — never guess or invent a bank ID. At least one other field must be provided.",
       parameters: {
         type: "object",
         properties: {
-          bank_id: { type: "string", description: "The bank ID (e.g. BANK-001)" },
+          bank_query: {
+            type: "string",
+            description: "The bank's Arabic name (e.g. 'مصرف الراجحي') or English name (e.g. 'Al Rajhi Bank'). Do NOT invent or guess an ID — use the name from the live data.",
+          },
           status: {
             type: "string",
             enum: ["Not Started", "In Progress", "Completed", "Delayed", "On Hold"],
-            description: "New status for the bank",
+            description: "New status",
           },
           risk_level: {
             type: "string",
@@ -194,8 +203,47 @@ const AGENT_FUNCTIONS: OpenAI.Chat.ChatCompletionTool[] = [
           next_meeting_topic: { type: "string", description: "Topic for the next meeting" },
           executive_summary: { type: "string", description: "Updated executive summary" },
           responsible_person: { type: "string", description: "Responsible person name" },
+          relationship_manager: { type: "string", description: "Relationship manager name" },
+          next_action: { type: "string", description: "Next action / follow-up note" },
         },
-        required: ["bank_id"],
+        required: ["bank_query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_bank",
+      description: "Create a new bank in the system. Required: name in Arabic, name in English, category, status, risk level, priority impact.",
+      parameters: {
+        type: "object",
+        properties: {
+          name_ar: { type: "string", description: "Bank name in Arabic" },
+          name_en: { type: "string", description: "Bank name in English" },
+          category: {
+            type: "string",
+            enum: ["Commercial", "Investment", "Islamic", "Government", "Digital", "International", "Fintech"],
+            description: "Bank category",
+          },
+          status: {
+            type: "string",
+            enum: ["Not Started", "In Progress", "Completed", "Delayed", "On Hold"],
+            description: "Initial status",
+          },
+          risk_level: {
+            type: "string",
+            enum: ["Low", "Medium", "High"],
+            description: "Risk level",
+          },
+          priority_impact: {
+            type: "string",
+            enum: ["Low", "Medium", "High", "Critical"],
+            description: "Priority impact level",
+          },
+          responsible_person: { type: "string", description: "Person responsible for this bank" },
+          executive_summary: { type: "string", description: "Initial executive summary or notes" },
+        },
+        required: ["name_ar", "name_en", "category", "status", "risk_level", "priority_impact"],
       },
     },
   },
@@ -209,8 +257,45 @@ const AGENT_FUNCTIONS: OpenAI.Chat.ChatCompletionTool[] = [
   },
 ];
 
+// ── Arabic normalizer (shared) ─────────────────────────────────────────────────
+function normalizeAr(s: string): string {
+  return s.toLowerCase()
+    .replace(/[أإآا]/g, "ا")
+    .replace(/[يى]/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[\u064B-\u065F]/g, ""); // strip tashkeel
+}
+
+// ── Bank lookup by name or ID (shared) ────────────────────────────────────────
+function findBank(query: string, allBanks: Awaited<ReturnType<typeof buildBankContext>>) {
+  const q = normalizeAr(query).trim();
+  return allBanks.find(
+    (b) =>
+      b.id.toLowerCase() === query.toLowerCase() ||
+      normalizeAr(b.name_ar ?? "").includes(q) ||
+      (b.name_en ?? "").toLowerCase().includes(query.toLowerCase()),
+  );
+}
+
+// ── Auto-generate next bank ID ─────────────────────────────────────────────────
+async function nextBankId(): Promise<string> {
+  const rows = await db.select({ id: banksTable.id }).from(banksTable);
+  let maxNum = 0;
+  for (const row of rows) {
+    // Only parse IDs that match exactly BANK-NNN (ignore malformed / non-standard IDs)
+    const match = row.id.match(/^BANK-(\d{1,6})$/);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n > maxNum) maxNum = n;
+    }
+  }
+  return `BANK-${String(maxNum + 1).padStart(3, "0")}`;
+}
+
 // ── Function executor ──────────────────────────────────────────────────────────
 async function executeFunction(name: string, args: Record<string, any>, allBanks: Awaited<ReturnType<typeof buildBankContext>>) {
+
+  // ── get_dashboard_summary ──────────────────────────────────────────────────
   if (name === "get_dashboard_summary") {
     const total = allBanks.length;
     const byStatus = new Map<string, number>();
@@ -221,58 +306,103 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
       byRisk.set(b.risk_level, (byRisk.get(b.risk_level) ?? 0) + 1);
       totalPct += b.implementation.completion_pct;
     }
+    // Sort copies, not in-place mutations
+    const sorted = [...allBanks].sort((a, b) => b.implementation.completion_pct - a.implementation.completion_pct);
     return {
       total_banks: total,
       avg_implementation_pct: total > 0 ? Math.round(totalPct / total) : 0,
       by_status: Object.fromEntries(byStatus),
       by_risk: Object.fromEntries(byRisk),
       high_risk_banks: allBanks.filter((b) => b.risk_level === "High").map((b) => b.name_ar || b.name_en),
-      most_advanced: allBanks
-        .sort((a, b) => b.implementation.completion_pct - a.implementation.completion_pct)
-        .slice(0, 3)
-        .map((b) => ({ name: b.name_ar || b.name_en, pct: b.implementation.completion_pct })),
-      least_advanced: allBanks
-        .sort((a, b) => a.implementation.completion_pct - b.implementation.completion_pct)
-        .slice(0, 3)
-        .map((b) => ({ name: b.name_ar || b.name_en, pct: b.implementation.completion_pct })),
+      most_advanced: sorted.slice(0, 3).map((b) => ({ name: b.name_ar || b.name_en, pct: b.implementation.completion_pct })),
+      least_advanced: sorted.slice(-3).map((b) => ({ name: b.name_ar || b.name_en, pct: b.implementation.completion_pct })),
     };
   }
 
+  // ── get_bank_details ───────────────────────────────────────────────────────
   if (name === "get_bank_details") {
-    // Normalize Arabic: strip diacritics and normalize Alef/Yaa variants for robust matching
-    const normalizeAr = (s: string) =>
-      s.toLowerCase()
-        .replace(/[أإآا]/g, "ا")
-        .replace(/[يى]/g, "ي")
-        .replace(/ة/g, "ه")
-        .replace(/[\u064B-\u065F]/g, ""); // strip tashkeel
-
-    const q = normalizeAr(args.bank_query as string ?? "").trim();
-    const bank = allBanks.find(
-      (b) =>
-        b.id.toLowerCase() === q ||
-        normalizeAr(b.name_ar ?? "").includes(q) ||
-        (b.name_en ?? "").toLowerCase().includes(q),
-    );
-    if (!bank) return { error: `Bank not found: ${args.bank_query}. Available banks: ${allBanks.map((b) => b.name_ar || b.name_en).join(", ")}` };
+    const bank = findBank(args.bank_query as string ?? "", allBanks);
+    if (!bank) {
+      return {
+        error: `لم أجد بنكاً باسم "${args.bank_query}". البنوك المتاحة: ${allBanks.map((b) => b.name_ar || b.name_en).join("، ")}`,
+      };
+    }
     return bank;
   }
 
-  if (name === "update_bank_status") {
-    const bankId = args.bank_id as string;
-    const [existing] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
-    if (!existing) return { error: `Bank ${bankId} not found` };
+  // ── update_bank ────────────────────────────────────────────────────────────
+  if (name === "update_bank") {
+    const query = args.bank_query as string ?? "";
+    if (!query.trim()) return { error: "يجب تحديد اسم البنك أو معرّفه." };
+
+    // Resolve by name OR ID
+    const match = findBank(query, allBanks);
+    if (!match) {
+      return {
+        error: `لم أجد بنكاً باسم "${query}". البنوك المتاحة: ${allBanks.map((b) => b.name_ar || b.name_en).join("، ")}`,
+      };
+    }
 
     const update: Record<string, any> = { updatedAt: new Date() };
-    if (args.status) update.status = args.status;
-    if (args.risk_level) update.riskLevel = args.risk_level;
-    if (args.next_meeting_date) update.nextMeetingDate = args.next_meeting_date;
-    if (args.next_meeting_topic) update.nextMeetingTopic = args.next_meeting_topic;
-    if (args.executive_summary) update.executiveSummary = args.executive_summary;
-    if (args.responsible_person) update.responsiblePerson = args.responsible_person;
+    if (args.status !== undefined)            update.status           = args.status;
+    if (args.risk_level !== undefined)        update.riskLevel        = args.risk_level;
+    if (args.next_meeting_date !== undefined) update.nextMeetingDate  = args.next_meeting_date;
+    if (args.next_meeting_topic !== undefined) update.nextMeetingTopic = args.next_meeting_topic;
+    if (args.executive_summary !== undefined) update.executiveSummary = args.executive_summary;
+    if (args.responsible_person !== undefined) update.responsiblePerson = args.responsible_person;
+    if (args.relationship_manager !== undefined) update.relationshipManager = args.relationship_manager;
+    if (args.next_action !== undefined)       update.nextAction       = args.next_action;
 
-    await db.update(banksTable).set(update).where(eq(banksTable.id, bankId));
-    return { success: true, updated_fields: Object.keys(update).filter((k) => k !== "updatedAt") };
+    const changedFields = Object.keys(update).filter((k) => k !== "updatedAt");
+    if (changedFields.length === 0) {
+      return { error: "لم يُحدَّد أي حقل للتحديث. يرجى تحديد القيمة الجديدة." };
+    }
+
+    await db.update(banksTable).set(update).where(eq(banksTable.id, match.id));
+    return {
+      success: true,
+      bank_id: match.id,
+      bank_name: match.name_ar || match.name_en,
+      updated_fields: changedFields,
+      new_values: changedFields.reduce<Record<string, any>>((acc, k) => { acc[k] = update[k]; return acc; }, {}),
+    };
+  }
+
+  // ── create_bank ────────────────────────────────────────────────────────────
+  if (name === "create_bank") {
+    const required = ["name_ar", "name_en", "category", "status", "risk_level", "priority_impact"] as const;
+    for (const field of required) {
+      if (!args[field]) return { error: `الحقل "${field}" مطلوب لإنشاء البنك.` };
+    }
+
+    // Check duplicate by name
+    const duplicate = findBank(args.name_ar as string, allBanks) ?? findBank(args.name_en as string, allBanks);
+    if (duplicate) {
+      return { error: `يوجد بنك بهذا الاسم بالفعل: ${duplicate.name_ar} (${duplicate.id})` };
+    }
+
+    const newId = await nextBankId();
+    await db.insert(banksTable).values({
+      id: newId,
+      nameAr: args.name_ar as string,
+      nameEn: args.name_en as string,
+      category: args.category as string,
+      status: args.status as string,
+      riskLevel: args.risk_level as string,
+      priorityImpact: args.priority_impact as string,
+      responsiblePerson: (args.responsible_person as string | undefined) ?? null,
+      executiveSummary: (args.executive_summary as string | undefined) ?? null,
+      contacts: [],
+      isArchived: false,
+    });
+
+    return {
+      success: true,
+      bank_id: newId,
+      bank_name_ar: args.name_ar,
+      bank_name_en: args.name_en,
+      message: `تم إنشاء البنك بنجاح برقم ${newId}`,
+    };
   }
 
   return { error: `Unknown function: ${name}` };

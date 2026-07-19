@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
 import { useTheme } from './ThemeProvider';
 import { WaslLogo } from './WaslLogo';
+import { WaslAIChat } from './WaslAIChat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { analytics } from '@/lib/analytics';
 
@@ -221,6 +222,9 @@ export function Layout({ children }: LayoutProps) {
       <main className="relative z-10 flex-1 flex flex-col min-w-0 min-h-[100dvh] pt-4 md:pt-0 overflow-y-auto overflow-x-hidden safe-area-bottom">
         {children}
       </main>
+
+      {/* Wasl AI Chat Widget */}
+      <WaslAIChat />
     </div>
   );
 }

@@ -44,15 +44,59 @@ const WELCOME: Message = {
 };
 
 /** Safe inline markdown renderer — no dangerouslySetInnerHTML, no XSS risk */
+function renderInline(text: string): React.ReactNode[] {
+  // Bold: **text**
+  return text.split(/\*\*(.+?)\*\*/g).map((part, j) =>
+    j % 2 === 1 ? <strong key={j}>{part}</strong> : part
+  );
+}
+
 function renderMarkdown(text: string): React.ReactNode[] {
-  return text.split('\n').map((line, i) => {
-    // Bold: **text**
-    const parts = line.split(/\*\*(.+?)\*\*/g);
-    const rendered = parts.map((part, j) =>
-      j % 2 === 1 ? <strong key={j}>{part}</strong> : part
-    );
-    return <React.Fragment key={i}>{rendered}{i < text.split('\n').length - 1 && <br />}</React.Fragment>;
-  });
+  const lines = text.split('\n');
+  const nodes: React.ReactNode[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // H1: # heading
+    if (/^# /.test(line)) {
+      nodes.push(
+        <p key={i} className="font-bold text-base mt-2 mb-1 text-foreground">
+          {renderInline(line.replace(/^# /, ''))}
+        </p>
+      );
+    }
+    // H2: ## heading
+    else if (/^## /.test(line)) {
+      nodes.push(
+        <p key={i} className="font-semibold text-sm mt-3 mb-1 border-b border-foreground/10 pb-0.5 text-foreground">
+          {renderInline(line.replace(/^## /, ''))}
+        </p>
+      );
+    }
+    // H3: ### heading
+    else if (/^### /.test(line)) {
+      nodes.push(
+        <p key={i} className="font-semibold text-xs mt-2 mb-0.5 text-muted-foreground uppercase tracking-wide">
+          {renderInline(line.replace(/^### /, ''))}
+        </p>
+      );
+    }
+    // Empty line → small spacer
+    else if (line.trim() === '') {
+      nodes.push(<div key={i} className="h-1" />);
+    }
+    // Normal line
+    else {
+      nodes.push(
+        <p key={i} className="leading-relaxed">
+          {renderInline(line)}
+        </p>
+      );
+    }
+    i++;
+  }
+  return nodes;
 }
 
 function MessageBubble({ msg }: { msg: Message }) {

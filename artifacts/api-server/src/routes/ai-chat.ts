@@ -504,11 +504,14 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
     const sorted = [...allBanks].sort(
       (a, b) => b.implementation.completion_pct - a.implementation.completion_pct,
     );
-    const topPerformers = sorted.slice(0, 5).map((b) => ({
-      name: b.name_ar || b.name_en,
-      completion_pct: b.implementation.completion_pct,
-      status: b.status,
-    }));
+    const topPerformers = sorted
+      .filter((b) => b.implementation.completion_pct > 0)
+      .slice(0, 5)
+      .map((b) => ({
+        name: b.name_ar || b.name_en,
+        completion_pct: b.implementation.completion_pct,
+        status: b.status,
+      }));
     const notCompleted = sorted.filter((b) => b.status !== "Completed");
     const laggingBanks = [...notCompleted]
       .sort((a, b) => a.implementation.completion_pct - b.implementation.completion_pct)

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -210,6 +210,7 @@ export function WaslAIChat() {
   const [speaking, setSpeaking] = useState(false);
   const [voicesReady, setVoicesReady] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [backdropActive, setBackdropActive] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -219,12 +220,9 @@ export function WaslAIChat() {
   // Trigger voices load (Chrome lazy-loads them)
   useEffect(() => {
     const load = () => setVoicesReady(true);
-    if (window.speechSynthesis.getVoices().length > 0) {
-      setVoicesReady(true);
-    } else {
-      window.speechSynthesis.addEventListener('voiceschanged', load);
-      return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
-    }
+    window.speechSynthesis.addEventListener('voiceschanged', load);
+    if (window.speechSynthesis.getVoices().length > 0) setVoicesReady(true);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
   }, []);
 
   useEffect(() => {
@@ -235,9 +233,15 @@ export function WaslAIChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
-  // Stop speaking when chat closes
+  // Stop speaking when chat closes; delay backdrop so accidental tap doesn't close immediately
   useEffect(() => {
-    if (!open) stopSpeaking();
+    if (!open) {
+      stopSpeaking();
+      setBackdropActive(false);
+      return;
+    }
+    const t = setTimeout(() => setBackdropActive(true), 500);
+    return () => clearTimeout(t);
   }, [open]);
 
   // ── TTS ────────────────────────────────────────────────────────────────────
@@ -406,7 +410,7 @@ export function WaslAIChat() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-40 bg-background/40 backdrop-blur-sm md:hidden"
-              onClick={() => setOpen(false)}
+              onClick={() => backdropActive && setOpen(false)}
             />
 
             <motion.div

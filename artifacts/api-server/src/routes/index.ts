@@ -17,6 +17,7 @@ import implementationRouter from "./implementation";
 import implementationV2Router from "./implementation-v2";
 import adminPerfRouter from "./admin-perf";
 import aiChatRouter from "./ai-chat";
+import voiceRouter from "./voice";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(implementationRouter);
 router.use(implementationV2Router);
 router.use(adminPerfRouter);
 router.use(aiChatRouter);
+router.use(voiceRouter);
 
 export default router;

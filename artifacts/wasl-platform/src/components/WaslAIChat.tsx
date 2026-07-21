@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, VolumeX } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, VolumeX, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
+import { VoiceCallModal } from './VoiceCallModal';
 
 async function authedPost(path: string, body: unknown) {
   const { data } = await supabase.auth.getSession();
@@ -40,7 +41,7 @@ const WELCOME: Message = {
 • 📅 الاجتماعات القادمة
 • ✏️ تحديث بيانات البنوك مباشرة
 
-اسألني بالعربي أو الإنجليزي — أو اضغط 🎤 وكلمني!`,
+اسألني بالعربي أو الإنجليزي — أو اضغط 📞 للمكالمة الصوتية!`,
 };
 
 // ── Markdown renderer ────────────────────────────────────────────────────────
@@ -93,30 +94,20 @@ function renderMarkdown(text: string): React.ReactNode[] {
 
 function stripMarkdown(text: string): string {
   return text
-    .replace(/#{1,3} /g, '')         // headings
-    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
-    .replace(/\*(.+?)\*/g, '$1')     // italic
-    .replace(/[-•]\s/g, '')           // bullets
-    .replace(/\d+\.\s/g, '')          // numbered lists
-    .replace(/\n{2,}/g, '. ')         // blank lines → pause
+    .replace(/#{1,3} /g, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/[-•]\s/g, '')
+    .replace(/\d+\.\s/g, '')
+    .replace(/\n{2,}/g, '. ')
     .replace(/\n/g, ' ')
     .trim();
 }
 
-// ── Speech helpers ───────────────────────────────────────────────────────────
+// ── Speech Recognition ───────────────────────────────────────────────────────
 
 const SpeechRecognitionAPI =
   (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-function pickArabicFemaleVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
-  // Prefer Saudi Arabic female, then any Arabic female, then any Arabic
-  const arVoices = voices.filter(v => v.lang.startsWith('ar'));
-  const female = arVoices.find(v =>
-    /hala|fatima|layla|zira|female|woman|نسائي|هلا|ليلى|فاطمة/i.test(v.name)
-  );
-  return female ?? arVoices[0] ?? null;
-}
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
@@ -202,28 +193,20 @@ function SpeakingWave() {
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function WaslAIChat() {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([WELCOME]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [voicesReady, setVoicesReady] = useState(false);
-  const [micError, setMicError] = useState<string | null>(null);
+  const [open, setOpen]               = useState(false);
+  const [voiceCallOpen, setVoiceCallOpen] = useState(false);
+  const [messages, setMessages]       = useState<Message[]>([WELCOME]);
+  const [input, setInput]             = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [listening, setListening]     = useState(false);
+  const [speaking, setSpeaking]       = useState(false);
+  const [micError, setMicError]       = useState<string | null>(null);
   const [backdropActive, setBackdropActive] = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const bottomRef      = useRef<HTMLDivElement>(null);
+  const inputRef       = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  // Trigger voices load (Chrome lazy-loads them)
-  useEffect(() => {
-    const load = () => setVoicesReady(true);
-    window.speechSynthesis.addEventListener('voiceschanged', load);
-    if (window.speechSynthesis.getVoices().length > 0) setVoicesReady(true);
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
-  }, []);
+  const audioRef       = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -233,10 +216,10 @@ export function WaslAIChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
-  // Stop speaking when chat closes; delay backdrop so accidental tap doesn't close immediately
+  // Stop audio when chat closes
   useEffect(() => {
     if (!open) {
-      stopSpeaking();
+      stopTTS();
       setBackdropActive(false);
       return;
     }
@@ -244,78 +227,59 @@ export function WaslAIChat() {
     return () => clearTimeout(t);
   }, [open]);
 
-  // ── TTS ────────────────────────────────────────────────────────────────────
+  // ── ElevenLabs TTS ────────────────────────────────────────────────────────
 
-  // Keep a ref so onClick always calls the latest version (no stale closure)
-  const speakRef = useRef<(text: string) => void>(() => {});
+  const playTTS = useCallback(async (text: string) => {
+    const clean = stripMarkdown(text);
+    if (!clean) return;
 
-  const speak = useCallback((text: string) => {
-    speakRef.current(text);
+    // Stop any ongoing TTS first
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    setSpeaking(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ text: clean }),
+      });
+      if (!res.ok) throw new Error(`TTS ${res.status}`);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+        setSpeaking(false);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+        setSpeaking(false);
+      };
+
+      await audio.play();
+    } catch {
+      setSpeaking(false);
+    }
   }, []);
 
-  useEffect(() => {
-    speakRef.current = (text: string) => {
-      const ss = window.speechSynthesis;
-      if (!ss) return;
-
-      const clean = stripMarkdown(text);
-      if (!clean) return;
-
-      const makeUtterance = (withLang: boolean) => {
-        const utter = new SpeechSynthesisUtterance(clean);
-        if (withLang) utter.lang = 'ar-SA';
-        utter.rate = 0.9;
-        utter.pitch = 1.1;
-
-        const voices = ss.getVoices();
-        const arVoices = voices.filter(v => v.lang.startsWith('ar'));
-        const femaleVoice = arVoices.find(v =>
-          /hala|fatima|layla|zira|female|woman|نسائي|هلا|ليلى|فاطمة/i.test(v.name)
-        );
-        const chosenVoice = femaleVoice ?? arVoices[0] ?? null;
-        if (chosenVoice) utter.voice = chosenVoice;
-        return utter;
-      };
-
-      const fireUtterance = () => {
-        const utter = makeUtterance(true);
-
-        utter.onstart = () => setSpeaking(true);
-        utter.onend   = () => { setSpeaking(false); utteranceRef.current = null; };
-        utter.onerror = (e: SpeechSynthesisErrorEvent) => {
-          setSpeaking(false);
-          utteranceRef.current = null;
-          // If the language is unavailable, retry once with the default voice
-          if (e.error === 'language-unavailable' || e.error === 'voice-unavailable') {
-            const fallback = makeUtterance(false);
-            fallback.onstart = () => setSpeaking(true);
-            fallback.onend   = () => { setSpeaking(false); utteranceRef.current = null; };
-            fallback.onerror = () => { setSpeaking(false); utteranceRef.current = null; };
-            utteranceRef.current = fallback;
-            ss.speak(fallback);
-          }
-        };
-
-        utteranceRef.current = utter;
-        ss.speak(utter);
-      };
-
-      // Chrome/Edge bug: cancel() + immediate speak() silently cancels the new one too.
-      // Fix: only cancel if already speaking, then wait 100ms before re-speaking.
-      if (ss.speaking || ss.pending) {
-        ss.cancel();
-        setSpeaking(false);
-        setTimeout(fireUtterance, 100);
-      } else {
-        fireUtterance();
-      }
-    };
-  }); // runs every render so voices/state are always fresh
-
-  function stopSpeaking() {
-    window.speechSynthesis?.cancel();
+  function stopTTS() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setSpeaking(false);
-    utteranceRef.current = null;
   }
 
   // ── STT ────────────────────────────────────────────────────────────────────
@@ -326,7 +290,7 @@ export function WaslAIChat() {
       return;
     }
     setMicError(null);
-    stopSpeaking();
+    stopTTS();
 
     const rec = new SpeechRecognitionAPI();
     rec.lang = 'ar-SA';
@@ -338,10 +302,7 @@ export function WaslAIChat() {
     rec.onresult = (e: any) => {
       const transcript: string = e.results[0][0].transcript.trim();
       setListening(false);
-      if (transcript) {
-        // Auto-send the recognized text
-        sendMessage(transcript);
-      }
+      if (transcript) sendMessage(transcript);
     };
 
     rec.onerror = (e: any) => {
@@ -387,9 +348,9 @@ export function WaslAIChat() {
       const reply: Message = { role: 'assistant', content: replyText };
       setMessages((prev) => [...prev, reply]);
 
-      // Auto-speak if the user used the mic
+      // Auto-speak via ElevenLabs when user used the mic
       if (text !== undefined) {
-        speak(replyText);
+        playTTS(replyText);
       }
     } catch {
       setMessages((prev) => [
@@ -409,7 +370,7 @@ export function WaslAIChat() {
   }
 
   function reset() {
-    stopSpeaking();
+    stopTTS();
     stopListening();
     setMessages([WELCOME]);
     setInput('');
@@ -420,26 +381,47 @@ export function WaslAIChat() {
 
   return (
     <>
+      {/* Voice Call Modal — fullscreen */}
+      <VoiceCallModal
+        open={voiceCallOpen}
+        onClose={() => setVoiceCallOpen(false)}
+      />
+
       {/* FAB */}
       <AnimatePresence>
-        {!open && (
-          <motion.button
-            key="fab"
+        {!open && !voiceCallOpen && (
+          <motion.div
+            key="fab-group"
+            className="fixed bottom-6 right-6 z-40 flex flex-col items-center gap-3"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setOpen(true);
-              speak('أهلاً! أنا مساعدك الشخصي في وصل. كيف أقدر أخدمك؟');
-            }}
-            aria-label="فتح Wasl AI"
-            className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-br from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 transition-all"
-            style={{ boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}
           >
-            <Sparkles className="w-6 h-6 text-white" />
-          </motion.button>
+            {/* Voice Call FAB */}
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setVoiceCallOpen(true)}
+              aria-label="مكالمة صوتية"
+              title="مكالمة صوتية مع Wasl AI"
+              className="w-12 h-12 rounded-full shadow-xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all"
+              style={{ boxShadow: '0 0 24px rgba(16,185,129,0.4)' }}
+            >
+              <Phone className="w-5 h-5 text-white" />
+            </motion.button>
+
+            {/* Chat FAB */}
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setOpen(true)}
+              aria-label="فتح Wasl AI"
+              className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-br from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 transition-all"
+              style={{ boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}
+            >
+              <Sparkles className="w-6 h-6 text-white" />
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -475,16 +457,28 @@ export function WaslAIChat() {
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  {/* Mute / unmute speaking */}
+                  {/* Stop TTS */}
                   {speaking && (
                     <button
-                      onClick={stopSpeaking}
+                      onClick={stopTTS}
                       aria-label="إيقاف الصوت"
                       className="w-8 h-8 rounded-full flex items-center justify-center text-violet-400 hover:text-foreground hover:bg-foreground/10 transition-colors"
                     >
                       <VolumeX className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  {/* Voice call button in header */}
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      setVoiceCallOpen(true);
+                    }}
+                    aria-label="مكالمة صوتية"
+                    title="تحويل إلى مكالمة صوتية"
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-emerald-400 hover:text-emerald-300 hover:bg-foreground/10 transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     onClick={reset}
                     aria-label="محادثة جديدة"
@@ -561,7 +555,7 @@ export function WaslAIChat() {
                     style={{ direction: input && /[\u0600-\u06FF]/.test(input[0]) ? 'rtl' : 'ltr' }}
                   />
 
-                  {/* Mic button */}
+                  {/* Mic button — STT */}
                   {hasSpeechRecognition && (
                     <motion.button
                       whileTap={{ scale: 0.9 }}
@@ -594,9 +588,7 @@ export function WaslAIChat() {
 
                 {/* Status hint */}
                 <p className="text-center text-[10px] text-foreground/30 mt-1.5">
-                  {hasSpeechRecognition
-                    ? 'Wasl AI · اكتب أو اضغط 🎤 وتكلم'
-                    : 'Wasl AI · متخصص في بيانات البنوك'}
+                  Wasl AI · اكتب أو اضغط 🎤 أو 📞 للمكالمة
                 </p>
               </div>
             </motion.div>

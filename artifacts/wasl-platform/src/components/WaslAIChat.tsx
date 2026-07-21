@@ -261,33 +261,45 @@ export function WaslAIChat() {
       const clean = stripMarkdown(text);
       if (!clean) return;
 
-      const fireUtterance = () => {
+      const makeUtterance = (withLang: boolean) => {
         const utter = new SpeechSynthesisUtterance(clean);
-        utter.lang = 'ar-SA';
+        if (withLang) utter.lang = 'ar-SA';
         utter.rate = 0.9;
         utter.pitch = 1.1;
 
-        // Pick best Arabic female voice available
         const voices = ss.getVoices();
-        console.log('[Wasl TTS] Available voices:', voices.map(v => `${v.name} (${v.lang})`));
         const arVoices = voices.filter(v => v.lang.startsWith('ar'));
         const femaleVoice = arVoices.find(v =>
           /hala|fatima|layla|zira|female|woman|نسائي|هلا|ليلى|فاطمة/i.test(v.name)
         );
         const chosenVoice = femaleVoice ?? arVoices[0] ?? null;
-        console.log('[Wasl TTS] Chosen voice:', chosenVoice?.name ?? 'default');
         if (chosenVoice) utter.voice = chosenVoice;
+        return utter;
+      };
 
-        utter.onstart = () => { console.log('[Wasl TTS] started'); setSpeaking(true); };
-        utter.onend   = () => { console.log('[Wasl TTS] ended'); setSpeaking(false); utteranceRef.current = null; };
-        utter.onerror = (e) => { console.error('[Wasl TTS] error:', (e as any).error); setSpeaking(false); utteranceRef.current = null; };
+      const fireUtterance = () => {
+        const utter = makeUtterance(true);
+
+        utter.onstart = () => setSpeaking(true);
+        utter.onend   = () => { setSpeaking(false); utteranceRef.current = null; };
+        utter.onerror = (e: SpeechSynthesisErrorEvent) => {
+          setSpeaking(false);
+          utteranceRef.current = null;
+          // If the language is unavailable, retry once with the default voice
+          if (e.error === 'language-unavailable' || e.error === 'voice-unavailable') {
+            const fallback = makeUtterance(false);
+            fallback.onstart = () => setSpeaking(true);
+            fallback.onend   = () => { setSpeaking(false); utteranceRef.current = null; };
+            fallback.onerror = () => { setSpeaking(false); utteranceRef.current = null; };
+            utteranceRef.current = fallback;
+            ss.speak(fallback);
+          }
+        };
 
         utteranceRef.current = utter;
-        console.log('[Wasl TTS] speaking:', clean.slice(0, 40));
         ss.speak(utter);
       };
 
-      console.log('[Wasl TTS] ss.speaking:', ss.speaking, 'ss.pending:', ss.pending);
       // Chrome/Edge bug: cancel() + immediate speak() silently cancels the new one too.
       // Fix: only cancel if already speaking, then wait 100ms before re-speaking.
       if (ss.speaking || ss.pending) {

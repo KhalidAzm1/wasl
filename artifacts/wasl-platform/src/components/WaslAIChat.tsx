@@ -235,17 +235,9 @@ export function WaslAIChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
-  // Stop speaking when chat closes; auto-greet when it opens
+  // Stop speaking when chat closes
   useEffect(() => {
-    if (!open) {
-      stopSpeaking();
-    } else {
-      // Small delay so voices finish loading before we speak
-      const timer = setTimeout(() => {
-        speak('أهلاً! أنا مساعدك الشخصي في وصل. كيف أقدر أخدمك؟');
-      }, 600);
-      return () => clearTimeout(timer);
-    }
+    if (!open) stopSpeaking();
   }, [open]);
 
   // ── TTS ────────────────────────────────────────────────────────────────────
@@ -392,7 +384,10 @@ export function WaslAIChat() {
             exit={{ scale: 0, opacity: 0 }}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setOpen(true);
+              speak('أهلاً! أنا مساعدك الشخصي في وصل. كيف أقدر أخدمك؟');
+            }}
             aria-label="فتح Wasl AI"
             className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-br from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 transition-all"
             style={{ boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}

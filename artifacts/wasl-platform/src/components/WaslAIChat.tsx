@@ -235,9 +235,17 @@ export function WaslAIChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
-  // Stop speaking when chat closes
+  // Stop speaking when chat closes; auto-greet when it opens
   useEffect(() => {
-    if (!open) stopSpeaking();
+    if (!open) {
+      stopSpeaking();
+    } else {
+      // Small delay so voices finish loading before we speak
+      const timer = setTimeout(() => {
+        speak('أهلاً! أنا مساعدك الشخصي في وصل. كيف أقدر أخدمك؟');
+      }, 600);
+      return () => clearTimeout(timer);
+    }
   }, [open]);
 
   // ── TTS ────────────────────────────────────────────────────────────────────

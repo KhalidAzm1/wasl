@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -25,7 +25,7 @@ async function authedPost(path: string, body: unknown) {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  isWelcome?: boolean; // flag to exclude from API history
+  isWelcome?: boolean;
 }
 
 const WELCOME: Message = {
@@ -40,12 +40,12 @@ const WELCOME: Message = {
 • 📅 الاجتماعات القادمة
 • ✏️ تحديث بيانات البنوك مباشرة
 
-اسألني بالعربي أو الإنجليزي!`,
+اسألني بالعربي أو الإنجليزي — أو اضغط 🎤 وكلمني!`,
 };
 
-/** Safe inline markdown renderer — no dangerouslySetInnerHTML, no XSS risk */
+// ── Markdown renderer ────────────────────────────────────────────────────────
+
 function renderInline(text: string): React.ReactNode[] {
-  // Bold: **text**
   return text.split(/\*\*(.+?)\*\*/g).map((part, j) =>
     j % 2 === 1 ? <strong key={j}>{part}</strong> : part
   );
@@ -57,37 +57,27 @@ function renderMarkdown(text: string): React.ReactNode[] {
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
-
-    // H1: # heading
     if (/^# /.test(line)) {
       nodes.push(
         <p key={i} className="font-bold text-base mt-2 mb-1 text-foreground">
           {renderInline(line.replace(/^# /, ''))}
         </p>
       );
-    }
-    // H2: ## heading
-    else if (/^## /.test(line)) {
+    } else if (/^## /.test(line)) {
       nodes.push(
         <p key={i} className="font-semibold text-sm mt-3 mb-1 border-b border-foreground/10 pb-0.5 text-foreground">
           {renderInline(line.replace(/^## /, ''))}
         </p>
       );
-    }
-    // H3: ### heading
-    else if (/^### /.test(line)) {
+    } else if (/^### /.test(line)) {
       nodes.push(
         <p key={i} className="font-semibold text-xs mt-2 mb-0.5 text-muted-foreground uppercase tracking-wide">
           {renderInline(line.replace(/^### /, ''))}
         </p>
       );
-    }
-    // Empty line → small spacer
-    else if (line.trim() === '') {
+    } else if (line.trim() === '') {
       nodes.push(<div key={i} className="h-1" />);
-    }
-    // Normal line
-    else {
+    } else {
       nodes.push(
         <p key={i} className="leading-relaxed">
           {renderInline(line)}
@@ -99,19 +89,47 @@ function renderMarkdown(text: string): React.ReactNode[] {
   return nodes;
 }
 
+// ── Strip markdown for TTS ───────────────────────────────────────────────────
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/#{1,3} /g, '')         // headings
+    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
+    .replace(/\*(.+?)\*/g, '$1')     // italic
+    .replace(/[-•]\s/g, '')           // bullets
+    .replace(/\d+\.\s/g, '')          // numbered lists
+    .replace(/\n{2,}/g, '. ')         // blank lines → pause
+    .replace(/\n/g, ' ')
+    .trim();
+}
+
+// ── Speech helpers ───────────────────────────────────────────────────────────
+
+const SpeechRecognitionAPI =
+  (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+function pickArabicFemaleVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  // Prefer Saudi Arabic female, then any Arabic female, then any Arabic
+  const arVoices = voices.filter(v => v.lang.startsWith('ar'));
+  const female = arVoices.find(v =>
+    /hala|fatima|layla|zira|female|woman|نسائي|هلا|ليلى|فاطمة/i.test(v.name)
+  );
+  return female ?? arVoices[0] ?? null;
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
 function MessageBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user';
-
   return (
     <div className={cn('flex gap-2 items-start', isUser ? 'flex-row-reverse' : 'flex-row')}>
-      {/* Avatar */}
       <div className={cn(
         'shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs',
         isUser ? 'bg-primary' : 'bg-gradient-to-br from-violet-500 to-purple-700'
       )}>
         {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
       </div>
-      {/* Bubble */}
       <div className={cn(
         'max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
         isUser
@@ -144,13 +162,70 @@ function TypingIndicator() {
   );
 }
 
+/** Animated mic pulse rings shown while listening */
+function MicPulse() {
+  return (
+    <div className="relative flex items-center justify-center">
+      {[1, 2, 3].map(i => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full border border-red-400/60"
+          initial={{ width: 32, height: 32, opacity: 0.8 }}
+          animate={{ width: 32 + i * 18, height: 32 + i * 18, opacity: 0 }}
+          transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.3, ease: 'easeOut' }}
+        />
+      ))}
+      <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/40">
+        <Mic className="w-4 h-4 text-white" />
+      </div>
+    </div>
+  );
+}
+
+/** Animated sound wave shown while AI is speaking */
+function SpeakingWave() {
+  return (
+    <div className="flex items-center gap-[3px]">
+      {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
+        <motion.div
+          key={i}
+          className="w-[3px] rounded-full bg-violet-400"
+          animate={{ scaleY: [h, 1, h] }}
+          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
+          style={{ height: 16, transformOrigin: 'center' }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
 export function WaslAIChat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voicesReady, setVoicesReady] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Trigger voices load (Chrome lazy-loads them)
+  useEffect(() => {
+    const load = () => setVoicesReady(true);
+    if (window.speechSynthesis.getVoices().length > 0) {
+      setVoicesReady(true);
+    } else {
+      window.speechSynthesis.addEventListener('voiceschanged', load);
+      return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
+    }
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -160,17 +235,101 @@ export function WaslAIChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
-  async function sendMessage() {
-    const text = input.trim();
-    if (!text || loading) return;
+  // Stop speaking when chat closes
+  useEffect(() => {
+    if (!open) stopSpeaking();
+  }, [open]);
 
-    const userMsg: Message = { role: 'user', content: text };
-    // Exclude the welcome message from API context (it's UI-only), keep last 10 turns
+  // ── TTS ────────────────────────────────────────────────────────────────────
+
+  const speak = useCallback((text: string) => {
+    if (!window.speechSynthesis) return;
+    stopSpeaking();
+
+    const clean = stripMarkdown(text);
+    if (!clean) return;
+
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = 'ar-SA';
+    utter.rate = 0.95;
+    utter.pitch = 1.05;
+
+    // Load voice (may need another tick after voiceschanged)
+    const voice = pickArabicFemaleVoice();
+    if (voice) utter.voice = voice;
+
+    utter.onstart = () => setSpeaking(true);
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+
+    utteranceRef.current = utter;
+    window.speechSynthesis.speak(utter);
+  }, [voicesReady]); // re-create when voices become available
+
+  function stopSpeaking() {
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+    utteranceRef.current = null;
+  }
+
+  // ── STT ────────────────────────────────────────────────────────────────────
+
+  function startListening() {
+    if (!SpeechRecognitionAPI) {
+      setMicError('المتصفح لا يدعم التعرف على الصوت. استخدم Chrome.');
+      return;
+    }
+    setMicError(null);
+    stopSpeaking();
+
+    const rec = new SpeechRecognitionAPI();
+    rec.lang = 'ar-SA';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+
+    rec.onstart = () => setListening(true);
+
+    rec.onresult = (e: any) => {
+      const transcript: string = e.results[0][0].transcript.trim();
+      setListening(false);
+      if (transcript) {
+        // Auto-send the recognized text
+        sendMessage(transcript);
+      }
+    };
+
+    rec.onerror = (e: any) => {
+      setListening(false);
+      if (e.error === 'not-allowed') {
+        setMicError('يرجى السماح للمتصفح باستخدام الميكروفون.');
+      } else if (e.error !== 'no-speech') {
+        setMicError('لم يُتعرف على الكلام، حاول مجدداً.');
+      }
+    };
+
+    rec.onend = () => setListening(false);
+
+    recognitionRef.current = rec;
+    rec.start();
+  }
+
+  function stopListening() {
+    recognitionRef.current?.stop();
+    setListening(false);
+  }
+
+  // ── Send ───────────────────────────────────────────────────────────────────
+
+  async function sendMessage(text?: string) {
+    const content = (text ?? input).trim();
+    if (!content || loading) return;
+
+    const userMsg: Message = { role: 'user', content };
     const contextHistory = messages
       .filter((m) => !m.isWelcome)
       .concat(userMsg)
       .slice(-10)
-      .map(({ role, content }) => ({ role, content })); // strip UI-only fields
+      .map(({ role, content }) => ({ role, content }));
 
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
@@ -178,12 +337,15 @@ export function WaslAIChat() {
 
     try {
       const data = await authedPost('/api/ai/chat', { messages: contextHistory });
-      const reply: Message = {
-        role: 'assistant',
-        content: data.reply ?? data.error ?? 'حدث خطأ، حاول مرة أخرى.',
-      };
+      const replyText: string = data.reply ?? data.error ?? 'حدث خطأ، حاول مرة أخرى.';
+      const reply: Message = { role: 'assistant', content: replyText };
       setMessages((prev) => [...prev, reply]);
-    } catch (err: any) {
+
+      // Auto-speak if the user used the mic
+      if (text !== undefined) {
+        speak(replyText);
+      }
+    } catch {
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: 'تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مجدداً.' },
@@ -201,13 +363,18 @@ export function WaslAIChat() {
   }
 
   function reset() {
+    stopSpeaking();
+    stopListening();
     setMessages([WELCOME]);
     setInput('');
+    setMicError(null);
   }
+
+  const hasSpeechRecognition = !!SpeechRecognitionAPI;
 
   return (
     <>
-      {/* Floating trigger button */}
+      {/* FAB */}
       <AnimatePresence>
         {!open && (
           <motion.button
@@ -231,7 +398,6 @@ export function WaslAIChat() {
       <AnimatePresence>
         {open && (
           <>
-            {/* Backdrop (mobile) */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -240,7 +406,6 @@ export function WaslAIChat() {
               onClick={() => setOpen(false)}
             />
 
-            {/* Panel */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -252,13 +417,25 @@ export function WaslAIChat() {
               {/* Header */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-foreground/10 bg-gradient-to-r from-violet-600/20 to-purple-700/10 shrink-0">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg shrink-0">
-                  <Sparkles className="w-4 h-4 text-white" />
+                  {speaking ? <SpeakingWave /> : <Sparkles className="w-4 h-4 text-white" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-foreground">Wasl AI</p>
-                  <p className="text-xs text-foreground/50">مساعد بيانات البنوك</p>
+                  <p className="text-xs text-foreground/50">
+                    {listening ? '🎤 أستمع إليك...' : speaking ? '🔊 أتحدث...' : 'مساعد بيانات البنوك'}
+                  </p>
                 </div>
                 <div className="flex gap-1">
+                  {/* Mute / unmute speaking */}
+                  {speaking && (
+                    <button
+                      onClick={stopSpeaking}
+                      aria-label="إيقاف الصوت"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-violet-400 hover:text-foreground hover:bg-foreground/10 transition-colors"
+                    >
+                      <VolumeX className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button
                     onClick={reset}
                     aria-label="محادثة جديدة"
@@ -285,7 +462,42 @@ export function WaslAIChat() {
                 <div ref={bottomRef} />
               </div>
 
-              {/* Input */}
+              {/* Listening overlay */}
+              <AnimatePresence>
+                {listening && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute inset-x-4 bottom-20 flex flex-col items-center gap-3 bg-background/95 border border-red-400/30 rounded-2xl py-6 shadow-xl backdrop-blur-xl"
+                  >
+                    <MicPulse />
+                    <p className="text-sm text-foreground/70 font-medium">أستمع إليك...</p>
+                    <button
+                      onClick={stopListening}
+                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      اضغط للإيقاف
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Mic error */}
+              <AnimatePresence>
+                {micError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mx-3 mb-1 px-3 py-1.5 bg-red-500/10 border border-red-400/20 rounded-lg text-xs text-red-400 text-center"
+                  >
+                    {micError}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Input row */}
               <div className="px-3 py-3 border-t border-foreground/10 shrink-0">
                 <div className="flex gap-2 items-end bg-foreground/5 border border-foreground/10 rounded-xl px-3 py-2">
                   <textarea
@@ -295,12 +507,32 @@ export function WaslAIChat() {
                     onKeyDown={handleKeyDown}
                     placeholder="اسألني عن أي بنك..."
                     rows={1}
-                    disabled={loading}
+                    disabled={loading || listening}
                     className="flex-1 bg-transparent text-sm text-foreground placeholder:text-foreground/40 resize-none outline-none leading-relaxed max-h-28 disabled:opacity-50"
                     style={{ direction: input && /[\u0600-\u06FF]/.test(input[0]) ? 'rtl' : 'ltr' }}
                   />
+
+                  {/* Mic button */}
+                  {hasSpeechRecognition && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={listening ? stopListening : startListening}
+                      disabled={loading}
+                      aria-label={listening ? 'إيقاف الميكروفون' : 'تحدث'}
+                      className={cn(
+                        'shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30',
+                        listening
+                          ? 'bg-red-500 text-white shadow-lg shadow-red-500/40'
+                          : 'bg-foreground/10 text-foreground/60 hover:bg-foreground/20 hover:text-foreground'
+                      )}
+                    >
+                      {listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    </motion.button>
+                  )}
+
+                  {/* Send button */}
                   <button
-                    onClick={sendMessage}
+                    onClick={() => sendMessage()}
                     disabled={!input.trim() || loading}
                     className="shrink-0 w-8 h-8 rounded-lg bg-primary disabled:opacity-30 flex items-center justify-center text-primary-foreground transition-all hover:bg-primary/80 active:scale-95"
                   >
@@ -310,8 +542,12 @@ export function WaslAIChat() {
                     }
                   </button>
                 </div>
+
+                {/* Status hint */}
                 <p className="text-center text-[10px] text-foreground/30 mt-1.5">
-                  Wasl AI · متخصص في بيانات البنوك فقط
+                  {hasSpeechRecognition
+                    ? 'Wasl AI · اكتب أو اضغط 🎤 وتكلم'
+                    : 'Wasl AI · متخصص في بيانات البنوك'}
                 </p>
               </div>
             </motion.div>

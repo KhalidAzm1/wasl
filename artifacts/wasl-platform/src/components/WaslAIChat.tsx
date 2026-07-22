@@ -1,10 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, VolumeX, Phone } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
-import { elevenLabsTTS, unlockAudio } from '@/lib/elevenlabs';
-import { VoiceCallModal } from './VoiceCallModal';
 
 async function authedPost(path: string, body: unknown) {
   const { data } = await supabase.auth.getSession();
@@ -42,7 +40,7 @@ const WELCOME: Message = {
 • 📅 الاجتماعات القادمة
 • ✏️ تحديث بيانات البنوك مباشرة
 
-اسألني بالعربي أو الإنجليزي — أو اضغط 📞 للمكالمة الصوتية!`,
+اسألني بالعربي أو الإنجليزي!`,
 };
 
 // ── Markdown renderer ────────────────────────────────────────────────────────
@@ -89,20 +87,6 @@ function renderMarkdown(text: string): React.ReactNode[] {
     i++;
   }
   return nodes;
-}
-
-// ── Strip markdown for TTS ───────────────────────────────────────────────────
-
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/#{1,3} /g, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/[-•]\s/g, '')
-    .replace(/\d+\.\s/g, '')
-    .replace(/\n{2,}/g, '. ')
-    .replace(/\n/g, ' ')
-    .trim();
 }
 
 // ── Speech Recognition ───────────────────────────────────────────────────────
@@ -174,34 +158,15 @@ function MicPulse() {
   );
 }
 
-/** Animated sound wave shown while AI is speaking */
-function SpeakingWave() {
-  return (
-    <div className="flex items-center gap-[3px]">
-      {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
-        <motion.div
-          key={i}
-          className="w-[3px] rounded-full bg-violet-400"
-          animate={{ scaleY: [h, 1, h] }}
-          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
-          style={{ height: 16, transformOrigin: 'center' }}
-        />
-      ))}
-    </div>
-  );
-}
-
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function WaslAIChat() {
-  const [open, setOpen]               = useState(false);
-  const [voiceCallOpen, setVoiceCallOpen] = useState(false);
-  const [messages, setMessages]       = useState<Message[]>([WELCOME]);
-  const [input, setInput]             = useState('');
-  const [loading, setLoading]         = useState(false);
-  const [listening, setListening]     = useState(false);
-  const [speaking, setSpeaking]       = useState(false);
-  const [micError, setMicError]       = useState<string | null>(null);
+  const [open, setOpen]           = useState(false);
+  const [messages, setMessages]   = useState<Message[]>([WELCOME]);
+  const [input, setInput]         = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [listening, setListening] = useState(false);
+  const [micError, setMicError]   = useState<string | null>(null);
   const [backdropActive, setBackdropActive] = useState(false);
 
   const bottomRef      = useRef<HTMLDivElement>(null);
@@ -216,34 +181,14 @@ export function WaslAIChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
-  // Stop audio when chat closes
   useEffect(() => {
     if (!open) {
-      stopTTS();
       setBackdropActive(false);
       return;
     }
     const t = setTimeout(() => setBackdropActive(true), 500);
     return () => clearTimeout(t);
   }, [open]);
-
-  // ── ElevenLabs TTS (browser-direct) ──────────────────────────────────────
-
-  const playTTS = useCallback(async (text: string) => {
-    if (!text?.trim()) return;
-    setSpeaking(true);
-    try {
-      await elevenLabsTTS(text);
-    } catch (err) {
-      console.error('[WaslAI] TTS error:', err);
-    } finally {
-      setSpeaking(false);
-    }
-  }, []);
-
-  function stopTTS() {
-    setSpeaking(false);
-  }
 
   // ── STT ────────────────────────────────────────────────────────────────────
 
@@ -253,7 +198,6 @@ export function WaslAIChat() {
       return;
     }
     setMicError(null);
-    stopTTS();
 
     const rec = new SpeechRecognitionAPI();
     rec.lang = 'ar-SA';
@@ -310,11 +254,6 @@ export function WaslAIChat() {
       const replyText: string = data.reply ?? data.error ?? 'حدث خطأ، حاول مرة أخرى.';
       const reply: Message = { role: 'assistant', content: replyText };
       setMessages((prev) => [...prev, reply]);
-
-      // Auto-speak via ElevenLabs when user used the mic
-      if (text !== undefined) {
-        playTTS(replyText);
-      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -333,7 +272,6 @@ export function WaslAIChat() {
   }
 
   function reset() {
-    stopTTS();
     stopListening();
     setMessages([WELCOME]);
     setInput('');
@@ -344,47 +282,23 @@ export function WaslAIChat() {
 
   return (
     <>
-      {/* Voice Call Modal — fullscreen */}
-      <VoiceCallModal
-        open={voiceCallOpen}
-        onClose={() => setVoiceCallOpen(false)}
-      />
-
       {/* FAB */}
       <AnimatePresence>
-        {!open && !voiceCallOpen && (
-          <motion.div
-            key="fab-group"
-            className="fixed bottom-6 right-6 z-40 flex flex-col items-center gap-3"
+        {!open && (
+          <motion.button
+            key="fab"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setOpen(true)}
+            aria-label="فتح Wasl AI"
+            className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-br from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 transition-all"
+            style={{ boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
           >
-            {/* Voice Call FAB */}
-            <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={async () => { await unlockAudio(); setVoiceCallOpen(true); }}
-              aria-label="مكالمة صوتية"
-              title="مكالمة صوتية مع Wasl AI"
-              className="w-12 h-12 rounded-full shadow-xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all"
-              style={{ boxShadow: '0 0 24px rgba(16,185,129,0.4)' }}
-            >
-              <Phone className="w-5 h-5 text-white" />
-            </motion.button>
-
-            {/* Chat FAB */}
-            <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setOpen(true)}
-              aria-label="فتح Wasl AI"
-              className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-br from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 transition-all"
-              style={{ boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}
-            >
-              <Sparkles className="w-6 h-6 text-white" />
-            </motion.button>
-          </motion.div>
+            <Sparkles className="w-6 h-6 text-white" />
+          </motion.button>
         )}
       </AnimatePresence>
 
@@ -411,37 +325,15 @@ export function WaslAIChat() {
               {/* Header */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-foreground/10 bg-gradient-to-r from-violet-600/20 to-purple-700/10 shrink-0">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg shrink-0">
-                  {speaking ? <SpeakingWave /> : <Sparkles className="w-4 h-4 text-white" />}
+                  <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-foreground">Wasl AI</p>
                   <p className="text-xs text-foreground/50">
-                    {listening ? '🎤 أستمع إليك...' : speaking ? '🔊 أتحدث...' : 'مساعد بيانات البنوك'}
+                    {listening ? '🎤 أستمع إليك...' : 'مساعد بيانات البنوك'}
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  {/* Stop TTS */}
-                  {speaking && (
-                    <button
-                      onClick={stopTTS}
-                      aria-label="إيقاف الصوت"
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-violet-400 hover:text-foreground hover:bg-foreground/10 transition-colors"
-                    >
-                      <VolumeX className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  {/* Voice call button in header */}
-                  <button
-                    onClick={() => {
-                      setOpen(false);
-                      setVoiceCallOpen(true);
-                    }}
-                    aria-label="مكالمة صوتية"
-                    title="تحويل إلى مكالمة صوتية"
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-emerald-400 hover:text-emerald-300 hover:bg-foreground/10 transition-colors"
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                  </button>
                   <button
                     onClick={reset}
                     aria-label="محادثة جديدة"
@@ -549,9 +441,8 @@ export function WaslAIChat() {
                   </button>
                 </div>
 
-                {/* Status hint */}
                 <p className="text-center text-[10px] text-foreground/30 mt-1.5">
-                  Wasl AI · اكتب أو اضغط 🎤 أو 📞 للمكالمة
+                  Wasl AI · اكتب أو اضغط 🎤
                 </p>
               </div>
             </motion.div>

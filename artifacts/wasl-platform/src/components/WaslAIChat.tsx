@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, VolumeX, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
-import { elevenLabsTTS } from '@/lib/elevenlabs';
+import { elevenLabsTTS, unlockAudio } from '@/lib/elevenlabs';
 import { VoiceCallModal } from './VoiceCallModal';
 
 async function authedPost(path: string, body: unknown) {
@@ -207,7 +207,6 @@ export function WaslAIChat() {
   const bottomRef      = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
-  const audioRef       = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -232,41 +231,17 @@ export function WaslAIChat() {
 
   const playTTS = useCallback(async (text: string) => {
     if (!text?.trim()) return;
-
-    // Stop any ongoing TTS first
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-
     setSpeaking(true);
     try {
-      const url   = await elevenLabsTTS(text);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-        setSpeaking(false);
-      };
-      audio.onerror = () => {
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-        setSpeaking(false);
-      };
-
-      await audio.play();
-    } catch {
+      await elevenLabsTTS(text);
+    } catch (err) {
+      console.error('[WaslAI] TTS error:', err);
+    } finally {
       setSpeaking(false);
     }
   }, []);
 
   function stopTTS() {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
     setSpeaking(false);
   }
 
@@ -389,7 +364,7 @@ export function WaslAIChat() {
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setVoiceCallOpen(true)}
+              onClick={async () => { await unlockAudio(); setVoiceCallOpen(true); }}
               aria-label="مكالمة صوتية"
               title="مكالمة صوتية مع Wasl AI"
               className="w-12 h-12 rounded-full shadow-xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all"

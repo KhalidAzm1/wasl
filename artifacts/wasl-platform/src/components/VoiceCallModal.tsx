@@ -9,7 +9,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhoneOff, Mic, MicOff, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { elevenLabsTTS } from '@/lib/elevenlabs';
+import { elevenLabsTTS, unlockAudio } from '@/lib/elevenlabs';
 import { supabase } from '@/lib/supabaseClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -132,7 +132,6 @@ export function VoiceCallModal({ open, onClose }: VoiceCallModalProps) {
   const [muted, setMuted]           = useState(false);
   const [duration, setDuration]     = useState(0);
 
-  const audioRef       = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const closedRef      = useRef(false);
   const mutedRef       = useRef(false);
@@ -155,34 +154,17 @@ export function VoiceCallModal({ open, onClose }: VoiceCallModalProps) {
     return `${m}:${ss}`;
   }
 
-  // ── TTS via ElevenLabs (browser-direct) ──────────────────────────────────
+  // ── TTS via ElevenLabs (browser-direct, Web Audio API) ───────────────────
   const playTTS = useCallback(async (text: string): Promise<void> => {
     if (closedRef.current) return;
     setCallState('speaking');
     setAiText(text);
-
-    return new Promise(async (resolve) => {
-      try {
-        const url   = await elevenLabsTTS(text);
-        const audio = new Audio(url);
-        audioRef.current = audio;
-
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          audioRef.current = null;
-          resolve();
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          audioRef.current = null;
-          resolve();
-        };
-
-        await audio.play().catch(() => resolve());
-      } catch {
-        resolve(); // fail silently, keep call alive
-      }
-    });
+    try {
+      await elevenLabsTTS(text);
+    } catch (err) {
+      console.error('[VoiceCall] TTS error:', err);
+      // keep call alive — don't crash on TTS failure
+    }
   }, []);
 
   // ── STT ───────────────────────────────────────────────────────────────────
@@ -280,10 +262,6 @@ export function VoiceCallModal({ open, onClose }: VoiceCallModalProps) {
     return () => {
       closedRef.current = true;
       recognitionRef.current?.stop();
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
     };
   }, [open]); // eslint-disable-line
 
@@ -306,10 +284,6 @@ export function VoiceCallModal({ open, onClose }: VoiceCallModalProps) {
   function hangUp() {
     closedRef.current = true;
     recognitionRef.current?.stop();
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
     if (timerRef.current) clearInterval(timerRef.current);
     onClose();
   }

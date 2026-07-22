@@ -8,8 +8,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhoneOff, Mic, MicOff, Sparkles } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
 import { cn } from '@/lib/utils';
+import { elevenLabsTTS } from '@/lib/elevenlabs';
+import { supabase } from '@/lib/supabaseClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type CallState = 'greeting' | 'listening' | 'thinking' | 'speaking' | 'idle';
@@ -24,18 +25,6 @@ const SpeechRecognitionAPI =
   typeof window !== 'undefined'
     ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     : null;
-
-async function authedFetch(path: string, init: RequestInit): Promise<Response> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  return fetch(path, {
-    ...init,
-    headers: {
-      ...(init.headers ?? {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-}
 
 const GREETING = 'أهلاً! أنا سلمى، مساعدتك في منصة وصل. تكلّم وأنا أسمعك.';
 
@@ -166,7 +155,7 @@ export function VoiceCallModal({ open, onClose }: VoiceCallModalProps) {
     return `${m}:${ss}`;
   }
 
-  // ── TTS via ElevenLabs ────────────────────────────────────────────────────
+  // ── TTS via ElevenLabs (browser-direct) ──────────────────────────────────
   const playTTS = useCallback(async (text: string): Promise<void> => {
     if (closedRef.current) return;
     setCallState('speaking');
@@ -174,15 +163,7 @@ export function VoiceCallModal({ open, onClose }: VoiceCallModalProps) {
 
     return new Promise(async (resolve) => {
       try {
-        const res = await authedFetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-        });
-        if (!res.ok) throw new Error(`TTS ${res.status}`);
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-
+        const url   = await elevenLabsTTS(text);
         const audio = new Audio(url);
         audioRef.current = audio;
 

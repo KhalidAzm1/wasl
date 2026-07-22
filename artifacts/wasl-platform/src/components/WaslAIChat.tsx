@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Loader2, Sparkles, RotateCcw, Mic, MicOff, VolumeX, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
+import { elevenLabsTTS } from '@/lib/elevenlabs';
 import { VoiceCallModal } from './VoiceCallModal';
 
 async function authedPost(path: string, body: unknown) {
@@ -227,11 +228,10 @@ export function WaslAIChat() {
     return () => clearTimeout(t);
   }, [open]);
 
-  // ── ElevenLabs TTS ────────────────────────────────────────────────────────
+  // ── ElevenLabs TTS (browser-direct) ──────────────────────────────────────
 
   const playTTS = useCallback(async (text: string) => {
-    const clean = stripMarkdown(text);
-    if (!clean) return;
+    if (!text?.trim()) return;
 
     // Stop any ongoing TTS first
     if (audioRef.current) {
@@ -241,19 +241,7 @@ export function WaslAIChat() {
 
     setSpeaking(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ text: clean }),
-      });
-      if (!res.ok) throw new Error(`TTS ${res.status}`);
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
+      const url   = await elevenLabsTTS(text);
       const audio = new Audio(url);
       audioRef.current = audio;
 

@@ -35,7 +35,7 @@ function stripMarkdown(text: string): string {
 }
 
 // POST /api/tts
-router.post("/api/tts", async (req, res) => {
+router.post("/tts", async (req, res) => {
   const { text } = req.body as { text?: string };
   if (!text || typeof text !== "string" || !text.trim()) {
     res.status(400).json({ error: "text is required" });

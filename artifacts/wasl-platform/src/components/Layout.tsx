@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X, Sun, Moon, Activity, FlaskConical, Layers } from 'lucide-react';
+import { LayoutDashboard, Settings2, Settings, Users, LogOut, Calendar, FileText, ShieldCheck, X, Sun, Moon, Activity, FlaskConical, Layers } from 'lucide-react';
 import logoUrl from '@assets/wasl_brand/wasl_logo_2026.png';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from './AnimatedBackground';
@@ -18,6 +18,7 @@ interface LayoutProps {
 
 const mainNavItems = [
   { href: '/portfolio', icon: LayoutDashboard, label: 'Dashboard', roles: null, permission: 'dashboard_access' as const },
+  { href: '/settings', icon: Settings2, label: 'Dashboard Settings', roles: null, permission: null },
 ];
 
 // Note: "Product Types" and "Archive" live as tabs inside the Settings page
@@ -38,7 +39,6 @@ const adminNavItems = [
 
 const systemNavItems = [
   { href: '/security', icon: ShieldCheck, label: 'Activity Timeline', roles: null, permission: 'security' as const },
-  { href: '/settings', icon: Settings, label: 'Settings', roles: null, permission: null },
 ];
 
 export function Layout({ children }: LayoutProps) {

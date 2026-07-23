@@ -9,7 +9,7 @@ import { analytics } from '@/lib/analytics';
 
 /** Map Supabase auth error codes / messages to clear user-facing strings */
 function friendlyAuthError(err: { message?: string; status?: number } | null): string {
-  if (!err) return 'حدث خطأ غير متوقع. حاول مجدداً.';
+  if (!err) return 'An unexpected error occurred. Please try again.';
 
   const msg = (err.message ?? '').toLowerCase();
 
@@ -20,7 +20,7 @@ function friendlyAuthError(err: { message?: string; status?: number } | null): s
     msg.includes('email not confirmed') ||      // treat unconfirmed as credential issue
     msg.includes('user not found')
   ) {
-    return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+    return 'Incorrect email or password.';
   }
 
   // Rate limiting
@@ -30,12 +30,12 @@ function friendlyAuthError(err: { message?: string; status?: number } | null): s
     msg.includes('rate limit') ||
     err.status === 429
   ) {
-    return 'محاولات كثيرة جداً. انتظر دقيقة ثم حاول مجدداً.';
+    return 'Too many attempts. Please wait a minute and try again.';
   }
 
   // Account disabled / banned
   if (msg.includes('user is banned') || msg.includes('disabled')) {
-    return 'هذا الحساب موقوف. تواصل مع المدير.';
+    return 'This account has been suspended. Contact your administrator.';
   }
 
   // Network / server unreachable
@@ -46,16 +46,16 @@ function friendlyAuthError(err: { message?: string; status?: number } | null): s
     err.status === 0 ||
     err.status === 503
   ) {
-    return 'تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مجدداً.';
+    return 'Could not reach the server. Check your internet connection and try again.';
   }
 
   // Supabase project paused (free-tier inactivity)
   if (msg.includes('project is paused') || err.status === 503) {
-    return 'خدمة المصادقة متوقفة مؤقتاً. تواصل مع المدير.';
+    return 'Authentication service is temporarily unavailable. Contact your administrator.';
   }
 
   // Fallback: return original message so nothing is ever hidden
-  return err.message ?? 'حدث خطأ أثناء تسجيل الدخول. حاول مجدداً.';
+  return err.message ?? 'An error occurred while signing in. Please try again.';
 }
 
 export default function Login() {
@@ -74,7 +74,7 @@ export default function Login() {
 
     if (error || !data.session) {
       toast({
-        title: 'تعذّر تسجيل الدخول',
+        title: 'Sign-in failed',
         description: friendlyAuthError(error),
         variant: 'destructive',
       });

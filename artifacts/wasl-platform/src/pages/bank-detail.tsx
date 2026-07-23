@@ -67,14 +67,14 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
     if (!addingName.trim()) return;
     addStage.mutate({ productId: product.id, name: addingName.trim() }, {
       onSuccess: () => { setAddingName(''); setIsAdding(false); invalidateAll(); },
-      onError: (e: any) => toast({ title: 'فشل الإضافة', description: e?.message, variant: 'destructive' }),
+      onError: (e: any) => toast({ title: 'Add Failed', description: e?.message, variant: 'destructive' }),
     });
   };
 
   const handleToggle = (stage: any) => {
     patchStage.mutate({ id: stage.id, productId: product.id, completed: !stage.completed }, {
       onSuccess: invalidateAll,
-      onError: (e: any) => toast({ title: 'فشل التحديث', description: e?.message, variant: 'destructive' }),
+      onError: (e: any) => toast({ title: 'Update Failed', description: e?.message, variant: 'destructive' }),
     });
   };
 
@@ -82,14 +82,14 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
     if (!editingName.trim() || editingName === stage.name) { setEditingId(null); return; }
     patchStage.mutate({ id: stage.id, productId: product.id, name: editingName.trim() }, {
       onSuccess: () => { setEditingId(null); invalidateAll(); },
-      onError: (e: any) => toast({ title: 'فشل التعديل', description: e?.message, variant: 'destructive' }),
+      onError: (e: any) => toast({ title: 'Rename Failed', description: e?.message, variant: 'destructive' }),
     });
   };
 
   const handleDelete = (stage: any) => {
     deleteStage.mutate({ id: stage.id, productId: product.id }, {
       onSuccess: invalidateAll,
-      onError: (e: any) => toast({ title: 'فشل الحذف', description: e?.message, variant: 'destructive' }),
+      onError: (e: any) => toast({ title: 'Delete Failed', description: e?.message, variant: 'destructive' }),
     });
   };
 
@@ -104,14 +104,14 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
       >
         <span className="flex items-center gap-1.5 font-medium">
           <CheckSquare className="w-3 h-3" />
-          المراحل {total > 0 && <span className="text-primary font-semibold">{completed}/{total}</span>}
+          Stages {total > 0 && <span className="text-primary font-semibold">{completed}/{total}</span>}
         </span>
         {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
 
       {expanded && (
         <div className="mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-          {isLoading && <div className="text-xs text-foreground/30 py-2 text-center">جاري التحميل...</div>}
+          {isLoading && <div className="text-xs text-foreground/30 py-2 text-center">Loading...</div>}
 
           {stages.map((stage: any) => (
             <div key={stage.id} className="flex items-center gap-2 group">
@@ -138,7 +138,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
                 <span
                   className={cn('flex-1 text-xs leading-snug', stage.completed ? 'line-through text-foreground/40' : 'text-foreground/80')}
                   onDoubleClick={() => { setEditingId(stage.id); setEditingName(stage.name); }}
-                  title="انقر مرتين للتعديل"
+                  title="Double-click to edit"
                 >
                   {stage.name}
                 </span>
@@ -150,7 +150,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
                 <button
                   onClick={() => handleDelete(stage)}
                   className="w-5 h-5 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                  title="حذف المرحلة"
+                  title="Delete stage"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -159,7 +159,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
           ))}
 
           {stages.length === 0 && !isLoading && (
-            <div className="text-xs text-foreground/30 text-center py-1">لا توجد مراحل — أضف أولى المراحل</div>
+            <div className="text-xs text-foreground/30 text-center py-1">No stages — add the first one</div>
           )}
 
           {/* Add stage row */}
@@ -168,7 +168,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
               <input
                 autoFocus
                 className="flex-1 text-xs bg-foreground/5 border border-primary/40 rounded px-2 py-1 outline-none"
-                placeholder="اسم المرحلة..."
+                placeholder="Stage name..."
                 value={addingName}
                 onChange={e => setAddingName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setIsAdding(false); setAddingName(''); } }}
@@ -178,7 +178,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
                 disabled={addStage.isPending || !addingName.trim()}
                 className="px-2 py-1 rounded text-xs bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/80 transition-colors"
               >
-                {addStage.isPending ? '...' : 'إضافة'}
+                {addStage.isPending ? '...' : 'Add'}
               </button>
               <button
                 onClick={() => { setIsAdding(false); setAddingName(''); }}
@@ -192,7 +192,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
               onClick={() => setIsAdding(true)}
               className="flex items-center gap-1 text-xs text-foreground/40 hover:text-primary transition-colors mt-1 w-full"
             >
-              <Plus className="w-3 h-3" /> إضافة مرحلة
+              <Plus className="w-3 h-3" /> Add stage
             </button>
           )}
         </div>
@@ -395,20 +395,20 @@ export default function BankDetail() {
             <button
               onClick={() => prevBank && navigate(`/bank/${prevBank.id}`)}
               disabled={!prevBank}
-              title={prevBank ? `← ${prevBank.nameAr}` : undefined}
+              title={prevBank ? `← ${prevBank.nameEn}` : undefined}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-foreground/60 hover:text-foreground hover:bg-foreground/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-              <span className="hidden sm:inline max-w-[100px] truncate">{prevBank?.nameAr ?? 'السابق'}</span>
+              <span className="hidden sm:inline max-w-[100px] truncate">{prevBank?.nameEn ?? 'Previous'}</span>
             </button>
             <div className="w-px h-5 bg-foreground/10" />
             <button
               onClick={() => nextBank && navigate(`/bank/${nextBank.id}`)}
               disabled={!nextBank}
-              title={nextBank ? `${nextBank.nameAr} →` : undefined}
+              title={nextBank ? `${nextBank.nameEn} →` : undefined}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-foreground/60 hover:text-foreground hover:bg-foreground/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
-              <span className="hidden sm:inline max-w-[100px] truncate">{nextBank?.nameAr ?? 'التالي'}</span>
+              <span className="hidden sm:inline max-w-[100px] truncate">{nextBank?.nameEn ?? 'Next'}</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -723,7 +723,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
             <Input placeholder="Stage / Category" value={editing?.categoryStage || ''} onChange={e => setEditing({...editing, categoryStage: e.target.value})} />
             <Input placeholder="Status" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})} />
             <Input placeholder="Responsible Person" value={editing?.responsiblePerson || ''} onChange={e => setEditing({...editing, responsiblePerson: e.target.value})} />
-            <p className="text-xs text-foreground/40">نسبة التقدم تُحسب تلقائياً من المراحل</p>
+            <p className="text-xs text-foreground/40">Progress % is calculated automatically from stages</p>
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>Save</Button></DialogFooter>
         </DialogContent>

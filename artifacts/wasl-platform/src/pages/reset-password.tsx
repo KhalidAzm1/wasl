@@ -41,11 +41,11 @@ export default function ResetPassword() {
     e.preventDefault();
 
     if (password.length < 8) {
-      toast({ title: 'كلمة المرور قصيرة', description: 'يجب أن تكون 8 أحرف على الأقل.', variant: 'destructive' });
+      toast({ title: 'Password too short', description: 'Must be at least 8 characters.', variant: 'destructive' });
       return;
     }
     if (password !== confirm) {
-      toast({ title: 'كلمات المرور غير متطابقة', description: 'تأكد من تطابق كلمتي المرور.', variant: 'destructive' });
+      toast({ title: 'Passwords do not match', description: 'Make sure both passwords are identical.', variant: 'destructive' });
       return;
     }
 
@@ -54,7 +54,7 @@ export default function ResetPassword() {
     setLoading(false);
 
     if (error) {
-      toast({ title: 'فشل تغيير كلمة المرور', description: error.message, variant: 'destructive' });
+      toast({ title: 'Password reset failed', description: error.message, variant: 'destructive' });
       return;
     }
 
@@ -78,13 +78,13 @@ export default function ResetPassword() {
       <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
         <div className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6 text-center">
           <AlertCircle className="mx-auto w-12 h-12 text-red-500" />
-          <h2 className="text-xl font-bold text-foreground">رابط منتهي الصلاحية</h2>
+          <h2 className="text-xl font-bold text-foreground">Link expired</h2>
           <p className="text-sm text-foreground/60">
-            رابط إعادة تعيين كلمة المرور غير صالح أو انتهت صلاحيته.
-            طلب رابطاً جديداً من صفحة تسجيل الدخول.
+            This password reset link is invalid or has expired.
+            Request a new one from the sign-in page.
           </p>
           <Button className="w-full" onClick={() => navigate('/forgot-password')}>
-            طلب رابط جديد
+            Request new link
           </Button>
         </div>
       </div>
@@ -97,8 +97,8 @@ export default function ResetPassword() {
       <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
         <div className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6 text-center">
           <CheckCircle className="mx-auto w-12 h-12 text-emerald-500" />
-          <h2 className="text-xl font-bold text-foreground">تم تغيير كلمة المرور</h2>
-          <p className="text-sm text-foreground/60">سيتم توجيهك تلقائياً…</p>
+          <h2 className="text-xl font-bold text-foreground">Password updated</h2>
+          <p className="text-sm text-foreground/60">You will be redirected automatically…</p>
         </div>
       </div>
     );

@@ -84,7 +84,7 @@ const roleLabel: Record<Role, string> = {
 };
 
 const ASSIGNABLE_ROLES: { value: Role; label: string; hint: string; superAdminOnly?: boolean }[] = [
-  { value: 'super_admin', label: 'Super Admin', hint: 'تحكم كامل بكل شيء — بلا قيود', superAdminOnly: true },
+  { value: 'super_admin', label: 'Super Admin', hint: 'Full control over everything — no restrictions', superAdminOnly: true },
   { value: 'admin', label: 'Admin', hint: 'Full access to all sections' },
   { value: 'manager', label: 'Manager', hint: 'Manage content, no user administration' },
   { value: 'editor', label: 'Editor', hint: 'Create and edit content only' },
@@ -484,7 +484,7 @@ export default function AdminUsers() {
   }
 
   async function handlePromote(user: AdminUser) {
-    if (!confirm(`ترقية "${user.name}" لصلاحية Super Admin؟\nسيحصل على كامل الصلاحيات بدون قيود.`)) return;
+    if (!confirm(`Promote "${user.name}" to Super Admin?\nThis grants full unrestricted access.`)) return;
     try {
       await authedFetch(`/api/admin/users/${user.id}`, {
         method: 'PATCH',
@@ -494,7 +494,7 @@ export default function AdminUsers() {
         }),
       });
       analytics.userRoleChanged({ target_user_id: user.id, old_role: user.role, new_role: 'super_admin' });
-      toast({ title: '✓ تمت الترقية', description: `${user.name} أصبح الآن Super Admin.` });
+      toast({ title: '✓ Promoted', description: `${user.name} is now a Super Admin.` });
       loadUsers();
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
@@ -574,7 +574,7 @@ export default function AdminUsers() {
                               size="icon"
                               variant="ghost"
                               onClick={() => handlePromote(user)}
-                              title="ترقية لـ Super Admin"
+                              title="Promote to Super Admin"
                               className="text-amber-500/60 hover:text-amber-400 hover:bg-amber-400/10"
                             >
                               <Crown className="w-4 h-4" />
@@ -716,9 +716,9 @@ export default function AdminUsers() {
                           <Infinity className="w-5 h-5 text-amber-400" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-amber-300 mb-0.5">صلاحيات غير محدودة</p>
+                          <p className="text-sm font-semibold text-amber-300 mb-0.5">Unrestricted access</p>
                           <p className="text-[12px] text-foreground/50 leading-relaxed">
-                            السوبر أدمن يملك كامل الصلاحيات تلقائياً — إدارة المستخدمين، المستندات، الاجتماعات، الأمان، ولوحة التحكم — بدون قيود.
+                            Super Admin automatically has full permissions — users, documents, meetings, security, and the control panel — with no restrictions.
                           </p>
                         </div>
                       </div>

@@ -392,15 +392,15 @@ export default function Dashboard() {
 
           {/* Status KPI chips */}
           <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
-            <KpiChip dot="bg-foreground/50" label="إجمالي البنوك" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} dimmed={isImplActive} />
+            <KpiChip dot="bg-foreground/50" label="All Banks" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} dimmed={isImplActive} />
             <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-amber-400" label="قيد التنفيذ" value={summary.inProgress} active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} dimmed={isImplActive} />
+            <KpiChip dot="bg-amber-400" label="In Progress" value={summary.inProgress} active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} dimmed={isImplActive} />
             <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-emerald-400" label="مكتمل" value={summary.completed} active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} dimmed={isImplActive} />
+            <KpiChip dot="bg-emerald-400" label="Completed" value={summary.completed} active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} dimmed={isImplActive} />
             <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-red-400" label="متأخر" value={summary.delayed} active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} dimmed={isImplActive} />
+            <KpiChip dot="bg-red-400" label="Delayed" value={summary.delayed} active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} dimmed={isImplActive} />
             <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-rose-500" label="مخاطر عالية" value={highRiskBankCount} active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} dimmed={isImplActive} />
+            <KpiChip dot="bg-rose-500" label="High Risk" value={highRiskBankCount} active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} dimmed={isImplActive} />
           </div>
 
           {/* Spacer */}
@@ -412,9 +412,9 @@ export default function Dashboard() {
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن بنك..."
-              aria-label="ابحث عن بنك"
-              dir="rtl"
+              placeholder="Search banks..."
+              aria-label="Search banks"
+              dir="ltr"
               className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-2 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 focus:bg-foreground/[0.06] transition-all"
             />
           </div>
@@ -435,15 +435,15 @@ export default function Dashboard() {
           </div>
           <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
           <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
-            <KpiChip dot="bg-violet-400" label="متوسط التقدم" value={avgImplProgress} suffix="%" active={false} onClick={() => {}} dimmed={isStatusActive} />
+            <KpiChip dot="bg-violet-400" label="Avg. Progress" value={avgImplProgress} suffix="%" active={false} onClick={() => {}} dimmed={isStatusActive} />
             <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-emerald-400" label="في الإنتاج" value={banksInProduction} active={kpiFilter === 'implInProduction'} onClick={() => setKpiFilter(kpiFilter === 'implInProduction' ? 'all' : 'implInProduction')} dimmed={isStatusActive} />
+            <KpiChip dot="bg-emerald-400" label="In Production" value={banksInProduction} active={kpiFilter === 'implInProduction'} onClick={() => setKpiFilter(kpiFilter === 'implInProduction' ? 'all' : 'implInProduction')} dimmed={isStatusActive} />
             <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-blue-400" label="في الاختبار" value={banksInTesting} active={kpiFilter === 'implInTesting'} onClick={() => setKpiFilter(kpiFilter === 'implInTesting' ? 'all' : 'implInTesting')} dimmed={isStatusActive} />
+            <KpiChip dot="bg-blue-400" label="In Testing" value={banksInTesting} active={kpiFilter === 'implInTesting'} onClick={() => setKpiFilter(kpiFilter === 'implInTesting' ? 'all' : 'implInTesting')} dimmed={isStatusActive} />
             <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-red-400" label="موقوف" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} dimmed={isStatusActive} />
+            <KpiChip dot="bg-red-400" label="Blocked" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} dimmed={isStatusActive} />
             <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-amber-400" label="جاهز للإطلاق" value={banksReadyForGoLive} active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} dimmed={isStatusActive} />
+            <KpiChip dot="bg-amber-400" label="Ready for Go-Live" value={banksReadyForGoLive} active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} dimmed={isStatusActive} />
           </div>
         </div>
       </div>
@@ -1087,7 +1087,7 @@ function CompactBankCard({
           {/* Implementation progress */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-foreground/40 uppercase tracking-[0.12em] font-semibold">التنفيذ</span>
+              <span className="text-foreground/40 uppercase tracking-[0.12em] font-semibold">IMPL.</span>
               <span className="font-mono font-bold text-foreground/80">
                 {implProgress !== undefined ? `${Math.round(implProgress.completionPercentage)}%` : '—'}
               </span>

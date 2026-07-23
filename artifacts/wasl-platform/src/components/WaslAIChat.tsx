@@ -31,16 +31,16 @@ interface Message {
 const WELCOME: Message = {
   role: 'assistant',
   isWelcome: true,
-  content: `مرحباً! أنا **Wasl AI** 🏦
+  content: `Hello! I'm **Wasl AI** 🏦
 
-أنا مساعدك الذكي المتخصص في بيانات البنوك على منصة وصل. يمكنني مساعدتك في:
+I'm your intelligent assistant specialised in bank data on the Wasl platform. I can help you with:
 
-• 📊 حالة أي بنك وتقدم التنفيذ
-• ⚠️ المخاطر والإجراءات المفتوحة
-• 📅 الاجتماعات القادمة
-• ✏️ تحديث بيانات البنوك مباشرة
+• 📊 Status of any bank and implementation progress
+• ⚠️ Open risks and action items
+• 📅 Upcoming meetings
+• ✏️ Updating bank data directly
 
-اسألني بالعربي أو الإنجليزي!`,
+Ask me anything!`,
 };
 
 // ── Markdown renderer ────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ export function WaslAIChat() {
 
   function startListening() {
     if (!SpeechRecognitionAPI) {
-      setMicError('المتصفح لا يدعم التعرف على الصوت. استخدم Chrome.');
+      setMicError('Your browser does not support speech recognition. Try Chrome.');
       return;
     }
     setMicError(null);
@@ -215,9 +215,9 @@ export function WaslAIChat() {
     rec.onerror = (e: any) => {
       setListening(false);
       if (e.error === 'not-allowed') {
-        setMicError('يرجى السماح للمتصفح باستخدام الميكروفون.');
+        setMicError('Please allow microphone access in your browser.');
       } else if (e.error !== 'no-speech') {
-        setMicError('لم يُتعرف على الكلام، حاول مجدداً.');
+        setMicError('Speech not recognised, please try again.');
       }
     };
 
@@ -251,13 +251,13 @@ export function WaslAIChat() {
 
     try {
       const data = await authedPost('/api/ai/chat', { messages: contextHistory });
-      const replyText: string = data.reply ?? data.error ?? 'حدث خطأ، حاول مرة أخرى.';
+      const replyText: string = data.reply ?? data.error ?? 'An error occurred, please try again.';
       const reply: Message = { role: 'assistant', content: replyText };
       setMessages((prev) => [...prev, reply]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مجدداً.' },
+        { role: 'assistant', content: 'Could not reach the server. Check your connection and try again.' },
       ]);
     } finally {
       setLoading(false);
@@ -290,7 +290,7 @@ export function WaslAIChat() {
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setOpen(true)}
-            aria-label="فتح Wasl AI"
+            aria-label="Open Wasl AI"
             className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-br from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 transition-all"
             style={{ boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}
             initial={{ scale: 0, opacity: 0 }}
@@ -330,20 +330,20 @@ export function WaslAIChat() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-foreground">Wasl AI</p>
                   <p className="text-xs text-foreground/50">
-                    {listening ? '🎤 أستمع إليك...' : 'مساعد بيانات البنوك'}
+                    {listening ? '🎤 Listening...' : 'Banking Data Assistant'}
                   </p>
                 </div>
                 <div className="flex gap-1">
                   <button
                     onClick={reset}
-                    aria-label="محادثة جديدة"
+                    aria-label="New conversation"
                     className="w-8 h-8 rounded-full flex items-center justify-center text-foreground/50 hover:text-foreground hover:bg-foreground/10 transition-colors"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => setOpen(false)}
-                    aria-label="إغلاق"
+                    aria-label="Close"
                     className="w-8 h-8 rounded-full flex items-center justify-center text-foreground/50 hover:text-foreground hover:bg-foreground/10 transition-colors"
                   >
                     <X className="w-4 h-4" />
@@ -370,12 +370,12 @@ export function WaslAIChat() {
                     className="absolute inset-x-4 bottom-20 flex flex-col items-center gap-3 bg-background/95 border border-red-400/30 rounded-2xl py-6 shadow-xl backdrop-blur-xl"
                   >
                     <MicPulse />
-                    <p className="text-sm text-foreground/70 font-medium">أستمع إليك...</p>
+                    <p className="text-sm text-foreground/70 font-medium">Listening...</p>
                     <button
                       onClick={stopListening}
                       className="text-xs text-red-400 hover:text-red-300 transition-colors"
                     >
-                      اضغط للإيقاف
+                      Tap to stop
                     </button>
                   </motion.div>
                 )}
@@ -403,7 +403,7 @@ export function WaslAIChat() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="اسألني عن أي بنك..."
+                    placeholder="Ask me about any bank..."
                     rows={1}
                     disabled={loading || listening}
                     className="flex-1 bg-transparent text-sm text-foreground placeholder:text-foreground/40 resize-none outline-none leading-relaxed max-h-28 disabled:opacity-50"
@@ -416,7 +416,7 @@ export function WaslAIChat() {
                       whileTap={{ scale: 0.9 }}
                       onClick={listening ? stopListening : startListening}
                       disabled={loading}
-                      aria-label={listening ? 'إيقاف الميكروفون' : 'تحدث'}
+                      aria-label={listening ? 'Stop microphone' : 'Speak'}
                       className={cn(
                         'shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30',
                         listening
@@ -442,7 +442,7 @@ export function WaslAIChat() {
                 </div>
 
                 <p className="text-center text-[10px] text-foreground/30 mt-1.5">
-                  Wasl AI · اكتب أو اضغط 🎤
+                  Wasl AI · Type or press 🎤
                 </p>
               </div>
             </motion.div>

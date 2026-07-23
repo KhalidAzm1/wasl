@@ -41,9 +41,9 @@ export default function Settings() {
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-foreground to-foreground/60 mb-2">
-            System Settings
+            إدارة البنوك والمنتجات
           </h1>
-          <p className="text-foreground/50 text-lg">Manage banks and images</p>
+          <p className="text-foreground/50 text-lg">إدارة الكيانات التمويلية وأنواع المنتجات والأرشيف</p>
         </div>
         <NavControls />
       </header>

@@ -29,5 +29,4 @@ app.listen(port, (err) => {
   ensureStorageBucket().catch((err) => {
     logger.warn({ err }, "Failed to ensure Supabase Storage bucket");
   });
-
 });

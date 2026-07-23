@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link } from 'wouter';
+import { useParams, Link, useLocation } from 'wouter';
 import { BankLogo } from '@/components/BankLogo';
 import { NavControls } from '@/components/NavControls';
 import { 
-  useGetBank, 
+  useGetBank, useListBanks,
   useCreateProduct, useUpdateProduct, useDeleteProduct,
   useCreateMeeting, useUpdateMeeting, useDeleteMeeting,
   useCreateRisk, useUpdateRisk, useDeleteRisk,
@@ -322,7 +322,30 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
 
 export default function BankDetail() {
   const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
   const { data: bank, isLoading } = useGetBank(id!, { query: { enabled: !!id, queryKey: getGetBankQueryKey(id!) } });
+  const { data: allBanks } = useListBanks();
+
+  // Build sorted bank list for prev/next navigation (same order as dashboard default)
+  const sortedBanks = React.useMemo(() => {
+    if (!allBanks) return [];
+    return [...allBanks].sort((a, b) => (a.nameEn ?? '').localeCompare(b.nameEn ?? ''));
+  }, [allBanks]);
+
+  const currentIdx = sortedBanks.findIndex(b => b.id === id);
+  const prevBank = currentIdx > 0 ? sortedBanks[currentIdx - 1] : null;
+  const nextBank = currentIdx < sortedBanks.length - 1 ? sortedBanks[currentIdx + 1] : null;
+
+  // Keyboard navigation ← →
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowLeft' && nextBank) navigate(`/bank/${nextBank.id}`);
+      if (e.key === 'ArrowRight' && prevBank) navigate(`/bank/${prevBank.id}`);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [prevBank, nextBank, navigate]);
 
   // Fire once when bank data first resolves for this page visit
   const firedRef = useRef(false);
@@ -359,8 +382,38 @@ export default function BankDetail() {
           <Link href="/portfolio" className="hover:text-foreground transition-colors">Portfolio</Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-foreground">{bank.nameAr}</span>
+          {sortedBanks.length > 1 && (
+            <span className="text-foreground/30 text-xs">
+              {currentIdx + 1} / {sortedBanks.length}
+            </span>
+          )}
         </div>
-        <NavControls />
+
+        <div className="flex items-center gap-2">
+          {/* Prev / Next bank navigation */}
+          <div className="flex items-center gap-1 border border-foreground/10 rounded-xl overflow-hidden bg-foreground/5">
+            <button
+              onClick={() => prevBank && navigate(`/bank/${prevBank.id}`)}
+              disabled={!prevBank}
+              title={prevBank ? `← ${prevBank.nameAr}` : undefined}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-foreground/60 hover:text-foreground hover:bg-foreground/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+              <span className="hidden sm:inline max-w-[100px] truncate">{prevBank?.nameAr ?? 'السابق'}</span>
+            </button>
+            <div className="w-px h-5 bg-foreground/10" />
+            <button
+              onClick={() => nextBank && navigate(`/bank/${nextBank.id}`)}
+              disabled={!nextBank}
+              title={nextBank ? `${nextBank.nameAr} →` : undefined}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-foreground/60 hover:text-foreground hover:bg-foreground/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <span className="hidden sm:inline max-w-[100px] truncate">{nextBank?.nameAr ?? 'التالي'}</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <NavControls />
+        </div>
       </div>
 
       <div className="relative rounded-3xl overflow-hidden glass-panel border border-foreground/10 p-8 flex flex-col md:flex-row gap-8 items-start md:items-center">

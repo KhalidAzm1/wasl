@@ -116,6 +116,8 @@ export async function resolveStoredUrl(storedValue: string | null | undefined): 
   if (!storedValue) return null;
   // Inline base64 data URL — no signing needed, return directly
   if (storedValue.startsWith("data:")) return storedValue;
+  // Full external URL (e.g. https://brand.example.com/logo.svg) — pass through
+  if (storedValue.startsWith("http://") || storedValue.startsWith("https://")) return storedValue;
   // Legacy OneDrive proxy URL — no longer resolvable after OneDrive removal
   if (storedValue.startsWith("/api/files/content/")) return null;
   // Supabase storage path — generate a fresh 1-hour signed URL

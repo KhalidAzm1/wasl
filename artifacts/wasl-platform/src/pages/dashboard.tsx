@@ -769,6 +769,21 @@ function ProductBadges({ codes }: { codes: string[] }) {
   );
 }
 
+function getBankGradient(nameEn: string): string {
+  const gradients = [
+    'from-[#0c1628] to-[#1a2744]',
+    'from-[#0d1f12] to-[#1a3a20]',
+    'from-[#1a0d28] to-[#2e1a4a]',
+    'from-[#1a0d0d] to-[#3a1a1a]',
+    'from-[#0d1a1a] to-[#1a3232]',
+    'from-[#1a1408] to-[#2e2410]',
+    'from-[#080d1a] to-[#101828]',
+    'from-[#14101a] to-[#201830]',
+  ];
+  const idx = (nameEn.charCodeAt(0) || 0) % gradients.length;
+  return `bg-gradient-to-br ${gradients[idx]}`;
+}
+
 function CompactBankCard({ 
   bankSummary, 
   hoveredId, 
@@ -793,6 +808,9 @@ function CompactBankCard({
 
   const displayBank = bankDetail || bankSummary;
   const isHovered = hoveredId === displayBank.id;
+  
+  const hasRealHero = Boolean(displayBank.heroImageUrl && !displayBank.heroImageUrl.includes('placehold.co'));
+  const hasLogo = Boolean(displayBank.logoUrl);
 
   const risksCount = bankDetail?.risks?.length || 0;
   const docsCount = bankDetail?.documents?.length || 0;
@@ -931,116 +949,140 @@ function CompactBankCard({
       );
     }
 
-    // Default GRID
+    // Default GRID — logo-hero card
     return (
       <motion.div
         onMouseEnter={() => setHoveredId(displayBank.id)}
         onMouseLeave={() => setHoveredId(null)}
-        animate={{ scale: isHovered ? 1.02 : 1, y: isHovered ? -4 : 0 }}
+        animate={{ scale: isHovered ? 1.025 : 1, y: isHovered ? -6 : 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full min-h-[340px] rounded-[24px] glass-card cursor-pointer group"
+        className="relative w-full rounded-[24px] overflow-hidden cursor-pointer group border border-white/6 dark:border-white/6 shadow-xl"
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-transparent transition-all duration-700 pointer-events-none" />
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-b from-white/50 to-transparent pointer-events-none transition-opacity duration-300 dark:hidden rounded-[24px]" />
-        
-        {/* Glow for active bank */}
-        {displayBank.status === 'Active - Integration In Progress' && (
-           <div className="absolute inset-0 z-10 rounded-[24px] pointer-events-none shadow-[inset_0_0_0_1px_rgba(47,107,255,0.3),0_0_20px_0_rgba(47,107,255,0.15)] dark:shadow-[inset_0_0_0_1px_rgba(79,50,214,0.3),0_0_20px_0_rgba(79,50,214,0.2)]" />
-        )}
-
-        {displayBank.logoUrl && (
-          <div className="absolute -right-8 -bottom-8 w-40 h-40 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none blur-[2px]">
-            <img src={displayBank.logoUrl} alt="" className="w-full h-full object-contain" />
-          </div>
-        )}
-
-        <div className="relative z-20 p-6 flex flex-col">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-white/50 dark:bg-foreground/5 border border-foreground/10 p-2.5 flex items-center justify-center shadow-sm backdrop-blur-md">
-                 <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
+        {/* ── HERO ZONE ── */}
+        <div className="relative h-[172px] overflow-hidden">
+          {hasRealHero ? (
+            /* Full-bleed hero photo */
+            <>
+              <img
+                src={displayBank.heroImageUrl!}
+                alt={displayBank.nameEn}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              {/* Logo overlay top-left when hero photo exists */}
+              {hasLogo && (
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 p-1.5 flex items-center justify-center">
+                  <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} className="w-full h-full object-contain" />
+                </div>
+              )}
+            </>
+          ) : hasLogo ? (
+            /* Large logo on dark gradient */
+            <div className={cn('absolute inset-0 flex items-center justify-center', getBankGradient(displayBank.nameEn))}>
+              {/* Subtle dot-grid texture */}
+              <div
+                className="absolute inset-0 opacity-[0.04]"
+                style={{
+                  backgroundImage: 'radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)',
+                  backgroundSize: '20px 20px',
+                }}
+              />
+              {/* Glow ring */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-white/5 blur-2xl" />
               </div>
-            </div>
-            <EditButton className="w-8 h-8 bg-background/60 backdrop-blur-md border border-foreground/10 text-foreground/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 hover:text-primary hover:bg-primary/15 hover:border-primary/40 transition-all text-[14px]" />
-          </div>
-
-          <div className="mt-5 min-w-0">
-            <h2 className="text-lg font-bold text-foreground leading-tight truncate">{displayBank.nameAr}</h2>
-            <h3 className="text-[11px] text-foreground/50 tracking-[0.15em] uppercase truncate">{displayBank.nameEn}</h3>
-          </div>
-
-          <div className="mt-2">
-            <ProductBadges codes={productCodes} />
-          </div>
-
-          <div className="mt-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-foreground/5 border border-foreground/5 text-[11px] font-medium backdrop-blur-md shadow-sm">
-              <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_8px_currentColor]`} />
-              <span className="text-foreground/80">{displayBank.status}</span>
-            </div>
-          </div>
-
-          {/* Implementation progress — bar + % side by side */}
-          <div className="mt-3 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Implementation</span>
-              <span className="text-sm font-mono font-bold text-foreground/80">
-                {implProgress !== undefined ? `${Math.round(implProgress.completionPercentage)}%` : '—'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 rounded-full bg-foreground/10 overflow-hidden">
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all duration-700',
-                    implProgress === undefined ? 'bg-foreground/20' :
-                    implProgress.completionPercentage === 100 ? 'bg-emerald-500' :
-                    implProgress.isBlocked ? 'bg-red-500' :
-                    implProgress.completionPercentage >= 75 ? 'bg-blue-500' :
-                    implProgress.completionPercentage >= 50 ? 'bg-yellow-500' :
-                    implProgress.completionPercentage > 0 ? 'bg-orange-500' : 'bg-foreground/20'
-                  )}
-                  style={{ width: `${implProgress?.completionPercentage ?? 0}%` }}
+              <div className="relative z-10 w-[65%] max-h-[100px] flex items-center justify-center p-4">
+                <BankLogo
+                  src={displayBank.logoUrl}
+                  alt={displayBank.nameEn}
+                  className="max-w-full max-h-[88px] object-contain drop-shadow-[0_2px_24px_rgba(255,255,255,0.18)] transition-transform duration-500 group-hover:scale-110"
                 />
               </div>
             </div>
+          ) : (
+            /* Initials on colored gradient */
+            <div className={cn('absolute inset-0 flex items-center justify-center', getBankGradient(displayBank.nameEn))}>
+              <span className="text-[64px] font-black text-white/15 select-none leading-none">
+                {displayBank.nameAr.substring(0, 2)}
+              </span>
+            </div>
+          )}
+
+          {/* Hover shimmer overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/10 group-hover:to-transparent transition-all duration-700 pointer-events-none" />
+
+          {/* Edit button */}
+          <EditButton className="absolute top-3 left-3 z-20 w-8 h-8 bg-black/50 backdrop-blur-md border border-white/10 text-white/70 opacity-0 group-hover:opacity-100 hover:bg-primary/80 hover:border-primary/50 hover:text-white transition-all text-[13px]" />
+
+          {/* Active-status glow ring on hero */}
+          {displayBank.status === 'Active - Integration In Progress' && (
+            <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_0_1.5px_rgba(79,50,214,0.6)]" />
+          )}
+        </div>
+
+        {/* ── INFO ZONE ── */}
+        <div className="relative bg-card/95 dark:bg-card/95 backdrop-blur-xl px-5 py-4 flex flex-col gap-3 border-t border-white/5">
+          {/* Name + Status row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[16px] font-bold text-foreground leading-tight truncate">{displayBank.nameAr}</h2>
+              <h3 className="text-[10px] text-foreground/40 tracking-[0.12em] uppercase truncate mt-0.5">{displayBank.nameEn}</h3>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-foreground/5 border border-foreground/8 text-[10px] font-medium shrink-0 mt-0.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_6px_currentColor]`} />
+              <span className="text-foreground/70 max-w-[100px] truncate">{displayBank.status}</span>
+            </div>
+          </div>
+
+          {/* Product badges */}
+          {productCodes.length > 0 && (
+            <div className="-mt-1">
+              <ProductBadges codes={productCodes} />
+            </div>
+          )}
+
+          {/* Implementation progress */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-foreground/40 uppercase tracking-[0.12em] font-semibold">التنفيذ</span>
+              <span className="font-mono font-bold text-foreground/80">
+                {implProgress !== undefined ? `${Math.round(implProgress.completionPercentage)}%` : '—'}
+              </span>
+            </div>
+            <div className="h-[5px] rounded-full bg-foreground/8 overflow-hidden">
+              <div
+                className={cn('h-full rounded-full transition-all duration-700',
+                  implProgress === undefined ? 'bg-foreground/20' :
+                  implProgress.completionPercentage === 100 ? 'bg-emerald-500' :
+                  implProgress.isBlocked ? 'bg-red-500' :
+                  implProgress.completionPercentage >= 75 ? 'bg-blue-500' :
+                  implProgress.completionPercentage >= 50 ? 'bg-yellow-500' :
+                  implProgress.completionPercentage > 0 ? 'bg-orange-500' : 'bg-foreground/20'
+                )}
+                style={{ width: `${implProgress?.completionPercentage ?? 0}%` }}
+              />
+            </div>
             {implProgress?.currentStageName && implProgress.completionPercentage < 100 && (
-              <p className="text-[10px] text-foreground/40 leading-tight">
-                {implProgress.currentStageName}
-              </p>
+              <p className="text-[9px] text-foreground/30 leading-tight truncate">{implProgress.currentStageName}</p>
             )}
           </div>
 
-          <div className="mt-auto pt-4 border-t border-foreground/5 grid grid-cols-2 gap-y-3 gap-x-2">
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Owner</span>
-              <span className="text-xs text-foreground/90 truncate flex items-center gap-1.5">
-                <User className="w-3 h-3 text-primary/70 shrink-0" />
-                <span className="truncate">{displayBank.responsiblePerson || '—'}</span>
+          {/* Stats footer */}
+          <div className="flex items-center justify-between text-[11px] pt-2.5 border-t border-foreground/5">
+            <span className="flex items-center gap-1.5 text-foreground/55 truncate max-w-[45%]">
+              <User className="w-3 h-3 text-primary/60 shrink-0" />
+              <span className="truncate">{displayBank.responsiblePerson?.split(' ').slice(0,2).join(' ') || '—'}</span>
+            </span>
+            <div className="flex items-center gap-3 shrink-0 text-foreground/35">
+              <span className={cn('flex items-center gap-1', risksCount > 0 && 'text-red-500/80')}>
+                <AlertTriangle className="w-3 h-3" />{risksCount}
               </span>
-            </div>
-            
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Risks</span>
-              <span className={`text-xs truncate flex items-center gap-1.5 ${risksCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground/60'}`}>
-                <AlertTriangle className="w-3 h-3 shrink-0" />
-                <span className="truncate">{risksCount} {displayBank.riskLevel && `· ${displayBank.riskLevel}`}</span>
+              <span className="flex items-center gap-1">
+                <FileText className="w-3 h-3" />{docsCount}
               </span>
-            </div>
-            
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Docs</span>
-              <span className="text-xs text-foreground/60 truncate flex items-center gap-1.5">
-                <FileText className="w-3 h-3 shrink-0" />
-                <span className="truncate">{docsCount} files</span>
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-foreground/40 uppercase tracking-[0.15em] font-semibold">Updated</span>
-              <span className="text-xs text-foreground/60 truncate flex items-center gap-1.5">
-                <Clock className="w-3 h-3 shrink-0" />
-                <span className="truncate">{formatDateTime(displayBank.updatedAt).split(',')[0]}</span>
+              <span className="hidden xl:flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatDateTime(displayBank.updatedAt).split(',')[0]}
               </span>
             </div>
           </div>

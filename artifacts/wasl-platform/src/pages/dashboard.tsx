@@ -411,7 +411,7 @@ export default function Dashboard() {
   const allKanbanStatuses = [...kanbanStatuses, ...Array.from(existingStatuses)];
 
   return (
-    <div className="min-h-full flex flex-col w-full overflow-x-hidden">
+    <div className={cn("min-h-full flex flex-col w-full", viewMode !== 'kanban' && "overflow-x-hidden")}>
       
       <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-3xl border-b border-foreground/5 px-8 py-8 flex flex-col items-center gap-7 shadow-2xl">
         <div className="flex flex-col items-center gap-2 text-center">

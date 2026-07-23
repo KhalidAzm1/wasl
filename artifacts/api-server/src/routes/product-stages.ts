@@ -27,7 +27,7 @@ async function syncProgress(productId: number) {
 
 // ── List stages for a product ─────────────────────────────────────────────────
 
-router.get("/api/products/:productId/stages", async (req, res): Promise<void> => {
+router.get("/products/:productId/stages", async (req, res): Promise<void> => {
   const productId = Number(req.params.productId);
   if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
 
@@ -47,7 +47,7 @@ const CreateStageBody = z.object({
   notes: z.string().optional(),
 });
 
-router.post("/api/products/:productId/stages", async (req, res): Promise<void> => {
+router.post("/products/:productId/stages", async (req, res): Promise<void> => {
   const productId = Number(req.params.productId);
   if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
 
@@ -79,7 +79,7 @@ const UpdateStageBody = z.object({
   notes: z.string().optional(),
 });
 
-router.patch("/api/product-stages/:id", async (req, res): Promise<void> => {
+router.patch("/product-stages/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -110,7 +110,7 @@ router.patch("/api/product-stages/:id", async (req, res): Promise<void> => {
 
 // ── Delete a stage ────────────────────────────────────────────────────────────
 
-router.delete("/api/product-stages/:id", async (req, res): Promise<void> => {
+router.delete("/product-stages/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 

@@ -174,9 +174,19 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
     return;
   }
 
-  // Namespaced path: <entityType>/<entityId>/<timestamp>_<fileName>
+  // Sanitize filename: keep only ASCII alphanumeric, dots, dashes, underscores.
+  // Arabic and other non-ASCII characters in filenames are rejected by Supabase Storage.
+  const rawName = parsed.data.fileName ?? "file";
+  const ext = rawName.includes(".") ? rawName.slice(rawName.lastIndexOf(".")) : "";
+  const safeName = rawName
+    .replace(/[^\x00-\x7F]/g, "")   // strip non-ASCII (Arabic etc.)
+    .replace(/[^a-zA-Z0-9._-]/g, "_") // replace remaining special chars
+    .replace(/^_+|_+$/g, "")         // trim leading/trailing underscores
+    || `file${ext}`;                  // fallback if nothing left
+
+  // Namespaced path: <entityType>/<entityId>/<timestamp>_<safeName>
   // This prevents collisions across entities and timestamps.
-  const storagePath = `${resolved.entityType}/${resolved.entityId}/${Date.now()}_${parsed.data.fileName}`;
+  const storagePath = `${resolved.entityType}/${resolved.entityId}/${Date.now()}_${safeName}`;
 
   try {
     await uploadToStorage(storagePath, buffer, contentType);

@@ -769,19 +769,35 @@ function ProductBadges({ codes }: { codes: string[] }) {
   );
 }
 
+// Rich brand-inspired gradient palettes — 16 distinct options
+const BANK_HERO_PALETTES: Array<{ bg1: string; bg2: string; accent: string }> = [
+  { bg1: '#0D1B2E', bg2: '#162844', accent: '#2563EB' }, // sapphire navy
+  { bg1: '#0A1F14', bg2: '#112D1E', accent: '#16A34A' }, // forest emerald
+  { bg1: '#1A0B2E', bg2: '#280F42', accent: '#9333EA' }, // deep violet
+  { bg1: '#1C0A0A', bg2: '#2A1010', accent: '#DC2626' }, // crimson dusk
+  { bg1: '#0C1A1A', bg2: '#102828', accent: '#0D9488' }, // dark teal
+  { bg1: '#1A1000', bg2: '#2A1A00', accent: '#D97706' }, // amber night
+  { bg1: '#0A0D20', bg2: '#0E1530', accent: '#4F46E5' }, // midnight indigo
+  { bg1: '#130A1A', bg2: '#1E0F28', accent: '#DB2777' }, // rose plum
+  { bg1: '#001A1A', bg2: '#00282A', accent: '#06B6D4' }, // cyan abyss
+  { bg1: '#1A1500', bg2: '#2A2000', accent: '#CA8A04' }, // gold noir
+  { bg1: '#0A1428', bg2: '#0F1E3A', accent: '#3B82F6' }, // ocean blue
+  { bg1: '#1A0F0A', bg2: '#281500', accent: '#EA580C' }, // burnt sienna
+  { bg1: '#0A1A0A', bg2: '#102410', accent: '#22C55E' }, // jade grove
+  { bg1: '#1A0A1A', bg2: '#280F2A', accent: '#C026D3' }, // magenta storm
+  { bg1: '#0F1820', bg2: '#152030', accent: '#0EA5E9' }, // arctic steel
+  { bg1: '#1A1818', bg2: '#262222', accent: '#94A3B8' }, // graphite
+];
+
+function getBankPalette(nameEn: string) {
+  const sum = [...nameEn].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return BANK_HERO_PALETTES[sum % BANK_HERO_PALETTES.length];
+}
+
 function getBankGradient(nameEn: string): string {
-  const gradients = [
-    'from-[#0c1628] to-[#1a2744]',
-    'from-[#0d1f12] to-[#1a3a20]',
-    'from-[#1a0d28] to-[#2e1a4a]',
-    'from-[#1a0d0d] to-[#3a1a1a]',
-    'from-[#0d1a1a] to-[#1a3232]',
-    'from-[#1a1408] to-[#2e2410]',
-    'from-[#080d1a] to-[#101828]',
-    'from-[#14101a] to-[#201830]',
-  ];
-  const idx = (nameEn.charCodeAt(0) || 0) % gradients.length;
-  return `bg-gradient-to-br ${gradients[idx]}`;
+  const p = getBankPalette(nameEn);
+  return `bg-gradient-to-br`; // kept for compat; use getBankPalette inline
+  void p;
 }
 
 function CompactBankCard({ 
@@ -976,36 +992,63 @@ function CompactBankCard({
                 </div>
               )}
             </>
-          ) : hasLogo ? (
-            /* Large logo on dark gradient */
-            <div className={cn('absolute inset-0 flex items-center justify-center', getBankGradient(displayBank.nameEn))}>
-              {/* Subtle dot-grid texture */}
-              <div
-                className="absolute inset-0 opacity-[0.04]"
-                style={{
-                  backgroundImage: 'radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)',
-                  backgroundSize: '20px 20px',
-                }}
-              />
-              {/* Glow ring */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-32 h-32 rounded-full bg-white/5 blur-2xl" />
-              </div>
-              <div className="relative z-10 w-[65%] max-h-[100px] flex items-center justify-center p-4">
-                <BankLogo
-                  src={displayBank.logoUrl}
-                  alt={displayBank.nameEn}
-                  className="max-w-full max-h-[88px] object-contain drop-shadow-[0_2px_24px_rgba(255,255,255,0.18)] transition-transform duration-500 group-hover:scale-110"
-                />
-              </div>
-            </div>
           ) : (
-            /* Initials on colored gradient */
-            <div className={cn('absolute inset-0 flex items-center justify-center', getBankGradient(displayBank.nameEn))}>
-              <span className="text-[64px] font-black text-white/15 select-none leading-none">
-                {displayBank.nameAr.substring(0, 2)}
-              </span>
-            </div>
+            /* Logo (or initials) on brand-palette gradient with white elevated card */
+            (() => {
+              const palette = getBankPalette(displayBank.nameEn);
+              return (
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${palette.bg1} 0%, ${palette.bg2} 100%)` }}
+                >
+                  {/* Noise texture overlay */}
+                  <div
+                    className="absolute inset-0 opacity-[0.035]"
+                    style={{
+                      backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")',
+                      backgroundSize: '200px',
+                    }}
+                  />
+                  {/* Accent glow blob */}
+                  <div
+                    className="absolute w-40 h-40 rounded-full blur-3xl opacity-20 transition-opacity duration-500 group-hover:opacity-30"
+                    style={{ background: palette.accent }}
+                  />
+                  {/* White elevated logo card */}
+                  <div
+                    className="relative z-10 flex items-center justify-center rounded-[18px] transition-all duration-500 group-hover:scale-[1.06]"
+                    style={{
+                      width: '72%',
+                      height: '90px',
+                      padding: '10px 18px',
+                      background: 'linear-gradient(145deg, #ffffff 0%, #f5f7fa 100%)',
+                      boxShadow: '0 10px 36px rgba(0,0,0,0.38), 0 2px 8px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.9)',
+                      border: '1px solid rgba(255,255,255,0.25)',
+                    }}
+                  >
+                    {hasLogo ? (
+                      <BankLogo
+                        src={displayBank.logoUrl}
+                        alt={displayBank.nameEn}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span
+                        className="text-[32px] font-black select-none tracking-tight"
+                        style={{ color: palette.accent }}
+                      >
+                        {displayBank.nameAr.substring(0, 2)}
+                      </span>
+                    )}
+                  </div>
+                  {/* Accent bottom stripe */}
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-[3px] opacity-70"
+                    style={{ background: `linear-gradient(90deg, transparent 0%, ${palette.accent}cc 40%, ${palette.accent} 50%, ${palette.accent}cc 60%, transparent 100%)` }}
+                  />
+                </div>
+              );
+            })()
           )}
 
           {/* Hover shimmer overlay */}

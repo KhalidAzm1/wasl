@@ -4,7 +4,7 @@ import type { Bank, BankSummaryV2 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Link } from 'wouter';
-import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check } from 'lucide-react';
+import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3 } from 'lucide-react';
 import { BankLogo } from '@/components/BankLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,67 +180,28 @@ function AdvancedFiltersPanel({
   );
 }
 
-function KpiButton({ label, value, colorClass, active, onClick }: { label: string; value: number; colorClass: string; active: boolean; onClick: () => void }) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
-
-  React.useEffect(() => {
-    if (prefersReducedMotion) {
-      setDisplayValue(value);
-      return;
-    }
-
-    let startTimestamp: number | null = null;
-    let rafId: number;
-    const duration = 1000;
-    const startValue = displayValue;
-
-    const step = (timestamp: number) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      // easeOutExpo
-      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      setDisplayValue(Math.floor(startValue + (value - startValue) * easeProgress));
-
-      if (progress < 1) {
-        rafId = window.requestAnimationFrame(step);
-      }
-    };
-
-    rafId = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(rafId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, prefersReducedMotion]);
-
+function KpiChip({
+  dot, label, value, active, onClick, suffix, dimmed
+}: { dot: string; label: string; value: number | string; active: boolean; onClick: () => void; suffix?: string; dimmed?: boolean }) {
   return (
     <button
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "relative overflow-hidden flex flex-col text-left px-5 py-3.5 shrink-0 min-w-[140px] md:w-auto transition-all duration-300 focus:outline-none glass-card group outline-none",
-        active 
-          ? "border-primary/50 shadow-[0_0_30px_-5px_rgba(47,107,255,0.4)] transform -translate-y-1 bg-white/80 dark:bg-foreground/10 dark:border-primary/40 dark:shadow-[0_0_30px_-5px_rgba(79,50,214,0.25)]" 
-          : "hover:border-primary/30 dark:bg-foreground/5 dark:border-foreground/5 dark:hover:bg-foreground/10 dark:hover:border-foreground/10"
+        "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 shrink-0 focus:outline-none",
+        active
+          ? "bg-foreground/10 border-foreground/25 shadow-sm"
+          : "border-transparent hover:bg-foreground/[0.04] hover:border-foreground/10",
+        dimmed && "opacity-35"
       )}
     >
-      {active && <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-b from-white/50 to-transparent pointer-events-none transition-opacity duration-300 dark:hidden" />
-      <span className="relative z-10 text-foreground/50 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] mb-1.5">{label}</span>
-      <AnimatePresence mode="popLayout">
-        <motion.span
-          key={value} // The actual value changing triggers the pop, but displayValue is what renders
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          transition={{ duration: 0.3 }}
-          className={cn(
-            "relative z-10 text-2xl md:text-3xl font-mono font-light tracking-tight",
-            active ? "text-primary drop-shadow-[0_0_8px_rgba(47,107,255,0.4)] dark:drop-shadow-[0_0_8px_rgba(79,50,214,0.6)]" : colorClass
-          )}
-        >
-          {displayValue}
-        </motion.span>
-      </AnimatePresence>
+      <span className={cn("w-2 h-2 rounded-full shrink-0 shadow-[0_0_6px_currentColor]", dot)} />
+      <span className={cn("text-[20px] font-black leading-none tracking-tight", active ? "text-foreground" : "text-foreground/80")}>
+        {value}{suffix && <span className="text-sm ml-0.5 opacity-50">{suffix}</span>}
+      </span>
+      <span className={cn("text-[10px] leading-tight font-medium max-w-[52px] text-right", active ? "text-foreground/70" : "text-foreground/35")}>
+        {label}
+      </span>
     </button>
   );
 }
@@ -410,41 +371,80 @@ export default function Dashboard() {
   kanbanStatuses.forEach(s => existingStatuses.delete(s));
   const allKanbanStatuses = [...kanbanStatuses, ...Array.from(existingStatuses)];
 
+  const isImplActive = ['implInProduction','implInTesting','implBlocked','implReadyForGoLive'].includes(kpiFilter);
+  const isStatusActive = ['inProgress','completed','delayed','highRisk'].includes(kpiFilter);
+
   return (
     <div className={cn("min-h-full flex flex-col w-full", viewMode !== 'kanban' && "overflow-x-hidden")}>
-      
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-3xl border-b border-foreground/5 px-8 py-8 flex flex-col items-center gap-7 shadow-2xl">
-        <div className="flex flex-col items-center gap-2 text-center">
-           <WaslLogo height={90} imgClassName="w-auto" />
-           <p className="text-[11px] text-foreground/40 uppercase tracking-[0.2em] font-medium">Banking Intelligence Platform</p>
+
+      {/* ── Clean Strip Header ─────────────────────────────────────────── */}
+      <div className="sticky top-0 z-40 bg-background/90 backdrop-blur-3xl border-b border-foreground/[0.06] shadow-2xl">
+
+        {/* Row 1: View controls | Search | → | Status KPI chips | Logo */}
+        <div className="flex items-center gap-3 px-5 pt-2.5 pb-2" dir="rtl">
+
+          {/* Logo – visual far right in RTL */}
+          <div className="shrink-0 pl-3 border-l border-foreground/[0.08]">
+            <WaslLogo height={28} imgClassName="w-auto" />
+          </div>
+
+          <div className="w-px h-5 bg-foreground/[0.08] shrink-0" />
+
+          {/* Status KPI chips */}
+          <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
+            <KpiChip dot="bg-foreground/50" label="إجمالي البنوك" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} dimmed={isImplActive} />
+            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-amber-400" label="قيد التنفيذ" value={summary.inProgress} active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} dimmed={isImplActive} />
+            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-emerald-400" label="مكتمل" value={summary.completed} active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} dimmed={isImplActive} />
+            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-red-400" label="متأخر" value={summary.delayed} active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} dimmed={isImplActive} />
+            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-rose-500" label="مخاطر عالية" value={highRiskBankCount} active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} dimmed={isImplActive} />
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1 min-w-0" />
+
+          {/* Search */}
+          <div className="relative shrink-0 w-52">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30" />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="ابحث عن بنك..."
+              aria-label="ابحث عن بنك"
+              dir="rtl"
+              className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-2 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 focus:bg-foreground/[0.06] transition-all"
+            />
+          </div>
+
+          {/* View mode toggle */}
+          <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
+            <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
+          </div>
         </div>
 
-        {/* Bank status KPIs */}
-        <div className="flex md:flex-wrap items-center justify-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-2 md:pb-0 w-full">
-          <KpiButton label="Total Banks" value={summary.totalBanks} colorClass="text-foreground" active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="In Progress" value={summary.inProgress} colorClass="text-yellow-600 dark:text-yellow-400" active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="Completed" value={summary.completed} colorClass="text-emerald-600 dark:text-emerald-400" active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="Delayed" value={summary.delayed} colorClass="text-red-600 dark:text-red-400" active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="High Risk" value={highRiskBankCount} colorClass="text-red-600 dark:text-red-400" active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} />
-        </div>
-
-        {/* Implementation progress KPIs */}
-        <div className="flex md:flex-wrap items-center justify-center gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none hide-scrollbar -mx-8 px-8 md:mx-0 md:px-0 pb-1 md:pb-0 w-full border-t border-foreground/5 pt-4">
-          <div className="text-[10px] text-foreground/30 uppercase tracking-[0.2em] font-bold shrink-0 hidden md:block">Implementation</div>
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="Avg Progress" value={avgImplProgress} colorClass="text-purple-500 dark:text-purple-400" active={false} onClick={() => {}} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="In Production" value={banksInProduction} colorClass="text-emerald-600 dark:text-emerald-400" active={kpiFilter === 'implInProduction'} onClick={() => setKpiFilter(kpiFilter === 'implInProduction' ? 'all' : 'implInProduction')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="In Testing" value={banksInTesting} colorClass="text-blue-600 dark:text-blue-400" active={kpiFilter === 'implInTesting'} onClick={() => setKpiFilter(kpiFilter === 'implInTesting' ? 'all' : 'implInTesting')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="Blocked" value={banksBlocked} colorClass="text-red-600 dark:text-red-400" active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} />
-          <div className="hidden md:block w-px h-8 md:h-10 bg-foreground/10 shrink-0" />
-          <KpiButton label="Ready for Go-Live" value={banksReadyForGoLive} colorClass="text-amber-500 dark:text-amber-400" active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} />
+        {/* Row 2: Implementation chips */}
+        <div className="flex items-center gap-2 px-5 pb-2" dir="rtl">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <BarChart3 className="w-3 h-3 text-violet-400/60" />
+            <span className="text-[9px] text-foreground/25 uppercase tracking-[0.2em] font-bold">Implementation</span>
+          </div>
+          <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
+          <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
+            <KpiChip dot="bg-violet-400" label="متوسط التقدم" value={avgImplProgress} suffix="%" active={false} onClick={() => {}} dimmed={isStatusActive} />
+            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-emerald-400" label="في الإنتاج" value={banksInProduction} active={kpiFilter === 'implInProduction'} onClick={() => setKpiFilter(kpiFilter === 'implInProduction' ? 'all' : 'implInProduction')} dimmed={isStatusActive} />
+            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-blue-400" label="في الاختبار" value={banksInTesting} active={kpiFilter === 'implInTesting'} onClick={() => setKpiFilter(kpiFilter === 'implInTesting' ? 'all' : 'implInTesting')} dimmed={isStatusActive} />
+            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-red-400" label="موقوف" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} dimmed={isStatusActive} />
+            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
+            <KpiChip dot="bg-amber-400" label="جاهز للإطلاق" value={banksReadyForGoLive} active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} dimmed={isStatusActive} />
+          </div>
         </div>
       </div>
 
@@ -470,44 +470,25 @@ export default function Dashboard() {
 
       <div className="flex-1 p-8 md:p-10 max-w-[1920px] mx-auto w-full flex flex-col gap-8">
         
-        {/* Control Bar */}
-        <div className="flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
-          <div className="flex flex-wrap md:flex-nowrap items-center gap-3 w-full xl:w-auto">
-            {/* Search */}
-            <div className="relative group w-full md:w-[320px] shrink-0">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <Search className="w-5 h-5 text-foreground/40 group-focus-within:text-primary transition-colors" />
-              </div>
-              <input 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search banks, people..."
-                aria-label="Search banks, people..."
-                className="w-full glass-panel !rounded-full pl-11 pr-4 h-[48px] text-[15px] text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 focus:bg-white/80 dark:focus:bg-card/60 transition-all shadow-inner"
-              />
-            </div>
+        {/* Control Bar — Category + Filters + Impl% range */}
+        <div className="flex flex-wrap items-center gap-3">
+          <CategoryFilter categories={categories} value={filterCategory} onChange={setFilterCategory} />
 
-            {/* Category Dropdown */}
-            <CategoryFilter categories={categories} value={filterCategory} onChange={setFilterCategory} />
+          <button 
+            onClick={() => setIsAdvancedFilterOpen(true)}
+            aria-label="Open advanced filters"
+            className={cn(
+              "flex items-center justify-center w-[42px] h-[42px] rounded-xl transition-all backdrop-blur-md shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50",
+              filterRisk !== 'All' 
+                ? "bg-primary/20 border border-primary/50 text-primary shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
+                : "bg-foreground/5 border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-primary/40 hover:bg-primary/10"
+            )}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
 
-            {/* Advanced Filters Button */}
-            <button 
-              onClick={() => setIsAdvancedFilterOpen(true)}
-              aria-label="Open advanced filters"
-              className={cn(
-                "flex items-center justify-center w-[42px] h-[42px] rounded-xl transition-all backdrop-blur-md shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50",
-                filterRisk !== 'All' 
-                  ? "bg-primary/20 border border-primary/50 text-primary shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
-                  : "bg-foreground/5 border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-primary/40 hover:bg-primary/10"
-              )}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Implementation progress range filter */}
           <div className="flex items-center gap-1 p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0">
-            <span className="text-[9px] text-foreground/30 uppercase tracking-wider font-bold px-2 hidden xl:block">Impl%</span>
+            <span className="text-[9px] text-foreground/30 uppercase tracking-wider font-bold px-2">Impl%</span>
             {(['all', '0-25', '26-50', '51-75', '76-100'] as const).map(range => (
               <button
                 key={range}
@@ -520,12 +501,6 @@ export default function Dashboard() {
                 {range === 'all' ? 'All' : `${range}%`}
               </button>
             ))}
-          </div>
-
-          <div className="flex items-center p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0 w-max xl:w-auto">
-            <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary shadow-sm" : "text-foreground/50 hover:text-foreground hover:bg-foreground/10")}><LayoutGrid className="w-4 h-4" /></button>
-            <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary shadow-sm" : "text-foreground/50 hover:text-foreground hover:bg-foreground/10")}><List className="w-4 h-4" /></button>
-            <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-2 rounded-lg transition-colors focus:outline-none", viewMode === 'kanban' ? "bg-primary/20 text-primary shadow-sm" : "text-foreground/50 hover:text-foreground hover:bg-foreground/10")}><Columns3 className="w-4 h-4" /></button>
           </div>
         </div>
 

@@ -6,3 +6,4 @@ export * from './generated/api';
 export * from './generated/api.schemas';
 export * from './implementation-api';
 export * from './implementation-v2-api';
+export * from './product-stages-api';

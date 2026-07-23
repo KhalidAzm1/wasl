@@ -9,3 +9,4 @@ export * from "./product-catalog";
 export * from "./audit-logs";
 export * from "./implementation";
 export * from "./implementation-v2";
+export * from "./product-stages";

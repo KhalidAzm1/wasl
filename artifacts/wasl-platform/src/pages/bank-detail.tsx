@@ -13,6 +13,8 @@ import {
   useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
   useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
   type StageV2, type BankStagesViewV2, type PatchStageBodyV2,
+  useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
+  getProductStagesQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -40,6 +42,165 @@ import {
   GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw,
 } from 'lucide-react';
 
+// ── Product Stages Section ────────────────────────────────────────────────────
+function ProductStagesSection({ product, bankId }: { product: any; bankId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: stages = [], isLoading } = useProductStages(product.id);
+  const addStage = useAddProductStage();
+  const patchStage = usePatchProductStage();
+  const deleteStage = useDeleteProductStage();
+
+  const [expanded, setExpanded] = useState(false);
+  const [addingName, setAddingName] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: getProductStagesQueryKey(product.id) });
+    queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+    queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+  };
+
+  const handleAdd = () => {
+    if (!addingName.trim()) return;
+    addStage.mutate({ productId: product.id, name: addingName.trim() }, {
+      onSuccess: () => { setAddingName(''); setIsAdding(false); invalidateAll(); },
+      onError: (e: any) => toast({ title: 'فشل الإضافة', description: e?.message, variant: 'destructive' }),
+    });
+  };
+
+  const handleToggle = (stage: any) => {
+    patchStage.mutate({ id: stage.id, productId: product.id, completed: !stage.completed }, {
+      onSuccess: invalidateAll,
+      onError: (e: any) => toast({ title: 'فشل التحديث', description: e?.message, variant: 'destructive' }),
+    });
+  };
+
+  const handleRename = (stage: any) => {
+    if (!editingName.trim() || editingName === stage.name) { setEditingId(null); return; }
+    patchStage.mutate({ id: stage.id, productId: product.id, name: editingName.trim() }, {
+      onSuccess: () => { setEditingId(null); invalidateAll(); },
+      onError: (e: any) => toast({ title: 'فشل التعديل', description: e?.message, variant: 'destructive' }),
+    });
+  };
+
+  const handleDelete = (stage: any) => {
+    deleteStage.mutate({ id: stage.id, productId: product.id }, {
+      onSuccess: invalidateAll,
+      onError: (e: any) => toast({ title: 'فشل الحذف', description: e?.message, variant: 'destructive' }),
+    });
+  };
+
+  const completed = stages.filter((s: any) => s.completed).length;
+  const total = stages.length;
+
+  return (
+    <div className="border-t border-foreground/10 mt-3 pt-3">
+      <button
+        className="flex items-center justify-between w-full text-xs text-foreground/60 hover:text-foreground transition-colors gap-2"
+        onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
+      >
+        <span className="flex items-center gap-1.5 font-medium">
+          <CheckSquare className="w-3 h-3" />
+          المراحل {total > 0 && <span className="text-primary font-semibold">{completed}/{total}</span>}
+        </span>
+        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+
+      {expanded && (
+        <div className="mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          {isLoading && <div className="text-xs text-foreground/30 py-2 text-center">جاري التحميل...</div>}
+
+          {stages.map((stage: any) => (
+            <div key={stage.id} className="flex items-center gap-2 group">
+              {/* Checkbox */}
+              <button
+                onClick={() => handleToggle(stage)}
+                className="shrink-0 w-4 h-4 rounded border border-foreground/30 flex items-center justify-center hover:border-primary transition-colors"
+                style={{ background: stage.completed ? 'hsl(var(--primary))' : 'transparent' }}
+              >
+                {stage.completed && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+              </button>
+
+              {/* Name — editable inline */}
+              {editingId === stage.id ? (
+                <input
+                  autoFocus
+                  className="flex-1 text-xs bg-foreground/5 border border-primary/40 rounded px-1.5 py-0.5 outline-none"
+                  value={editingName}
+                  onChange={e => setEditingName(e.target.value)}
+                  onBlur={() => handleRename(stage)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleRename(stage); if (e.key === 'Escape') setEditingId(null); }}
+                />
+              ) : (
+                <span
+                  className={cn('flex-1 text-xs leading-snug', stage.completed ? 'line-through text-foreground/40' : 'text-foreground/80')}
+                  onDoubleClick={() => { setEditingId(stage.id); setEditingName(stage.name); }}
+                  title="انقر مرتين للتعديل"
+                >
+                  {stage.name}
+                </span>
+              )}
+
+              {/* Actions (file + delete) */}
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <EntityAttachmentsButton entityType="product_stage" entityId={stage.id} label={stage.name} />
+                <button
+                  onClick={() => handleDelete(stage)}
+                  className="w-5 h-5 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                  title="حذف المرحلة"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {stages.length === 0 && !isLoading && (
+            <div className="text-xs text-foreground/30 text-center py-1">لا توجد مراحل — أضف أولى المراحل</div>
+          )}
+
+          {/* Add stage row */}
+          {isAdding ? (
+            <div className="flex gap-1 mt-1">
+              <input
+                autoFocus
+                className="flex-1 text-xs bg-foreground/5 border border-primary/40 rounded px-2 py-1 outline-none"
+                placeholder="اسم المرحلة..."
+                value={addingName}
+                onChange={e => setAddingName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setIsAdding(false); setAddingName(''); } }}
+              />
+              <button
+                onClick={handleAdd}
+                disabled={addStage.isPending || !addingName.trim()}
+                className="px-2 py-1 rounded text-xs bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/80 transition-colors"
+              >
+                {addStage.isPending ? '...' : 'إضافة'}
+              </button>
+              <button
+                onClick={() => { setIsAdding(false); setAddingName(''); }}
+                className="px-1.5 py-1 rounded text-xs text-foreground/50 hover:text-foreground hover:bg-foreground/10 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center gap-1 text-xs text-foreground/40 hover:text-primary transition-colors mt-1 w-full"
+            >
+              <Plus className="w-3 h-3" /> إضافة مرحلة
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Implementation progress badge (used in the bank header) ──────────────
 function ImplProgressBadge({ bankId }: { bankId: string }) {
   const { data } = useGetBankStagesV2(bankId);
@@ -65,7 +226,7 @@ function ImplProgressBadge({ bankId }: { bankId: string }) {
 // Generic attachment button + dialog for entities other than banks (products,
 // meetings). Mirrors the bank Documents tab but scoped to a single
 // entityType/entityId pair, since products/meetings don't have their own tab.
-function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 'product' | 'meeting', entityId: number, label: string }) {
+function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 'product' | 'meeting' | 'product_stage', entityId: number, label: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<{ name: string, title: string, docType: string, dataUrl: string } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -493,6 +654,8 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                   <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${p.progressPercent * 100}%` }} />
                 </div>
               </div>
+
+              <ProductStagesSection product={p} bankId={bankId} />
             </CardContent>
           </Card>
         ))}
@@ -506,8 +669,8 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
             <Input placeholder="Product Code" value={editing?.productCode || ''} onChange={e => setEditing({...editing, productCode: e.target.value})} />
             <Input placeholder="Stage / Category" value={editing?.categoryStage || ''} onChange={e => setEditing({...editing, categoryStage: e.target.value})} />
             <Input placeholder="Status" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})} />
-            <Input type="number" placeholder="Progress % (0-100)" value={editing?.progressPercent || 0} onChange={e => setEditing({...editing, progressPercent: e.target.value})} />
             <Input placeholder="Responsible Person" value={editing?.responsiblePerson || ''} onChange={e => setEditing({...editing, responsiblePerson: e.target.value})} />
+            <p className="text-xs text-foreground/40">نسبة التقدم تُحسب تلقائياً من المراحل</p>
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>Save</Button></DialogFooter>
         </DialogContent>

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, filesTable, banksTable, productsTable, meetingsTable } from "@workspace/db";
+import { db, filesTable, banksTable, productsTable, meetingsTable, productStagesTable } from "@workspace/db";
 import {
   ListDocumentsQueryParams,
   ListDocumentsResponse,
@@ -29,6 +29,7 @@ const ENTITY_CONFIG = {
   bank: { table: banksTable, idColumn: banksTable.id },
   product: { table: productsTable, idColumn: productsTable.id },
   meeting: { table: meetingsTable, idColumn: meetingsTable.id },
+  product_stage: { table: productStagesTable, idColumn: productStagesTable.id },
 } as const;
 type EntityType = keyof typeof ENTITY_CONFIG;
 

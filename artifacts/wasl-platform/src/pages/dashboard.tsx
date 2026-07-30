@@ -800,6 +800,92 @@ function getBankGradient(nameEn: string): string {
   void p;
 }
 
+const BANK_STATUSES = [
+  'Not Started',
+  'In Progress',
+  'Active - Integration In Progress',
+  'Delayed',
+  'Completed',
+] as const;
+
+function StatusQuickPicker({ bankId, status }: { bankId: string; status: string | null | undefined }) {
+  const [open, setOpen] = useState(false);
+  const updateBank = useUpdateBank();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const statusColor = getStatusColor(status);
+
+  const handleSelect = (newStatus: string) => {
+    setOpen(false);
+    if (newStatus === status) return;
+    updateBank.mutate(
+      { id: bankId, data: { status: newStatus } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+          toast({ title: 'Status updated', description: `Changed to "${newStatus}"` });
+        },
+        onError: () => {
+          toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="relative" onClick={e => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={e => { e.preventDefault(); e.stopPropagation(); setOpen(v => !v); }}
+        disabled={updateBank.isPending}
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-foreground/5 border border-foreground/[0.08] text-[10px] font-medium shrink-0 transition-all cursor-pointer",
+          open ? "border-primary/40 bg-primary/10" : "hover:border-primary/40 hover:bg-primary/10",
+          updateBank.isPending && "opacity-50 pointer-events-none"
+        )}
+        aria-label="Change status"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_6px_currentColor]`} />
+        <span className="text-foreground/70 max-w-[100px] truncate">{status || '—'}</span>
+        <ChevronDown className={cn("w-2.5 h-2.5 text-foreground/40 transition-transform duration-200 shrink-0", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={e => { e.stopPropagation(); setOpen(false); }} />
+          <div className="absolute top-full left-0 mt-1.5 z-50 min-w-[200px] bg-background/97 backdrop-blur-3xl border border-foreground/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {BANK_STATUSES.map(s => {
+              const sc = getStatusColor(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="option"
+                  aria-selected={s === status}
+                  onClick={() => handleSelect(s)}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors text-left",
+                    s === status
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-foreground/80 hover:bg-foreground/10 hover:text-foreground"
+                  )}
+                >
+                  <span className={`w-2 h-2 rounded-full ${sc.dot} shadow-[0_0_6px_currentColor] shrink-0`} />
+                  {s}
+                  {s === status && <Check className="ml-auto w-3 h-3 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function CompactBankCard({ 
   bankSummary, 
   hoveredId, 
@@ -830,8 +916,6 @@ function CompactBankCard({
 
   const risksCount = bankDetail?.risks?.length || 0;
   const docsCount = bankDetail?.documents?.length || 0;
-  
-  const statusColor = getStatusColor(displayBank.status);
 
   const EditButton = ({ className }: { className?: string }) => (
     <button
@@ -887,10 +971,7 @@ function CompactBankCard({
             </div>
 
             <div className="w-36 shrink-0">
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-foreground/5 border border-foreground/5 w-max text-[11px] font-medium backdrop-blur-md">
-                <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_8px_currentColor]`} />
-                <span className="text-foreground/80 truncate max-w-[120px]">{displayBank.status}</span>
-              </div>
+              <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
             </div>
 
             <div className="w-32 shrink-0 text-xs text-foreground/70 flex items-center gap-2 truncate">
@@ -949,14 +1030,17 @@ function CompactBankCard({
             </div>
           </div>
           
-          <div className="relative z-20 flex items-center justify-between text-[11px] mt-1 pt-3 border-t border-foreground/5">
-            <span className="text-foreground/70 flex items-center gap-1.5 truncate pr-2">
-              <User className="w-3 h-3 text-primary/70 shrink-0" /> 
-              <span className="truncate">{displayBank.responsiblePerson?.split(' ')[0] || '—'}</span>
-            </span>
-            <div className="flex items-center gap-3 shrink-0">
-               <span className={`flex items-center gap-1 ${risksCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground/40'}`}><AlertTriangle className="w-3 h-3"/>{risksCount}</span>
-               <span className="flex items-center gap-1 text-foreground/40"><FileText className="w-3 h-3"/>{docsCount}</span>
+          <div className="relative z-20 pt-3 border-t border-foreground/5 flex flex-col gap-2">
+            <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-foreground/70 flex items-center gap-1.5 truncate pr-2">
+                <User className="w-3 h-3 text-primary/70 shrink-0" /> 
+                <span className="truncate">{displayBank.responsiblePerson?.split(' ')[0] || '—'}</span>
+              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                 <span className={`flex items-center gap-1 ${risksCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground/40'}`}><AlertTriangle className="w-3 h-3"/>{risksCount}</span>
+                 <span className="flex items-center gap-1 text-foreground/40"><FileText className="w-3 h-3"/>{docsCount}</span>
+              </div>
             </div>
           </div>
           
@@ -1071,10 +1155,7 @@ function CompactBankCard({
               <h2 className="text-[16px] font-bold text-foreground leading-tight truncate">{displayBank.nameAr}</h2>
               <h3 className="text-[10px] text-foreground/40 tracking-[0.12em] uppercase truncate mt-0.5">{displayBank.nameEn}</h3>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-foreground/5 border border-foreground/8 text-[10px] font-medium shrink-0 mt-0.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_6px_currentColor]`} />
-              <span className="text-foreground/70 max-w-[100px] truncate">{displayBank.status}</span>
-            </div>
+            <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
           </div>
 
           {/* Product badges */}

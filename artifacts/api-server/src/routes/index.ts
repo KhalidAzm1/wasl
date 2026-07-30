@@ -18,8 +18,14 @@ import implementationV2Router from "./implementation-v2";
 import adminPerfRouter from "./admin-perf";
 import aiChatRouter from "./ai-chat";
 import productStagesRouter from "./product-stages";
+import quickUpdateRouter from "./quick-update";
 
 const router: IRouter = Router();
+
+// ── Public routes (no auth) — must come BEFORE any secured router
+// because secured routers use router.use(requireAuth) which intercepts
+// every unauthenticated request regardless of path.
+router.use(quickUpdateRouter);
 
 router.use(healthRouter);
 router.use(banksRouter);

@@ -39,8 +39,10 @@ import {
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
   CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip,
   Maximize2, BarChart2, CheckCircle2, Circle, Ban, Clock, Flag, Loader2,
-  GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw,
+  GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw, QrCode,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { useAuth } from '@/lib/authContext';
 
 // ── Product Stages Section ────────────────────────────────────────────────────
 function ProductStagesSection({ product, bankId }: { product: any; bankId: string }) {
@@ -320,9 +322,77 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
   );
 }
 
+// ── QR Quick-Update Dialog ─────────────────────────────────────────────────────
+function QRDialog({ bankId, open, onClose }: { bankId: string; open: boolean; onClose: () => void }) {
+  const [token, setToken]     = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState('');
+  const [copied, setCopied]   = useState(false);
+
+  const url = token
+    ? `${window.location.origin}${import.meta.env.BASE_URL}quick-update/${token}`
+    : '';
+
+  useEffect(() => {
+    if (!open || token) return;
+    setLoading(true);
+    setErr('');
+    fetch('/api/quick-update/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bankId }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.error) setErr(d.error); else setToken(d.token); })
+      .catch(() => setErr('تعذّر توليد الرابط'))
+      .finally(() => setLoading(false));
+  }, [open, bankId, token]);
+
+  function copyUrl() {
+    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-sm" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-right">
+            <QrCode className="w-5 h-5 text-primary" />
+            رمز QR — تحديث سريع
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center gap-4 py-2">
+          {loading && <Loader2 className="w-10 h-10 animate-spin text-primary" />}
+          {err && <p className="text-rose-400 text-sm text-center">{err}</p>}
+          {token && (
+            <>
+              <div className="p-3 rounded-2xl bg-white shadow-lg">
+                <QRCodeSVG value={url} size={220} level="M" />
+              </div>
+              <p className="text-xs text-foreground/40 text-center leading-relaxed">
+                يمكن للموظف مسح هذا الرمز لتحديث حالة البنك مباشرة<br />
+                بدون تسجيل دخول — صالح لمدة 30 يوماً
+              </p>
+              <button
+                type="button"
+                onClick={copyUrl}
+                className="w-full text-xs px-4 py-2.5 rounded-xl bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 transition-all text-foreground/60 hover:text-foreground truncate text-center"
+              >
+                {copied ? '✓ تم النسخ' : '📋 نسخ الرابط'}
+              </button>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function BankDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const { role } = useAuth();
+  const [qrOpen, setQrOpen] = useState(false);
   const { data: bank, isLoading } = useGetBank(id!, { query: { enabled: !!id, queryKey: getGetBankQueryKey(id!) } });
   const { data: allBanks } = useListBanks();
 
@@ -412,9 +482,24 @@ export default function BankDetail() {
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
+          {/* QR quick-update button — admin/super_admin only */}
+          {(role === 'admin' || role === 'super_admin') && (
+            <button
+              type="button"
+              onClick={() => setQrOpen(true)}
+              title="رمز QR للتحديث السريع"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-all text-xs font-medium"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">رمز QR</span>
+            </button>
+          )}
           <NavControls />
         </div>
       </div>
+
+      {/* QR Dialog */}
+      {bank && <QRDialog bankId={bank.id} open={qrOpen} onClose={() => setQrOpen(false)} />}
 
       <div className="relative rounded-3xl overflow-hidden glass-panel border border-foreground/10 p-8 flex flex-col md:flex-row gap-8 items-start md:items-center">
         {bank.heroImageUrl && (

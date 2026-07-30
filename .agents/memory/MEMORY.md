@@ -21,3 +21,4 @@
 - [Auth cache circuit breaker](auth-circuit-breaker.md) — auth cache TTL is 5 min; circuit opens after 3 Supabase failures, serves stale cache for 30 s to prevent full outage.
 - [lastActivityAt in-process cache](last-activity-cache.md) — banks route caches MAX-date subquery result (5-min TTL); invalidated on every bank/meeting write. files table uses entity_id not bank_id.
 - [Meetings LEFT JOIN for bank name](meetings-bank-name-join.md) — GET /meetings LEFT JOINs banks; returns bankNameEn/bankNameAr so archived banks still show their name.
+- [Express router.use(requireAuth) intercepts all paths](express-router-auth-ordering.md) — any router with router.use(requireAuth) (no path) blocks ALL unauthenticated requests; public routes must be mounted BEFORE secured routers in the index.

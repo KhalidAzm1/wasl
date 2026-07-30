@@ -25,6 +25,7 @@ import AdminSystemTests from '@/pages/admin-system-tests';
 import AdminSystemTestsReports from '@/pages/admin-system-tests-reports';
 import AdminPerformance from '@/pages/admin-performance';
 import AdminImplementationSettings from '@/pages/admin-implementation-settings';
+import QuickUpdate from '@/pages/QuickUpdate';
 import { AdminPinGate } from '@/components/AdminPinGate';
 import { PostHogProvider } from '@/providers/PostHogProvider';
 
@@ -40,6 +41,9 @@ const queryClient = new QueryClient({
 function AppRoutes() {
   return (
     <Switch>
+      {/* ── Public: quick-update form (no auth needed — token carries the permission) */}
+      <Route path="/quick-update/:token" component={QuickUpdate} />
+
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />

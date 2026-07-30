@@ -39,7 +39,7 @@ function CategoryFilter({ categories, value, onChange }: { categories: string[],
       <button 
         onClick={() => setOpen(!open)} 
         className={cn(
-          "flex items-center gap-2 h-[48px] px-5 rounded-full border text-[15px] transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 glass-panel",
+          "flex items-center gap-2 h-9 sm:h-[48px] px-3 sm:px-5 rounded-full border text-[13px] sm:text-[15px] transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 glass-panel",
           open 
             ? "bg-white/80 dark:bg-primary/10 border-primary/40 shadow-[0_0_15px_-3px_rgba(47,107,255,0.3)] dark:shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
             : "hover:bg-white/60 dark:hover:bg-foreground/10 hover:border-primary/30"
@@ -223,6 +223,7 @@ export default function Dashboard() {
   const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk' | 'implInProduction' | 'implInTesting' | 'implBlocked' | 'implReadyForGoLive'>('all');
   const [implProgressFilter, setImplProgressFilter] = useState<'all' | '0-25' | '26-50' | '51-75' | '76-100'>('all');
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   // ── Analytics: Dashboard Loaded ─────────────────────────────────────────
   const dashboardLoadedRef = useRef(false);
@@ -381,18 +382,18 @@ export default function Dashboard() {
       {/* ── Clean Strip Header ─────────────────────────────────────────── */}
       <div className="sticky top-0 z-40 bg-background/90 backdrop-blur-3xl border-b border-foreground/[0.06] shadow-2xl">
 
-        {/* Row 1: View controls | Search | → | Status KPI chips | Logo */}
-        <div className="flex items-center gap-3 px-5 pt-2.5 pb-2" dir="rtl">
+        {/* Row 1: Logo | KPI chips | Search | View toggle */}
+        <div className="flex items-center gap-2 px-4 sm:px-5 pt-2.5 pb-2" dir="rtl">
 
-          {/* Logo – visual far right in RTL */}
-          <div className="shrink-0 pl-3 border-l border-foreground/[0.08]">
-            <WaslLogo height={28} imgClassName="w-auto" />
+          {/* Logo – far right in RTL */}
+          <div className="shrink-0 pl-2 sm:pl-3 border-l border-foreground/[0.08]">
+            <WaslLogo height={24} imgClassName="w-auto" />
           </div>
 
           <div className="w-px h-5 bg-foreground/[0.08] shrink-0" />
 
-          {/* Status KPI chips */}
-          <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
+          {/* Status KPI chips — scrollable, takes all flex space */}
+          <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar flex-1 min-w-0">
             <KpiChip dot="bg-foreground/50" label="All Banks" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} dimmed={isImplActive} />
             <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
             <KpiChip dot="bg-amber-400" label="In Progress" value={summary.inProgress} active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} dimmed={isImplActive} />
@@ -404,11 +405,8 @@ export default function Dashboard() {
             <KpiChip dot="bg-rose-500" label="High Risk" value={highRiskBankCount} active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} dimmed={isImplActive} />
           </div>
 
-          {/* Spacer */}
-          <div className="flex-1 min-w-0" />
-
-          {/* Search */}
-          <div className="relative shrink-0 w-52">
+          {/* Search — grows on desktop, icon-only toggle on mobile */}
+          <div className="relative shrink-0 hidden sm:block w-44 md:w-52">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30" />
             <input
               value={searchQuery}
@@ -419,23 +417,52 @@ export default function Dashboard() {
               className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-2 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 focus:bg-foreground/[0.06] transition-all"
             />
           </div>
+          {/* Mobile: search icon button — opens inline search row below */}
+          <button
+            className="sm:hidden shrink-0 p-1.5 rounded-lg border border-foreground/10 text-foreground/50 hover:text-foreground hover:border-foreground/20 transition-colors"
+            aria-label="Search"
+            onClick={() => setMobileSearchOpen(v => !v)}
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
 
           {/* View mode toggle */}
           <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
             <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
             <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
-            <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
           </div>
         </div>
 
+        {/* Mobile search row — shown when search icon is tapped */}
+        {(mobileSearchOpen || searchQuery) && (
+          <div className="sm:hidden px-4 pb-2">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30" />
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onBlur={() => { if (!searchQuery) setMobileSearchOpen(false); }}
+                placeholder="Search banks..."
+                aria-label="Search banks"
+                dir="ltr"
+                className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-2 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 transition-all"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Row 2: Implementation chips */}
-        <div className="flex items-center gap-2 px-5 pb-2" dir="rtl">
-          <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 px-4 sm:px-5 pb-2" dir="rtl">
+          {/* Label — hidden on very small screens to save space */}
+          <div className="hidden sm:flex items-center gap-1.5 shrink-0">
             <BarChart3 className="w-3 h-3 text-violet-400/60" />
             <span className="text-[9px] text-foreground/25 uppercase tracking-[0.2em] font-bold">Implementation</span>
           </div>
+          <BarChart3 className="sm:hidden w-3 h-3 text-violet-400/60 shrink-0" />
           <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
-          <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar flex-1 min-w-0">
             <KpiChip dot="bg-violet-400" label="Avg. Progress" value={avgImplProgress} suffix="%" active={false} onClick={() => {}} dimmed={isStatusActive} />
             <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
             <KpiChip dot="bg-emerald-400" label="In Production" value={banksInProduction} active={kpiFilter === 'implInProduction'} onClick={() => setKpiFilter(kpiFilter === 'implInProduction' ? 'all' : 'implInProduction')} dimmed={isStatusActive} />
@@ -444,7 +471,7 @@ export default function Dashboard() {
             <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
             <KpiChip dot="bg-red-400" label="Blocked" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} dimmed={isStatusActive} />
             <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-amber-400" label="Ready for Go-Live" value={banksReadyForGoLive} active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} dimmed={isStatusActive} />
+            <KpiChip dot="bg-amber-400" label="Ready Go-Live" value={banksReadyForGoLive} active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} dimmed={isStatusActive} />
           </div>
         </div>
       </div>
@@ -469,33 +496,33 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="flex-1 p-8 md:p-10 max-w-[1920px] mx-auto w-full flex flex-col gap-8">
+      <div className="flex-1 p-4 sm:p-8 md:p-10 max-w-[1920px] mx-auto w-full flex flex-col gap-5 sm:gap-8">
         
         {/* Control Bar — Category + Filters + Impl% range */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <CategoryFilter categories={categories} value={filterCategory} onChange={setFilterCategory} />
 
           <button 
             onClick={() => setIsAdvancedFilterOpen(true)}
             aria-label="Open advanced filters"
             className={cn(
-              "flex items-center justify-center w-[42px] h-[42px] rounded-xl transition-all backdrop-blur-md shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50",
+              "flex items-center justify-center w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-xl transition-all backdrop-blur-md shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50",
               filterRisk !== 'All' 
                 ? "bg-primary/20 border border-primary/50 text-primary shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
                 : "bg-foreground/5 border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-primary/40 hover:bg-primary/10"
             )}
           >
-            <SlidersHorizontal className="w-4 h-4" />
+            <SlidersHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
-          <div className="flex items-center gap-1 p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0">
-            <span className="text-[9px] text-foreground/30 uppercase tracking-wider font-bold px-2">Impl%</span>
+          <div className="flex items-center gap-0.5 sm:gap-1 p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0 overflow-x-auto hide-scrollbar">
+            <span className="hidden sm:inline text-[9px] text-foreground/30 uppercase tracking-wider font-bold px-2">Impl%</span>
             {(['all', '0-25', '26-50', '51-75', '76-100'] as const).map(range => (
               <button
                 key={range}
                 onClick={() => setImplProgressFilter(range)}
                 className={cn(
-                  'px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors focus:outline-none',
+                  'px-2 sm:px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors focus:outline-none whitespace-nowrap',
                   implProgressFilter === range ? 'bg-purple-500/20 text-purple-400 shadow-sm' : 'text-foreground/40 hover:text-foreground hover:bg-foreground/10'
                 )}
               >

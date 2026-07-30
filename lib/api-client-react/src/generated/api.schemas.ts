@@ -81,6 +81,8 @@ export interface Bank {
   updatedBy?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** @nullable — MAX updated_at across all related tables */
+  lastActivityAt?: string | null;
 }
 
 export interface Product {
@@ -109,6 +111,10 @@ export interface Product {
 export interface Meeting {
   id: number;
   bankId: string;
+  /** @nullable — bank name at query time; populated via LEFT JOIN even for archived banks */
+  bankNameEn?: string | null;
+  /** @nullable */
+  bankNameAr?: string | null;
   date: string;
   topic: string;
   /** @nullable */

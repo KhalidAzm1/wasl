@@ -525,9 +525,10 @@ export default function AdminUsers() {
       });
       if (!res.ok) return;
       const json = await res.json();
-      setBanks((json.banks ?? []).map((b: { id: string; nameAr: string; nameEn: string }) => ({
-        id: b.id, nameAr: b.nameAr, nameEn: b.nameEn,
-      })));
+      const list = Array.isArray(json) ? json : (json.banks ?? []);
+    setBanks(list.map((b: { id: string; nameAr: string; nameEn: string }) => ({
+      id: b.id, nameAr: b.nameAr, nameEn: b.nameEn,
+    })));
     } catch { /* silent — banks list is optional UI */ }
   }
 
@@ -756,7 +757,7 @@ export default function AdminUsers() {
                       <Button size="icon" variant="ghost" onClick={() => openEdit(user)} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      {isSuperAdmin && user.role !== 'super_admin' && !user.deleted_at && (
+                      {isSuperAdmin && !user.deleted_at && (
                         <Button
                           size="icon"
                           variant="ghost"

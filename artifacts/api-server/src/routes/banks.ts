@@ -174,6 +174,8 @@ async function getActivityMap(): Promise<Map<string, Date>> {
         SELECT bank_id, updated_at FROM products WHERE bank_id IS NOT NULL
         UNION ALL
         SELECT bank_id, updated_at FROM bank_implementation_progress WHERE bank_id IS NOT NULL
+        UNION ALL
+        SELECT bank_id, updated_at FROM implementation_stages WHERE bank_id IS NOT NULL
       ) AS activities GROUP BY bank_id
     `);
     for (const row of rows.rows) {

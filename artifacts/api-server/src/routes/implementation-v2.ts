@@ -17,6 +17,8 @@
  */
 import { Router, type IRouter } from "express";
 import { and, eq, asc } from "drizzle-orm";
+import { invalidateActivityCache } from "./banks";
+import { eventBus } from "../lib/event-bus";
 import {
   db, banksTable,
   implementationStagesTable,
@@ -282,6 +284,8 @@ router.patch("/v2/stages/:stageId", requirePermission("dashboard_access"), async
 
   await db.update(implementationStagesTable).set(update as any).where(eq(implementationStagesTable.id, stageId));
   await logAudit(req, { action: "UPDATE", entityType: "impl_stage_v2", entityId: `${existing.bankId}:${stageId}`, entityLabel: existing.name, details: update });
+  invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId: existing.bankId });
 
   const stages = await db.select().from(implementationStagesTable)
     .where(eq(implementationStagesTable.bankId, existing.bankId)).orderBy(asc(implementationStagesTable.displayOrder));
@@ -299,6 +303,8 @@ router.delete("/v2/stages/:stageId", requirePermission("dashboard_access"), asyn
 
   await db.delete(implementationStagesTable).where(eq(implementationStagesTable.id, stageId));
   await logAudit(req, { action: "ARCHIVE", entityType: "impl_stage_v2", entityId: `${existing.bankId}:${stageId}`, entityLabel: existing.name, details: {} });
+  invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId: existing.bankId });
 
   const stages = await db.select().from(implementationStagesTable)
     .where(eq(implementationStagesTable.bankId, existing.bankId)).orderBy(asc(implementationStagesTable.displayOrder));
@@ -354,6 +360,14 @@ router.patch("/v2/sub-stages/:subStageId", requirePermission("dashboard_access")
 
   const [updated] = await db.update(implementationSubStagesTable).set(update as any).where(eq(implementationSubStagesTable.id, subId)).returning();
   if (!updated) { res.status(404).json({ error: "Sub-stage not found" }); return; }
+
+  // Find bankId via the parent stage so we can invalidate the activity cache
+  const [parentStage] = await db.select({ bankId: implementationStagesTable.bankId })
+    .from(implementationStagesTable).where(eq(implementationStagesTable.id, updated.stageId));
+  if (parentStage) {
+    invalidateActivityCache();
+    eventBus.emit("bank_updated", { bankId: parentStage.bankId });
+  }
   res.json(updated);
 });
 

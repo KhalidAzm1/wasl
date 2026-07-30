@@ -11,6 +11,7 @@ declare global {
         name: string;
         role: UserRole;
         permissions: UserPermissions;
+        assignedBankId: string | null;
       };
     }
   }
@@ -75,7 +76,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, name, role, permissions, deleted_at")
+        .select("id, email, name, role, permissions, assigned_bank_id, deleted_at")
         .eq("id", userData.user.id)
         .single();
       if (profileError || !profile || profile.deleted_at) return null;
@@ -91,6 +92,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         name: profile.name ?? profile.email,
         role,
         permissions,
+        assignedBankId: (profile.assigned_bank_id as string | null) ?? null,
       };
       const entry: CachedAuth = { authUser, expiresAt: Date.now() + AUTH_CACHE_TTL_MS };
       authCache.set(token, entry);
@@ -134,4 +136,31 @@ export function requirePermission(permission: keyof UserPermissions) {
     }
     next();
   };
+}
+
+/**
+ * Enforces per-bank edit restrictions.
+ * If the authenticated user has an `assignedBankId`, they may only mutate
+ * their assigned bank. Super admins are always unrestricted.
+ *
+ * For routes with :id  — the param must match assignedBankId.
+ * For routes without :id (e.g. POST /banks) — blocked entirely when restricted.
+ */
+export function requireBankEditAccess(req: Request, res: Response, next: NextFunction): void {
+  const user = req.authUser;
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+  // Super admins bypass all bank restrictions
+  if (user.role === "super_admin") { next(); return; }
+  if (!user.assignedBankId) { next(); return; }
+
+  const routeBankId = req.params.id;
+  if (!routeBankId) {
+    res.status(403).json({ error: "ليس لديك صلاحية إنشاء أو تعديل بنوك أخرى — بنكك المخصص فقط" });
+    return;
+  }
+  if (routeBankId !== user.assignedBankId) {
+    res.status(403).json({ error: "يمكنك تعديل بنكك المخصص فقط" });
+    return;
+  }
+  next();
 }

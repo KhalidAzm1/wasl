@@ -30,7 +30,7 @@ import {
   SetBankHeroImageResponse,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth, requirePermission } from "../middlewares/auth";
+import { requireAuth, requirePermission, requireBankEditAccess } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 import { getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
 import { uploadToOneDrive } from "../lib/onedrive-storage";
@@ -179,7 +179,7 @@ router.get("/banks", async (_req, res): Promise<void> => {
   res.json(ListBanksResponse.parse(toPlain(withProductTypes)));
 });
 
-router.post("/banks", async (req, res): Promise<void> => {
+router.post("/banks", requireBankEditAccess, async (req, res): Promise<void> => {
   const parsed = CreateBankBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -259,7 +259,7 @@ router.get("/banks/:id", async (req, res): Promise<void> => {
   );
 });
 
-router.patch("/banks/:id", async (req, res): Promise<void> => {
+router.patch("/banks/:id", requireBankEditAccess, async (req, res): Promise<void> => {
   const params = UpdateBankParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -339,7 +339,7 @@ router.patch("/banks/:id", async (req, res): Promise<void> => {
   );
 });
 
-router.delete("/banks/:id", async (req, res): Promise<void> => {
+router.delete("/banks/:id", requireBankEditAccess, async (req, res): Promise<void> => {
   const params = DeleteBankParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -363,7 +363,7 @@ router.delete("/banks/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.post("/banks/:id/restore", async (req, res): Promise<void> => {
+router.post("/banks/:id/restore", requireBankEditAccess, async (req, res): Promise<void> => {
   const params = RestoreBankParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -391,7 +391,7 @@ router.post("/banks/:id/restore", async (req, res): Promise<void> => {
   );
 });
 
-router.put("/banks/:id/logo", async (req, res): Promise<void> => {
+router.put("/banks/:id/logo", requireBankEditAccess, async (req, res): Promise<void> => {
   const params = SetBankLogoParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

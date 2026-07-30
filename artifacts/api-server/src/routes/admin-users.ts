@@ -99,7 +99,7 @@ const updateUserBody = z.object({
   permissions: permissionsSchema.optional(),
 });
 
-const PROFILE_COLUMNS = "id, name, email, role, permissions, created_at, updated_at, deleted_at";
+const PROFILE_COLUMNS = "id, name, email, role, permissions, assigned_bank_id, created_at, updated_at, deleted_at";
 
 // A partial/missing permissions payload is always merged onto the target
 // role's default grant -- never persisted as-is -- so a client can only ever
@@ -417,6 +417,31 @@ router.post("/admin/users/:id/reactivate", async (req, res): Promise<void> => {
     // Re-ban to keep Auth and profiles in sync (see deactivate's symmetric
     // compensation above).
     await supabase.auth.admin.updateUserById(req.params.id, { ban_duration: "876000h" });
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ user: profile });
+});
+
+// ── Bank assignment ──────────────────────────────────────────────────────────
+const assignBankBody = z.object({
+  bankId: z.string().min(1).nullable(),
+});
+
+router.patch("/admin/users/:id/assign-bank", async (req, res): Promise<void> => {
+  const parsed = assignBankBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const supabase = getSupabaseAdmin();
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .update({ assigned_bank_id: parsed.data.bankId })
+    .eq("id", req.params.id)
+    .select(PROFILE_COLUMNS)
+    .single();
+  if (error) {
     res.status(500).json({ error: error.message });
     return;
   }

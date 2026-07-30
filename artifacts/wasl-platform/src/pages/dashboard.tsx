@@ -4,7 +4,8 @@ import type { Bank, BankSummaryV2 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Link } from 'wouter';
-import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3 } from 'lucide-react';
+import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3, Bookmark } from 'lucide-react';
+import { useAuth } from '@/lib/authContext';
 import { BankLogo } from '@/components/BankLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -907,6 +908,10 @@ function CompactBankCard({
     query: { queryKey: getGetBankQueryKey(bankSummary.id) }
   });
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const { assignedBankId, role: userRole } = useAuth();
+  const isMyBank = !!assignedBankId && assignedBankId === bankSummary.id;
+  // canEdit: no assignment → normal access; assignment set → only own bank (super_admin always ok)
+  const canEdit = !assignedBankId || userRole === 'super_admin' || isMyBank;
 
   const displayBank = bankDetail || bankSummary;
   const isHovered = hoveredId === displayBank.id;
@@ -917,20 +922,38 @@ function CompactBankCard({
   const risksCount = bankDetail?.risks?.length || 0;
   const docsCount = bankDetail?.documents?.length || 0;
 
-  const EditButton = ({ className }: { className?: string }) => (
-    <button
-      type="button"
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditOpen(true); }}
-      className={cn(
-        "z-40 rounded-full flex items-center justify-center transition-all",
+  const EditButton = ({ className }: { className?: string }) => {
+    if (!canEdit) return null;
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditOpen(true); }}
+        className={cn(
+          "z-40 rounded-full flex items-center justify-center transition-all",
+          className
+        )}
+        title="Edit Bank Details"
+        aria-label={`Edit ${displayBank.nameEn} details`}
+      >
+        <Pencil className="w-[1em] h-[1em]" />
+      </button>
+    );
+  };
+
+  // Badge shown when this bank is the user's assigned bank
+  const MyBankBadge = ({ className }: { className?: string }) => {
+    if (!isMyBank) return null;
+    return (
+      <span className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+        "bg-blue-500/15 text-blue-400 border border-blue-400/20",
         className
-      )}
-      title="Edit Bank Details"
-      aria-label={`Edit ${displayBank.nameEn} details`}
-    >
-      <Pencil className="w-[1em] h-[1em]" />
-    </button>
-  );
+      )}>
+        <Bookmark className="w-2.5 h-2.5" />
+        بنكك المخصص
+      </span>
+    );
+  };
 
   const content = () => {
     if (viewMode === 'list') {
@@ -951,8 +974,9 @@ function CompactBankCard({
             <div className="min-w-0 flex-1">
               <h2 className="text-[15px] font-bold text-foreground truncate">{displayBank.nameAr}</h2>
               <h3 className="text-[11px] text-foreground/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
-              <div className="mt-1">
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <ProductBadges codes={productCodes} />
+                <MyBankBadge />
               </div>
             </div>
           </div>
@@ -1025,8 +1049,9 @@ function CompactBankCard({
           <div className="relative z-20 min-w-0">
             <h2 className="text-sm font-bold text-foreground truncate">{displayBank.nameAr}</h2>
             <h3 className="text-[10px] text-foreground/50 uppercase tracking-widest truncate">{displayBank.nameEn}</h3>
-            <div className="mt-1.5">
+            <div className="mt-1.5 space-y-1">
               <ProductBadges codes={productCodes} />
+              <MyBankBadge />
             </div>
           </div>
           
@@ -1154,6 +1179,7 @@ function CompactBankCard({
             <div className="min-w-0 flex-1">
               <h2 className="text-[16px] font-bold text-foreground leading-tight truncate">{displayBank.nameAr}</h2>
               <h3 className="text-[10px] text-foreground/40 tracking-[0.12em] uppercase truncate mt-0.5">{displayBank.nameEn}</h3>
+              <MyBankBadge className="mt-1.5" />
             </div>
             <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
           </div>

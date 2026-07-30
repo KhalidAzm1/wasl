@@ -28,6 +28,9 @@ import {
   LayoutDashboard,
   Crown,
   Infinity,
+  Building2,
+  X,
+  Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/authContext';
@@ -50,9 +53,16 @@ interface AdminUser {
   email: string;
   role: Role;
   permissions: Permissions;
+  assigned_bank_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+interface BankOption {
+  id: string;
+  nameAr: string;
+  nameEn: string;
 }
 
 async function authedFetch(path: string, options: RequestInit = {}) {
@@ -338,6 +348,140 @@ interface FormState {
   permissions: Permissions;
 }
 
+// ── Bank Assignment Dialog ───────────────────────────────────────────────────
+function BankAssignDialog({
+  user,
+  banks,
+  onClose,
+  onAssign,
+}: {
+  user: AdminUser;
+  banks: BankOption[];
+  onClose: () => void;
+  onAssign: (bankId: string | null) => Promise<void>;
+}) {
+  const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const filtered = banks.filter(
+    (b) =>
+      b.nameAr.includes(search) ||
+      b.nameEn.toLowerCase().includes(search.toLowerCase()) ||
+      b.id.toLowerCase().includes(search.toLowerCase())
+  );
+
+  async function pick(bankId: string | null) {
+    setSaving(true);
+    try {
+      await onAssign(bankId);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && !saving && onClose()}>
+      <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-[480px] w-[calc(100%-2rem)] sm:rounded-none [&>button]:hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="relative rounded-[24px] border border-white/10 bg-background/95 backdrop-blur-2xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
+        >
+          <div className="pointer-events-none absolute -top-20 -right-20 w-48 h-48 rounded-full bg-blue-500/15 blur-[70px]" />
+          {/* Header */}
+          <div className="relative px-6 pt-6 pb-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">تعيين بنك</h2>
+                <p className="text-xs text-foreground/40">{user.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => !saving && onClose()}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-foreground/40 hover:text-foreground hover:bg-foreground/10 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="px-4 pt-4">
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-foreground/5 border border-foreground/10">
+              <Search className="w-4 h-4 text-foreground/40 shrink-0" />
+              <input
+                autoFocus
+                placeholder="ابحث عن بنك..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-foreground/30 text-foreground"
+                dir="rtl"
+              />
+            </div>
+          </div>
+
+          {/* Bank list */}
+          <div className="px-4 py-3 max-h-[300px] overflow-y-auto space-y-1">
+            {filtered.length === 0 && (
+              <p className="text-center text-foreground/30 text-sm py-6">لا توجد نتائج</p>
+            )}
+            {filtered.map((bank) => {
+              const isSelected = user.assigned_bank_id === bank.id;
+              return (
+                <button
+                  key={bank.id}
+                  type="button"
+                  disabled={saving}
+                  onClick={() => pick(bank.id)}
+                  className={cn(
+                    'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-start transition-all',
+                    isSelected
+                      ? 'bg-blue-500/15 border border-blue-400/25 text-foreground'
+                      : 'hover:bg-foreground/5 border border-transparent text-foreground/80'
+                  )}
+                  dir="rtl"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{bank.nameAr}</div>
+                    <div className="text-[11px] text-foreground/40 truncate">{bank.nameEn} · {bank.id}</div>
+                  </div>
+                  {isSelected && <Check className="w-4 h-4 text-blue-400 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 pb-4 border-t border-white/5 pt-3 flex justify-between items-center gap-3">
+            {user.assigned_bank_id ? (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => pick(null)}
+                className="text-xs text-red-400/70 hover:text-red-400 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <X className="w-3.5 h-3.5" />
+                إلغاء التعيين
+              </button>
+            ) : (
+              <span className="text-xs text-foreground/30">لا يوجد بنك مخصص حالياً</span>
+            )}
+            <button
+              onClick={() => !saving && onClose()}
+              disabled={saving}
+              className="px-4 py-2 rounded-xl text-sm text-foreground/60 border border-foreground/10 hover:bg-foreground/5 transition-colors disabled:opacity-50"
+            >
+              إغلاق
+            </button>
+          </div>
+        </motion.div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -353,6 +497,8 @@ export default function AdminUsers() {
     role: 'admin',
     permissions: DEFAULT_PERMISSIONS_BY_ROLE.admin,
   });
+  const [banks, setBanks] = useState<BankOption[]>([]);
+  const [assignBankTarget, setAssignBankTarget] = useState<AdminUser | null>(null);
   const { toast } = useToast();
   const { session, role: currentRole } = useAuth();
   const currentUserId = session?.user.id;
@@ -370,8 +516,32 @@ export default function AdminUsers() {
     }
   }
 
+  async function loadBanks() {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const res = await fetch('/api/banks', {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setBanks((json.banks ?? []).map((b: { id: string; nameAr: string; nameEn: string }) => ({
+        id: b.id, nameAr: b.nameAr, nameEn: b.nameEn,
+      })));
+    } catch { /* silent — banks list is optional UI */ }
+  }
+
+  async function handleAssignBank(userId: string, bankId: string | null) {
+    await authedFetch(`/api/admin/users/${userId}/assign-bank`, {
+      method: 'PATCH',
+      body: JSON.stringify({ bankId }),
+    });
+    await loadUsers();
+  }
+
   useEffect(() => {
     loadUsers();
+    loadBanks();
   }, []);
 
   function openCreate() {
@@ -531,13 +701,16 @@ export default function AdminUsers() {
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
                 <th className="p-4 font-medium">Role</th>
+                <th className="p-4 font-medium">Assigned Bank</th>
                 <th className="p-4 font-medium">Status</th>
                 <th className="p-4 font-medium">Last Updated</th>
                 <th className="p-4 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users?.map((user) => (
+              {users?.map((user) => {
+                const assignedBank = banks.find(b => b.id === user.assigned_bank_id);
+                return (
                 <tr key={user.id} className="border-t border-foreground/5">
                   <td className="p-4 text-foreground">{user.name}</td>
                   <td className="p-4 text-foreground/70" dir="ltr">{user.email}</td>
@@ -549,6 +722,28 @@ export default function AdminUsers() {
                       </span>
                     ) : (
                       <span className="text-foreground/70">{roleLabel[user.role]}</span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {assignedBank ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-400/20 max-w-[160px] truncate">
+                          <Building2 className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{assignedBank.nameAr}</span>
+                        </span>
+                        {isSuperAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => handleAssignBank(user.id, null).catch(() => toast({ title: 'Error', description: 'Failed to remove assignment', variant: 'destructive' }))}
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-foreground/30 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                            title="Remove bank assignment"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-foreground/30 text-xs">—</span>
                     )}
                   </td>
                   <td className="p-4">
@@ -564,11 +759,25 @@ export default function AdminUsers() {
                       <Button size="icon" variant="ghost" onClick={() => openEdit(user)} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
+                      {isSuperAdmin && user.role !== 'super_admin' && !user.deleted_at && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setAssignBankTarget(user)}
+                          title="Assign Bank"
+                          className={cn(
+                            user.assigned_bank_id
+                              ? 'text-blue-400/80 hover:text-blue-400 hover:bg-blue-400/10'
+                              : 'text-foreground/40 hover:text-blue-400 hover:bg-blue-400/10'
+                          )}
+                        >
+                          <Building2 className="w-4 h-4" />
+                        </Button>
+                      )}
                       {user.id === currentUserId ? (
                         <span className="text-foreground/30 text-xs px-2 py-1">Your Account</span>
                       ) : (
                         <>
-                          {/* Promote to Super Admin — only visible to super_admins, only for non-super users */}
                           {isSuperAdmin && user.role !== 'super_admin' && !user.deleted_at && (
                             <Button
                               size="icon"
@@ -597,16 +806,40 @@ export default function AdminUsers() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {users?.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-foreground/40">No users found</td>
+                  <td colSpan={7} className="p-8 text-center text-foreground/40">No users found</td>
                 </tr>
               )}
             </tbody>
           </table>
         )}
       </Card>
+
+      {/* Bank Assignment Dialog */}
+      {assignBankTarget && (
+        <BankAssignDialog
+          user={assignBankTarget}
+          banks={banks}
+          onClose={() => setAssignBankTarget(null)}
+          onAssign={async (bankId) => {
+            try {
+              await handleAssignBank(assignBankTarget.id, bankId);
+              toast({
+                title: bankId ? 'تم تعيين البنك' : 'تم إلغاء التعيين',
+                description: bankId
+                  ? `تم تعيين ${banks.find(b => b.id === bankId)?.nameAr ?? bankId} لـ ${assignBankTarget.name}`
+                  : `تم إلغاء تعيين البنك من ${assignBankTarget.name}`,
+              });
+              setAssignBankTarget(null);
+            } catch (err) {
+              toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+            }
+          }}
+        />
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={(o) => !saving && setDialogOpen(o)}>
         <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-[650px] w-[calc(100%-2rem)] sm:rounded-none [&>button]:hidden">

@@ -772,6 +772,23 @@ function EditBankDialog({ bank, open, onOpenChange }: { bank: Bank, open: boolea
   );
 }
 
+// Neon palette — each product code gets a deterministic slot based on its text
+const PRODUCT_NEON = [
+  { text: 'text-sky-400',     bg: 'bg-sky-400/[0.12]',     border: 'border-sky-400/40',     glow: '0 0 7px rgba(56,189,248,0.6),0 0 2px rgba(56,189,248,0.35)' },
+  { text: 'text-amber-400',   bg: 'bg-amber-400/[0.12]',   border: 'border-amber-400/40',   glow: '0 0 7px rgba(251,191,36,0.6),0 0 2px rgba(251,191,36,0.35)' },
+  { text: 'text-emerald-400', bg: 'bg-emerald-400/[0.12]', border: 'border-emerald-400/40', glow: '0 0 7px rgba(52,211,153,0.6),0 0 2px rgba(52,211,153,0.35)' },
+  { text: 'text-rose-400',    bg: 'bg-rose-400/[0.12]',    border: 'border-rose-400/40',    glow: '0 0 7px rgba(251,113,133,0.6),0 0 2px rgba(251,113,133,0.35)' },
+  { text: 'text-violet-400',  bg: 'bg-violet-400/[0.12]',  border: 'border-violet-400/40',  glow: '0 0 7px rgba(167,139,250,0.6),0 0 2px rgba(167,139,250,0.35)' },
+  { text: 'text-orange-400',  bg: 'bg-orange-400/[0.12]',  border: 'border-orange-400/40',  glow: '0 0 7px rgba(251,146,60,0.6),0 0 2px rgba(251,146,60,0.35)' },
+  { text: 'text-cyan-400',    bg: 'bg-cyan-400/[0.12]',    border: 'border-cyan-400/40',    glow: '0 0 7px rgba(34,211,238,0.6),0 0 2px rgba(34,211,238,0.35)' },
+  { text: 'text-lime-400',    bg: 'bg-lime-400/[0.12]',    border: 'border-lime-400/40',    glow: '0 0 7px rgba(163,230,53,0.6),0 0 2px rgba(163,230,53,0.35)' },
+];
+function getProductNeon(code: string) {
+  let h = 0;
+  for (const c of code) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return PRODUCT_NEON[h % PRODUCT_NEON.length];
+}
+
 function ProductBadges({ codes }: { codes: string[] }) {
   if (codes.length === 0) {
     return <span className="text-[10px] text-foreground/30 italic">No Products</span>;
@@ -780,14 +797,21 @@ function ProductBadges({ codes }: { codes: string[] }) {
   const overflow = codes.length - 3;
   return (
     <div className="flex items-center gap-1 flex-wrap">
-      {visible.map(code => (
-        <span
-          key={code}
-          className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 tracking-wider leading-none"
-        >
-          {code}
-        </span>
-      ))}
+      {visible.map(code => {
+        const n = getProductNeon(code);
+        return (
+          <span
+            key={code}
+            className={cn(
+              "inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black border tracking-widest leading-none",
+              n.text, n.bg, n.border
+            )}
+            style={{ boxShadow: n.glow }}
+          >
+            {code}
+          </span>
+        );
+      })}
       {overflow > 0 && (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-foreground/5 text-foreground/40 text-[10px] font-medium border border-foreground/10 leading-none">
           +{overflow}
@@ -868,17 +892,27 @@ function StatusQuickPicker({ bankId, status }: { bankId: string; status: string 
         onClick={e => { e.preventDefault(); e.stopPropagation(); setOpen(v => !v); }}
         disabled={updateBank.isPending}
         className={cn(
-          "inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-foreground/5 border border-foreground/[0.08] text-[10px] font-medium shrink-0 transition-all cursor-pointer",
-          open ? "border-primary/40 bg-primary/10" : "hover:border-primary/40 hover:bg-primary/10",
+          "inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[10px] font-medium shrink-0 transition-all duration-200 cursor-pointer",
+          open
+            ? "border-primary/40 bg-primary/10 text-primary"
+            : [
+                "bg-foreground/[0.04] hover:bg-foreground/[0.08]",
+                statusColor.text,
+                // border tinted to match status colour
+                statusColor.dot.includes('emerald') ? "border-emerald-500/30" :
+                statusColor.dot.includes('red')     ? "border-red-500/30"     :
+                statusColor.dot.includes('yellow')  ? "border-yellow-500/30"  :
+                "border-foreground/10"
+              ].join(' '),
           updateBank.isPending && "opacity-50 pointer-events-none"
         )}
         aria-label="Change status"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} shadow-[0_0_6px_currentColor]`} />
-        <span className="text-foreground/70 max-w-[100px] truncate">{status || '—'}</span>
-        <ChevronDown className={cn("w-2.5 h-2.5 text-foreground/40 transition-transform duration-200 shrink-0", open && "rotate-180")} />
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor.dot} shadow-[0_0_8px_currentColor]`} />
+        <span className="max-w-[100px] truncate">{status || '—'}</span>
+        <ChevronDown className={cn("w-2.5 h-2.5 opacity-50 transition-transform duration-200 shrink-0", open && "rotate-180")} />
       </button>
 
       {open && (

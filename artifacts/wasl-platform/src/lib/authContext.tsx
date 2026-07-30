@@ -35,9 +35,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function loadRole(userId: string) {
       const myRequestId = ++requestId;
       try {
+        // Critical query — role + permissions determine access gates
         const { data, error } = await supabase
           .from('profiles')
-          .select('role, permissions, assigned_bank_ids')
+          .select('role, permissions')
           .eq('id', userId)
           .single();
         if (myRequestId !== requestId) return;
@@ -49,7 +50,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setRole((data?.role as AppRole | undefined) ?? null);
         setPermissions((data?.permissions as AppPermissions | undefined) ?? null);
-        setAssignedBankIds(Array.isArray(data?.assigned_bank_ids) ? (data.assigned_bank_ids as string[]) : []);
+
+        // Non-critical query — bank assignments; failure is safe (defaults to no restriction)
+        try {
+          const { data: bankData } = await supabase
+            .from('profiles')
+            .select('assigned_bank_ids')
+            .eq('id', userId)
+            .single();
+          if (myRequestId === requestId) {
+            setAssignedBankIds(Array.isArray(bankData?.assigned_bank_ids) ? (bankData.assigned_bank_ids as string[]) : []);
+          }
+        } catch {
+          // Column might not yet be visible via PostgREST cache — safe to ignore
+          if (myRequestId === requestId) setAssignedBankIds([]);
+        }
       } catch {
         if (myRequestId === requestId) {
           setRole(null);

@@ -10,7 +10,7 @@
  */
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getListBanksQueryKey, getListMeetingsQueryKey } from '@workspace/api-client-react';
+import { getListBanksQueryKey, getListMeetingsQueryKey, getGetBankQueryKey } from '@workspace/api-client-react';
 
 export function useRealtimeUpdates() {
   const queryClient = useQueryClient();
@@ -28,10 +28,17 @@ export function useRealtimeUpdates() {
       };
 
       // ── bank_updated ───────────────────────────────────────────────────────
-      es.addEventListener('bank_updated', () => {
-        // Invalidate the whole bank list and any open bank detail
+      es.addEventListener('bank_updated', (e: MessageEvent) => {
+        // Invalidate the whole bank list
         queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
-        // Also refresh the dashboard summary (status counts, KPIs)
+        // Also invalidate the specific bank's detail query (carries lastActivityAt)
+        try {
+          const { bankId } = JSON.parse(e.data || '{}') as { bankId?: string };
+          if (bankId) {
+            queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+          }
+        } catch { /* ignore malformed data */ }
+        // Refresh the dashboard summary (status counts, KPIs)
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
         queryClient.invalidateQueries({ queryKey: ['summary'] });
       });

@@ -291,7 +291,10 @@ router.get("/banks/:id", async (req, res): Promise<void> => {
       ),
     getProductTypeIds(bank.id),
   ]);
-  const documentsWire = await Promise.all(documents.map(fileToWire));
+  const [documentsWire, activityMap] = await Promise.all([
+    Promise.all(documents.map(fileToWire)),
+    getActivityMap(),
+  ]);
   res.json(
     GetBankResponse.parse(
       toPlain(
@@ -303,6 +306,7 @@ router.get("/banks/:id", async (req, res): Promise<void> => {
           risks,
           actionItems,
           documents: documentsWire,
+          lastActivityAt: activityMap.get(bank.id) ?? null,
         }),
       ),
     ),

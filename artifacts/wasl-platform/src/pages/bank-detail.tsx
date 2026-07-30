@@ -337,15 +337,25 @@ function QRDialog({ bankId, open, onClose }: { bankId: string; open: boolean; on
     if (!open || token) return;
     setLoading(true);
     setErr('');
-    fetch('/api/quick-update/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bankId }),
-    })
-      .then(r => r.json())
-      .then(d => { if (d.error) setErr(d.error); else setToken(d.token); })
-      .catch(() => setErr('تعذّر توليد الرابط'))
-      .finally(() => setLoading(false));
+    // Must include the Supabase bearer token — the token-generation endpoint is admin-only
+    import('@/lib/supabaseClient').then(({ supabase }) =>
+      supabase.auth.getSession()
+    ).then(({ data }) => {
+      const bearer = data.session?.access_token;
+      if (!bearer) { setErr('يرجى تسجيل الدخول أولاً'); setLoading(false); return; }
+      return fetch('/api/quick-update/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${bearer}`,
+        },
+        body: JSON.stringify({ bankId }),
+      })
+        .then(r => r.json())
+        .then(d => { if (d.error) setErr(d.error); else setToken(d.token); })
+        .catch(() => setErr('تعذّر توليد الرابط'))
+        .finally(() => setLoading(false));
+    }).catch(() => { setErr('تعذّر توليد الرابط'); setLoading(false); });
   }, [open, bankId, token]);
 
   function copyUrl() {

@@ -4,7 +4,7 @@ import type { Bank, BankSummaryV2 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Link } from 'wouter';
-import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3, Bookmark } from 'lucide-react';
+import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3, Bookmark, Sun, Moon, Settings } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { BankLogo } from '@/components/BankLogo';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { formatDateTime, getStatusColor, cn } from '@/lib/utils';
 import { analytics } from '@/lib/analytics';
 import { Command } from 'cmdk';
 import { WaslLogo } from '@/components/WaslLogo';
+import { useTheme } from '@/components/ThemeProvider';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -208,6 +209,7 @@ function KpiChip({
 }
 
 export default function Dashboard() {
+  const { theme, setTheme } = useTheme();
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
   const { data: banks, isLoading: isLoadingBanks } = useListBanks();
   const { data: products, isLoading: isLoadingProducts } = useListProducts();
@@ -431,6 +433,29 @@ export default function Dashboard() {
             <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
             <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
             <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
+          </div>
+
+          {/* Theme toggle + Settings — desktop only (mobile uses the floating buttons from Layout) */}
+          <div className="hidden sm:flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              aria-label="Toggle theme"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] hover:border-foreground/20 transition-all"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
+              type="button"
+              aria-label="Open settings panel"
+              onClick={() => {
+                // trigger the Layout's settings panel via a custom event
+                window.dispatchEvent(new CustomEvent('wasl:open-settings'));
+              }}
+              className="p-2 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] hover:border-foreground/20 transition-all"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
         </div>
 

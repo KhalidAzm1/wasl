@@ -74,6 +74,8 @@ export default function Settings() {
 function BanksManager() {
   const { data: banks, isLoading } = useListBanks();
   const { data: productTypes } = useListProductTypes();
+  const { role } = useAuth();
+  const canWriteBanks = role === 'super_admin' || role === 'admin';
   const [editingBank, setEditingBank] = useState<Partial<Bank> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
@@ -150,10 +152,12 @@ function BanksManager() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-foreground">Manage Entities</h2>
-        <Button onClick={() => { setEditingBank({ riskLevel: 'Low', priorityImpact: 'Unclassified' }); setIsModalOpen(true); }} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Add New Bank
-        </Button>
+        {canWriteBanks && (
+          <Button onClick={() => { setEditingBank({ riskLevel: 'Low', priorityImpact: 'Unclassified' }); setIsModalOpen(true); }} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add New Bank
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -165,23 +169,27 @@ function BanksManager() {
                   <BankLogo src={bank.logoUrl} alt="Logo" />
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/50 hover:text-foreground" onClick={() => { setEditingBank(bank); setIsModalOpen(true); }}>
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 dark:text-red-400/50 hover:text-red-600 dark:text-red-400" onClick={() => {
-                    if (confirm('Are you sure you want to delete this bank?')) {
-                      deleteBank.mutate({ id: bank.id }, {
-                        onSuccess: () => {
-                          analytics.bankDeleted({ bank_id: bank.id, bank_name_en: bank.nameEn });
-                          queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
-                          toast({ title: 'Deleted', description: 'Bank moved to archive' });
-                        },
-                        onError: (e: any) => toast({ title: 'Failed to delete bank', description: e?.message, variant: 'destructive' }),
-                      });
-                    }
-                  }}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {canWriteBanks && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/50 hover:text-foreground" onClick={() => { setEditingBank(bank); setIsModalOpen(true); }}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {canWriteBanks && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 dark:text-red-400/50 hover:text-red-600 dark:text-red-400" onClick={() => {
+                      if (confirm('Are you sure you want to delete this bank?')) {
+                        deleteBank.mutate({ id: bank.id }, {
+                          onSuccess: () => {
+                            analytics.bankDeleted({ bank_id: bank.id, bank_name_en: bank.nameEn });
+                            queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+                            toast({ title: 'Deleted', description: 'Bank moved to archive' });
+                          },
+                          onError: (e: any) => toast({ title: 'Failed to delete bank', description: e?.message, variant: 'destructive' }),
+                        });
+                      }
+                    }}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
               <h3 className="text-lg font-bold text-foreground mb-1">{bank.nameAr}</h3>

@@ -18,12 +18,17 @@ export const PERMISSION_KEYS: (keyof UserPermissions)[] = [
   "dashboard_access",
 ];
 
+// Permission matrix — source of truth for all role defaults.
+// admin:   full access except user management (only super_admin can manage users)
+// manager: meetings + documents, no security/user_management
+// editor:  documents only, no meetings/security/user_management
+// viewer:  dashboard read-only
 export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
-  super_admin: { user_management: true, documents: true, meetings: true, security: true, dashboard_access: true },
-  admin: { user_management: true, documents: true, meetings: true, security: true, dashboard_access: true },
-  manager: { user_management: false, documents: true, meetings: true, security: false, dashboard_access: true },
-  editor: { user_management: false, documents: true, meetings: true, security: false, dashboard_access: true },
-  viewer: { user_management: false, documents: false, meetings: false, security: false, dashboard_access: true },
+  super_admin: { user_management: true,  documents: true,  meetings: true,  security: true,  dashboard_access: true },
+  admin:       { user_management: false, documents: true,  meetings: true,  security: true,  dashboard_access: true },
+  manager:     { user_management: false, documents: true,  meetings: true,  security: false, dashboard_access: true },
+  editor:      { user_management: false, documents: true,  meetings: false, security: false, dashboard_access: true },
+  viewer:      { user_management: false, documents: false, meetings: false, security: false, dashboard_access: true },
 };
 
 export interface Profile {

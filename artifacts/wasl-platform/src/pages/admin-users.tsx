@@ -94,19 +94,20 @@ const roleLabel: Record<Role, string> = {
 };
 
 const ASSIGNABLE_ROLES: { value: Role; label: string; hint: string; superAdminOnly?: boolean }[] = [
-  { value: 'super_admin', label: 'Super Admin', hint: 'Full control over everything — no restrictions', superAdminOnly: true },
-  { value: 'admin', label: 'Admin', hint: 'Full access to all sections' },
-  { value: 'manager', label: 'Manager', hint: 'Manage content, no user administration' },
-  { value: 'editor', label: 'Editor', hint: 'Create and edit content only' },
-  { value: 'viewer', label: 'Viewer', hint: 'Read-only dashboard access' },
+  { value: 'super_admin', label: 'Super Admin', hint: 'Full control + user management — no restrictions', superAdminOnly: true },
+  { value: 'admin', label: 'Admin', hint: 'Full access — edit banks, stages, meetings, documents' },
+  { value: 'manager', label: 'Manager', hint: 'View + manage meetings & documents — no security/users' },
+  { value: 'editor', label: 'Editor', hint: 'View + upload documents — no meetings/security/users' },
+  { value: 'viewer', label: 'Viewer', hint: 'Read-only dashboard — cannot edit anything' },
 ];
 
+// Must stay in sync with lib/supabase/src/index.ts DEFAULT_PERMISSIONS
 const DEFAULT_PERMISSIONS_BY_ROLE: Record<Role, Permissions> = {
-  super_admin: { user_management: true, documents: true, meetings: true, security: true, dashboard_access: true },
-  admin: { user_management: true, documents: true, meetings: true, security: true, dashboard_access: true },
-  manager: { user_management: false, documents: true, meetings: true, security: false, dashboard_access: true },
-  editor: { user_management: false, documents: true, meetings: true, security: false, dashboard_access: true },
-  viewer: { user_management: false, documents: false, meetings: false, security: false, dashboard_access: true },
+  super_admin: { user_management: true,  documents: true,  meetings: true,  security: true,  dashboard_access: true },
+  admin:       { user_management: false, documents: true,  meetings: true,  security: true,  dashboard_access: true },
+  manager:     { user_management: false, documents: true,  meetings: true,  security: false, dashboard_access: true },
+  editor:      { user_management: false, documents: true,  meetings: false, security: false, dashboard_access: true },
+  viewer:      { user_management: false, documents: false, meetings: false, security: false, dashboard_access: true },
 };
 
 const PERMISSION_CARDS: { key: keyof Permissions; label: string; description: string; icon: React.ElementType }[] = [
@@ -755,6 +756,26 @@ export default function AdminUsers() {
                         </span>
                       ) : (
                         <span className="text-foreground/70 text-sm">{roleLabel[user.role]}</span>
+                      )}
+                      {/* Permission chips — shows active permissions at a glance */}
+                      {user.role !== 'super_admin' && (
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {user.permissions.user_management && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-400/20">Users</span>
+                          )}
+                          {user.permissions.security && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-400/20">Security</span>
+                          )}
+                          {user.permissions.meetings && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-400/20">Meetings</span>
+                          )}
+                          {user.permissions.documents && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-400/20">Docs</span>
+                          )}
+                          {!user.permissions.user_management && !user.permissions.security && !user.permissions.meetings && !user.permissions.documents && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-foreground/10 text-foreground/40 border border-foreground/10">Dashboard only</span>
+                          )}
+                        </div>
                       )}
                       {assignedBanks.length > 0 && (
                         <div className="flex flex-wrap gap-1 max-w-[200px]">

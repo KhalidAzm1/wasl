@@ -4,7 +4,7 @@ import type { Bank, BankSummaryV2 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Link } from 'wouter';
-import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3, Bookmark, Sun, Moon, Settings } from 'lucide-react';
+import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3, Bookmark, Sun, Moon, Settings, Building2 } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { BankLogo } from '@/components/BankLogo';
 import { Button } from '@/components/ui/button';
@@ -210,6 +210,7 @@ function KpiChip({
 
 export default function Dashboard() {
   const { theme, setTheme } = useTheme();
+  const { role: userRole, assignedBankIds } = useAuth();
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
   const { data: banks, isLoading: isLoadingBanks } = useListBanks();
   const { data: products, isLoading: isLoadingProducts } = useListProducts();
@@ -345,8 +346,12 @@ export default function Dashboard() {
 
   const highRiskBankCount = banks.filter(b => b.riskLevel === 'High').length;
 
+  // Per-bank access restriction: non-admin users with assigned banks see only their own
+  const isBankScopeRestricted = userRole !== 'super_admin' && userRole !== 'admin' && assignedBankIds.length > 0;
+
   const filteredBanks = [...banks]
     .filter(b => {
+      if (isBankScopeRestricted && !assignedBankIds.includes(b.id)) return false;
       if (filterCategory !== 'All' && b.category !== filterCategory) return false;
       if (filterRisk !== 'All' && b.riskLevel !== filterRisk) return false;
       if (!matchesKpi(b)) return false;
@@ -523,6 +528,14 @@ export default function Dashboard() {
 
       <div className="flex-1 p-4 sm:p-8 md:p-10 max-w-[1920px] mx-auto w-full flex flex-col gap-5 sm:gap-8">
         
+        {/* Assigned-bank scope notice */}
+        {isBankScopeRestricted && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-400/20 text-blue-400 text-xs font-medium">
+            <Building2 className="w-3.5 h-3.5 shrink-0" />
+            تعرض بنوكك المحددة فقط ({assignedBankIds.length} {assignedBankIds.length === 1 ? 'بنك' : 'بنوك'})
+          </div>
+        )}
+
         {/* Control Bar — Category + Filters + Impl% range */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <CategoryFilter categories={categories} value={filterCategory} onChange={setFilterCategory} />
@@ -996,8 +1009,8 @@ function CompactBankCard({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const { assignedBankIds, role: userRole } = useAuth();
   const isMyBank = assignedBankIds.length > 0 && assignedBankIds.includes(bankSummary.id);
-  // canEdit: no assignments → normal access; assignments set → only own banks (super_admin always ok)
-  const canEdit = assignedBankIds.length === 0 || userRole === 'super_admin' || isMyBank;
+  // canEdit: must be admin+ AND (no bank restrictions OR this is an assigned bank)
+  const canEdit = (userRole === 'super_admin' || userRole === 'admin') && (assignedBankIds.length === 0 || isMyBank);
 
   const displayBank = bankDetail || bankSummary;
   const isHovered = hoveredId === displayBank.id;
@@ -1081,7 +1094,10 @@ function CompactBankCard({
             </div>
 
             <div className="w-36 shrink-0">
-              <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
+              {canEdit
+              ? <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
+              : <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full', getStatusColor(displayBank.status || '').text)}>{displayBank.status}</span>
+            }
             </div>
 
             <div className="w-32 shrink-0 text-xs text-foreground/70 flex items-center gap-2 truncate">
@@ -1142,7 +1158,10 @@ function CompactBankCard({
           </div>
           
           <div className="relative z-20 pt-3 border-t border-foreground/5 flex flex-col gap-2">
-            <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
+            {canEdit
+              ? <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
+              : <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full', getStatusColor(displayBank.status || '').text)}>{displayBank.status}</span>
+            }
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-foreground/70 flex items-center gap-1.5 truncate pr-2">
                 <User className="w-3 h-3 text-primary/70 shrink-0" /> 
@@ -1267,7 +1286,10 @@ function CompactBankCard({
               <h3 className="text-[10px] text-foreground/40 tracking-[0.12em] uppercase truncate mt-0.5">{displayBank.nameEn}</h3>
               <MyBankBadge className="mt-1.5" />
             </div>
-            <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
+            {canEdit
+              ? <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
+              : <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full', getStatusColor(displayBank.status || '').text)}>{displayBank.status}</span>
+            }
           </div>
 
           {/* Product badges */}

@@ -28,7 +28,7 @@ import {
   IMPLEMENTATION_STAGE_LABELS,
   DEFAULT_STAGE_NAMES,
 } from "@workspace/db";
-import { requireAuth, requirePermission } from "../middlewares/auth";
+import { requireAuth, requirePermission, requireRole } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -199,7 +199,7 @@ router.get("/v2/banks/:bankId/stages", requirePermission("dashboard_access"), as
 });
 
 /** POST /api/v2/banks/:bankId/stages */
-router.post("/v2/banks/:bankId/stages", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+router.post("/v2/banks/:bankId/stages", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const bankId = req.params.bankId as string;
   const [bank] = await db.select({ id: banksTable.id }).from(banksTable)
     .where(and(eq(banksTable.id, bankId), eq(banksTable.isArchived, false)));
@@ -224,7 +224,7 @@ router.post("/v2/banks/:bankId/stages", requirePermission("dashboard_access"), a
 });
 
 /** POST /api/v2/banks/:bankId/stages/reorder — body: { orderedIds: number[] } */
-router.post("/v2/banks/:bankId/stages/reorder", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+router.post("/v2/banks/:bankId/stages/reorder", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const bankId = req.params.bankId as string;
   const { orderedIds } = req.body as { orderedIds?: number[] };
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
@@ -249,7 +249,7 @@ router.post("/v2/banks/:bankId/stages/reorder", requirePermission("dashboard_acc
 });
 
 /** PATCH /api/v2/stages/:stageId */
-router.patch("/v2/stages/:stageId", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const stageId = parseInt(req.params.stageId as string, 10);
   if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
 
@@ -294,7 +294,7 @@ router.patch("/v2/stages/:stageId", requirePermission("dashboard_access"), async
 });
 
 /** DELETE /api/v2/stages/:stageId */
-router.delete("/v2/stages/:stageId", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+router.delete("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const stageId = parseInt(req.params.stageId as string, 10);
   if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
 
@@ -325,7 +325,7 @@ router.get("/v2/stages/:stageId/sub-stages", requirePermission("dashboard_access
 });
 
 /** POST /api/v2/stages/:stageId/sub-stages */
-router.post("/v2/stages/:stageId/sub-stages", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+router.post("/v2/stages/:stageId/sub-stages", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const stageId = parseInt(req.params.stageId as string, 10);
   if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
   const { name } = req.body as { name?: string };
@@ -341,7 +341,7 @@ router.post("/v2/stages/:stageId/sub-stages", requirePermission("dashboard_acces
 });
 
 /** PATCH /api/v2/sub-stages/:subStageId */
-router.patch("/v2/sub-stages/:subStageId", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+router.patch("/v2/sub-stages/:subStageId", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const subId = parseInt(req.params.subStageId as string, 10);
   if (isNaN(subId)) { res.status(400).json({ error: "Invalid subStageId" }); return; }
 
@@ -372,7 +372,7 @@ router.patch("/v2/sub-stages/:subStageId", requirePermission("dashboard_access")
 });
 
 /** DELETE /api/v2/sub-stages/:subStageId */
-router.delete("/v2/sub-stages/:subStageId", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+router.delete("/v2/sub-stages/:subStageId", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const subId = parseInt(req.params.subStageId as string, 10);
   if (isNaN(subId)) { res.status(400).json({ error: "Invalid subStageId" }); return; }
   await db.delete(implementationSubStagesTable).where(eq(implementationSubStagesTable.id, subId));

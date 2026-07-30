@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import {
   db,
   banksTable,
@@ -30,7 +30,7 @@ import {
   SetBankHeroImageResponse,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth, requirePermission, requireBankEditAccess } from "../middlewares/auth";
+import { requireAuth, requirePermission, requireBankEditAccess, requireRole } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 import { eventBus } from "../lib/event-bus";
 import { getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
@@ -199,9 +199,19 @@ router.get("/banks", async (req, res): Promise<void> => {
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 200;
   const offset = (page - 1) * limit;
 
+  // Per-bank scoping: non-admin users with assigned banks see only their own
+  const user = req.authUser!;
+  const restrictedBankIds =
+    user.role !== "super_admin" && user.role !== "admin" && user.assignedBankIds.length > 0
+      ? user.assignedBankIds
+      : null;
+
   // Run all three expensive queries in parallel
   const [banks, allMappings, activityMap] = await Promise.all([
-    db.select().from(banksTable).where(eq(banksTable.isArchived, false))
+    db.select().from(banksTable)
+      .where(restrictedBankIds
+        ? and(eq(banksTable.isArchived, false), inArray(banksTable.id, restrictedBankIds))
+        : eq(banksTable.isArchived, false))
       .orderBy(banksTable.nameEn).limit(limit).offset(offset),
     db.select({ bankId: bankProductTypesTable.bankId, productTypeId: bankProductTypesTable.productTypeId })
       .from(bankProductTypesTable),
@@ -227,7 +237,7 @@ router.get("/banks", async (req, res): Promise<void> => {
   res.json(ListBanksResponse.parse(toPlain(withProductTypes)));
 });
 
-router.post("/banks", requireBankEditAccess, async (req, res): Promise<void> => {
+router.post("/banks", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const parsed = CreateBankBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -262,6 +272,14 @@ router.get("/banks/:id", async (req, res): Promise<void> => {
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
+  }
+  // Per-bank access check for restricted users
+  const reqUser = req.authUser!;
+  if (reqUser.role !== "super_admin" && reqUser.role !== "admin" && reqUser.assignedBankIds.length > 0) {
+    if (!reqUser.assignedBankIds.includes(params.data.id)) {
+      res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى هذا البنك" });
+      return;
+    }
   }
   const [bank] = await db
     .select()
@@ -313,7 +331,7 @@ router.get("/banks/:id", async (req, res): Promise<void> => {
   );
 });
 
-router.patch("/banks/:id", requireBankEditAccess, async (req, res): Promise<void> => {
+router.patch("/banks/:id", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const params = UpdateBankParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -395,7 +413,7 @@ router.patch("/banks/:id", requireBankEditAccess, async (req, res): Promise<void
   );
 });
 
-router.delete("/banks/:id", requireBankEditAccess, async (req, res): Promise<void> => {
+router.delete("/banks/:id", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const params = DeleteBankParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -421,7 +439,7 @@ router.delete("/banks/:id", requireBankEditAccess, async (req, res): Promise<voi
   res.sendStatus(204);
 });
 
-router.post("/banks/:id/restore", requireBankEditAccess, async (req, res): Promise<void> => {
+router.post("/banks/:id/restore", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const params = RestoreBankParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -451,7 +469,7 @@ router.post("/banks/:id/restore", requireBankEditAccess, async (req, res): Promi
   );
 });
 
-router.put("/banks/:id/logo", requireBankEditAccess, async (req, res): Promise<void> => {
+router.put("/banks/:id/logo", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const params = SetBankLogoParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -493,7 +511,7 @@ router.put("/banks/:id/logo", requireBankEditAccess, async (req, res): Promise<v
   );
 });
 
-router.put("/banks/:id/hero", async (req, res): Promise<void> => {
+router.put("/banks/:id/hero", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const params = SetBankHeroImageParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

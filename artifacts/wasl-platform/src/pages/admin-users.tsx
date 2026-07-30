@@ -700,8 +700,7 @@ export default function AdminUsers() {
               <tr>
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
-                <th className="p-4 font-medium">Role</th>
-                <th className="p-4 font-medium">Assigned Bank</th>
+                <th className="p-4 font-medium">Role / Assigned Bank</th>
                 <th className="p-4 font-medium">Status</th>
                 <th className="p-4 font-medium">Last Updated</th>
                 <th className="p-4 font-medium">Actions</th>
@@ -715,36 +714,34 @@ export default function AdminUsers() {
                   <td className="p-4 text-foreground">{user.name}</td>
                   <td className="p-4 text-foreground/70" dir="ltr">{user.email}</td>
                   <td className="p-4">
-                    {user.role === 'super_admin' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/25">
-                        <Crown className="w-3 h-3" />
-                        Super Admin
-                      </span>
-                    ) : (
-                      <span className="text-foreground/70">{roleLabel[user.role]}</span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    {assignedBank ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-400/20 max-w-[160px] truncate">
-                          <Building2 className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{assignedBank.nameAr}</span>
+                    <div className="flex flex-col gap-1.5">
+                      {user.role === 'super_admin' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/25 w-fit">
+                          <Crown className="w-3 h-3" />
+                          Super Admin
                         </span>
-                        {isSuperAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => handleAssignBank(user.id, null).catch(() => toast({ title: 'Error', description: 'Failed to remove assignment', variant: 'destructive' }))}
-                            className="w-5 h-5 rounded-full flex items-center justify-center text-foreground/30 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                            title="Remove bank assignment"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-foreground/30 text-xs">—</span>
-                    )}
+                      ) : (
+                        <span className="text-foreground/70 text-sm">{roleLabel[user.role]}</span>
+                      )}
+                      {assignedBank && (
+                        <div className="flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-400/20 max-w-[150px]">
+                            <Building2 className="w-2.5 h-2.5 shrink-0" />
+                            <span className="truncate">{assignedBank.nameAr}</span>
+                          </span>
+                          {isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleAssignBank(user.id, null).catch(() => toast({ title: 'Error', description: 'Failed to remove assignment', variant: 'destructive' }))}
+                              className="w-4 h-4 rounded-full flex items-center justify-center text-foreground/30 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+                              title="Remove bank assignment"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4">
                     {user.deleted_at ? (
@@ -810,7 +807,7 @@ export default function AdminUsers() {
               })}
               {users?.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-foreground/40">No users found</td>
+                  <td colSpan={6} className="p-8 text-center text-foreground/40">No users found</td>
                 </tr>
               )}
             </tbody>

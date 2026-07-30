@@ -99,7 +99,7 @@ const updateUserBody = z.object({
   permissions: permissionsSchema.optional(),
 });
 
-const PROFILE_COLUMNS = "id, name, email, role, permissions, assigned_bank_id, created_at, updated_at, deleted_at";
+const PROFILE_COLUMNS = "id, name, email, role, permissions, assigned_bank_ids, created_at, updated_at, deleted_at";
 
 // A partial/missing permissions payload is always merged onto the target
 // role's default grant -- never persisted as-is -- so a client can only ever
@@ -424,8 +424,9 @@ router.post("/admin/users/:id/reactivate", async (req, res): Promise<void> => {
 });
 
 // ── Bank assignment ──────────────────────────────────────────────────────────
+// Body: { bankIds: string[] } — replaces the full assignment list for the user
 const assignBankBody = z.object({
-  bankId: z.string().min(1).nullable(),
+  bankIds: z.array(z.string().min(1)),
 });
 
 router.patch("/admin/users/:id/assign-bank", async (req, res): Promise<void> => {
@@ -437,7 +438,7 @@ router.patch("/admin/users/:id/assign-bank", async (req, res): Promise<void> => 
   const supabase = getSupabaseAdmin();
   const { data: profile, error } = await supabase
     .from("profiles")
-    .update({ assigned_bank_id: parsed.data.bankId })
+    .update({ assigned_bank_ids: parsed.data.bankIds })
     .eq("id", req.params.id)
     .select(PROFILE_COLUMNS)
     .single();

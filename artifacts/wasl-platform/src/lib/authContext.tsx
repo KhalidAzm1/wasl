@@ -8,7 +8,7 @@ interface AuthState {
   mustChangePassword: boolean;
   role: AppRole | null;
   permissions: AppPermissions | null;
-  assignedBankId: string | null;
+  assignedBankIds: string[];
 }
 
 const AuthContext = createContext<AuthState>({
@@ -17,14 +17,14 @@ const AuthContext = createContext<AuthState>({
   mustChangePassword: false,
   role: null,
   permissions: null,
-  assignedBankId: null,
+  assignedBankIds: [],
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [permissions, setPermissions] = useState<AppPermissions | null>(null);
-  const [assignedBankId, setAssignedBankId] = useState<string | null>(null);
+  const [assignedBankIds, setAssignedBankIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,24 +37,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('role, permissions, assigned_bank_id')
+          .select('role, permissions, assigned_bank_ids')
           .eq('id', userId)
           .single();
         if (myRequestId !== requestId) return;
         if (error) {
           setRole(null);
           setPermissions(null);
-          setAssignedBankId(null);
+          setAssignedBankIds([]);
           return;
         }
         setRole((data?.role as AppRole | undefined) ?? null);
         setPermissions((data?.permissions as AppPermissions | undefined) ?? null);
-        setAssignedBankId((data?.assigned_bank_id as string | null | undefined) ?? null);
+        setAssignedBankIds(Array.isArray(data?.assigned_bank_ids) ? (data.assigned_bank_ids as string[]) : []);
       } catch {
         if (myRequestId === requestId) {
           setRole(null);
           setPermissions(null);
-          setAssignedBankId(null);
+          setAssignedBankIds([]);
         }
       }
     }
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         requestId += 1;
         setRole(null);
         setPermissions(null);
-        setAssignedBankId(null);
+        setAssignedBankIds([]);
       }
       setLoading(false);
     });
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         requestId += 1;
         setRole(null);
         setPermissions(null);
-        setAssignedBankId(null);
+        setAssignedBankIds([]);
       }
     });
 
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const mustChangePassword = Boolean(session?.user.user_metadata?.must_change_password);
 
   return (
-    <AuthContext.Provider value={{ session, loading, mustChangePassword, role, permissions, assignedBankId }}>
+    <AuthContext.Provider value={{ session, loading, mustChangePassword, role, permissions, assignedBankIds }}>
       {children}
     </AuthContext.Provider>
   );

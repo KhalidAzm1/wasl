@@ -53,7 +53,7 @@ interface AdminUser {
   email: string;
   role: Role;
   permissions: Permissions;
-  assigned_bank_id: string | null;
+  assigned_bank_ids: string[];
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -353,15 +353,19 @@ function BankAssignDialog({
   user,
   banks,
   onClose,
-  onAssign,
+  onToggle,
 }: {
   user: AdminUser;
   banks: BankOption[];
   onClose: () => void;
-  onAssign: (bankId: string | null) => Promise<void>;
+  onToggle: (bankIds: string[]) => Promise<void>;
 }) {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
+  // Local state mirrors the user's current list so toggling feels instant
+  const [selected, setSelected] = useState<string[]>(
+    Array.isArray(user.assigned_bank_ids) ? user.assigned_bank_ids : []
+  );
 
   const filtered = banks.filter(
     (b) =>
@@ -370,10 +374,28 @@ function BankAssignDialog({
       b.id.toLowerCase().includes(search.toLowerCase())
   );
 
-  async function pick(bankId: string | null) {
+  async function toggle(bankId: string) {
+    const next = selected.includes(bankId)
+      ? selected.filter((id) => id !== bankId)
+      : [...selected, bankId];
+    setSelected(next);
     setSaving(true);
     try {
-      await onAssign(bankId);
+      await onToggle(next);
+    } catch {
+      setSelected(selected); // revert on error
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function clearAll() {
+    setSelected([]);
+    setSaving(true);
+    try {
+      await onToggle([]);
+    } catch {
+      setSelected(selected);
     } finally {
       setSaving(false);
     }
@@ -395,8 +417,13 @@ function BankAssignDialog({
                 <Building2 className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-foreground">تعيين بنك</h2>
-                <p className="text-xs text-foreground/40">{user.name}</p>
+                <h2 className="text-base font-semibold text-foreground">تعيين البنوك</h2>
+                <p className="text-xs text-foreground/40">
+                  {user.name}
+                  {selected.length > 0 && (
+                    <span className="mr-1.5 text-blue-400">{selected.length} بنك محدد</span>
+                  )}
+                </p>
               </div>
             </div>
             <button
@@ -423,18 +450,18 @@ function BankAssignDialog({
           </div>
 
           {/* Bank list */}
-          <div className="px-4 py-3 max-h-[300px] overflow-y-auto space-y-1">
+          <div className="px-4 py-3 max-h-[320px] overflow-y-auto space-y-1">
             {filtered.length === 0 && (
               <p className="text-center text-foreground/30 text-sm py-6">لا توجد نتائج</p>
             )}
             {filtered.map((bank) => {
-              const isSelected = user.assigned_bank_id === bank.id;
+              const isSelected = selected.includes(bank.id);
               return (
                 <button
                   key={bank.id}
                   type="button"
                   disabled={saving}
-                  onClick={() => pick(bank.id)}
+                  onClick={() => toggle(bank.id)}
                   className={cn(
                     'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-start transition-all',
                     isSelected
@@ -447,7 +474,12 @@ function BankAssignDialog({
                     <div className="text-sm font-medium truncate">{bank.nameAr}</div>
                     <div className="text-[11px] text-foreground/40 truncate">{bank.nameEn} · {bank.id}</div>
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-blue-400 shrink-0" />}
+                  <div className={cn(
+                    'w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all',
+                    isSelected ? 'bg-blue-500 border-blue-400' : 'border-foreground/20'
+                  )}>
+                    {isSelected && <Check className="w-3 h-3 text-white" />}
+                  </div>
                 </button>
               );
             })}
@@ -455,15 +487,15 @@ function BankAssignDialog({
 
           {/* Footer */}
           <div className="px-4 pb-4 border-t border-white/5 pt-3 flex justify-between items-center gap-3">
-            {user.assigned_bank_id ? (
+            {selected.length > 0 ? (
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => pick(null)}
+                onClick={clearAll}
                 className="text-xs text-red-400/70 hover:text-red-400 transition-colors flex items-center gap-1.5 disabled:opacity-50"
               >
                 <X className="w-3.5 h-3.5" />
-                إلغاء التعيين
+                إلغاء كل التعيينات
               </button>
             ) : (
               <span className="text-xs text-foreground/30">لا يوجد بنك مخصص حالياً</span>
@@ -532,10 +564,10 @@ export default function AdminUsers() {
     } catch { /* silent — banks list is optional UI */ }
   }
 
-  async function handleAssignBank(userId: string, bankId: string | null) {
+  async function handleAssignBank(userId: string, bankIds: string[]) {
     await authedFetch(`/api/admin/users/${userId}/assign-bank`, {
       method: 'PATCH',
-      body: JSON.stringify({ bankId }),
+      body: JSON.stringify({ bankIds }),
     });
     await loadUsers();
   }
@@ -709,7 +741,7 @@ export default function AdminUsers() {
             </thead>
             <tbody>
               {users?.map((user) => {
-                const assignedBank = banks.find(b => b.id === user.assigned_bank_id);
+                const assignedBanks = banks.filter(b => (user.assigned_bank_ids ?? []).includes(b.id));
                 return (
                 <tr key={user.id} className="border-t border-foreground/5">
                   <td className="p-4 text-foreground">{user.name}</td>
@@ -724,21 +756,18 @@ export default function AdminUsers() {
                       ) : (
                         <span className="text-foreground/70 text-sm">{roleLabel[user.role]}</span>
                       )}
-                      {assignedBank && (
-                        <div className="flex items-center gap-1">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-400/20 max-w-[150px]">
-                            <Building2 className="w-2.5 h-2.5 shrink-0" />
-                            <span className="truncate">{assignedBank.nameAr}</span>
-                          </span>
-                          {isSuperAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => handleAssignBank(user.id, null).catch(() => toast({ title: 'Error', description: 'Failed to remove assignment', variant: 'destructive' }))}
-                              className="w-4 h-4 rounded-full flex items-center justify-center text-foreground/30 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
-                              title="Remove bank assignment"
-                            >
-                              <X className="w-2.5 h-2.5" />
-                            </button>
+                      {assignedBanks.length > 0 && (
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {assignedBanks.slice(0, 2).map(b => (
+                            <span key={b.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-400/20 max-w-[140px]">
+                              <Building2 className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate">{b.nameAr}</span>
+                            </span>
+                          ))}
+                          {assignedBanks.length > 2 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-foreground/10 text-foreground/50 border border-foreground/10">
+                              +{assignedBanks.length - 2}
+                            </span>
                           )}
                         </div>
                       )}
@@ -762,9 +791,9 @@ export default function AdminUsers() {
                           size="icon"
                           variant="ghost"
                           onClick={() => setAssignBankTarget(user)}
-                          title="Assign Bank"
+                          title="Assign Banks"
                           className={cn(
-                            user.assigned_bank_id
+                            (user.assigned_bank_ids ?? []).length > 0
                               ? 'text-blue-400/80 hover:text-blue-400 hover:bg-blue-400/10'
                               : 'text-foreground/40 hover:text-blue-400 hover:bg-blue-400/10'
                           )}
@@ -822,18 +851,14 @@ export default function AdminUsers() {
           user={assignBankTarget}
           banks={banks}
           onClose={() => setAssignBankTarget(null)}
-          onAssign={async (bankId) => {
+          onToggle={async (bankIds) => {
             try {
-              await handleAssignBank(assignBankTarget.id, bankId);
-              toast({
-                title: bankId ? 'تم تعيين البنك' : 'تم إلغاء التعيين',
-                description: bankId
-                  ? `تم تعيين ${banks.find(b => b.id === bankId)?.nameAr ?? bankId} لـ ${assignBankTarget.name}`
-                  : `تم إلغاء تعيين البنك من ${assignBankTarget.name}`,
-              });
-              setAssignBankTarget(null);
+              await handleAssignBank(assignBankTarget.id, bankIds);
+              // Update the target in local state so dialog reflects new selection immediately
+              setAssignBankTarget(prev => prev ? { ...prev, assigned_bank_ids: bankIds } : null);
             } catch (err) {
               toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+              throw err;
             }
           }}
         />

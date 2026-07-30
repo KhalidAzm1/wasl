@@ -11,7 +11,7 @@ declare global {
         name: string;
         role: UserRole;
         permissions: UserPermissions;
-        assignedBankId: string | null;
+        assignedBankIds: string[];
       };
     }
   }
@@ -76,7 +76,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, name, role, permissions, assigned_bank_id, deleted_at")
+        .select("id, email, name, role, permissions, assigned_bank_ids, deleted_at")
         .eq("id", userData.user.id)
         .single();
       if (profileError || !profile || profile.deleted_at) return null;
@@ -92,7 +92,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         name: profile.name ?? profile.email,
         role,
         permissions,
-        assignedBankId: (profile.assigned_bank_id as string | null) ?? null,
+        assignedBankIds: Array.isArray(profile.assigned_bank_ids) ? (profile.assigned_bank_ids as string[]) : [],
       };
       const entry: CachedAuth = { authUser, expiresAt: Date.now() + AUTH_CACHE_TTL_MS };
       authCache.set(token, entry);
@@ -151,15 +151,15 @@ export function requireBankEditAccess(req: Request, res: Response, next: NextFun
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
   // Super admins bypass all bank restrictions
   if (user.role === "super_admin") { next(); return; }
-  if (!user.assignedBankId) { next(); return; }
+  if (!user.assignedBankIds || user.assignedBankIds.length === 0) { next(); return; }
 
   const routeBankId = req.params.id;
   if (!routeBankId) {
-    res.status(403).json({ error: "ليس لديك صلاحية إنشاء أو تعديل بنوك أخرى — بنكك المخصص فقط" });
+    res.status(403).json({ error: "ليس لديك صلاحية إنشاء بنك جديد — بنوكك المخصصة فقط" });
     return;
   }
-  if (routeBankId !== user.assignedBankId) {
-    res.status(403).json({ error: "يمكنك تعديل بنكك المخصص فقط" });
+  if (!user.assignedBankIds.some((id) => id === routeBankId)) {
+    res.status(403).json({ error: "يمكنك تعديل بنوكك المخصصة فقط" });
     return;
   }
   next();

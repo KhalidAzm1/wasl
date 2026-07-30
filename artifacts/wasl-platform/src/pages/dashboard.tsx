@@ -908,10 +908,10 @@ function CompactBankCard({
     query: { queryKey: getGetBankQueryKey(bankSummary.id) }
   });
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const { assignedBankId, role: userRole } = useAuth();
-  const isMyBank = !!assignedBankId && assignedBankId === bankSummary.id;
-  // canEdit: no assignment → normal access; assignment set → only own bank (super_admin always ok)
-  const canEdit = !assignedBankId || userRole === 'super_admin' || isMyBank;
+  const { assignedBankIds, role: userRole } = useAuth();
+  const isMyBank = assignedBankIds.length > 0 && assignedBankIds.includes(bankSummary.id);
+  // canEdit: no assignments → normal access; assignments set → only own banks (super_admin always ok)
+  const canEdit = assignedBankIds.length === 0 || userRole === 'super_admin' || isMyBank;
 
   const displayBank = bankDetail || bankSummary;
   const isHovered = hoveredId === displayBank.id;

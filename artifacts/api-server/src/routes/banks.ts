@@ -32,7 +32,8 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
-import { uploadToStorage, getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
+import { getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
+import { uploadToOneDrive } from "../lib/onedrive-storage";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
@@ -54,11 +55,11 @@ function validateImageDataUrl(dataUrl: string): string | null {
 }
 
 /**
- * Uploads a base64 image data URL to Supabase Storage under
- * `bank-images/<bankId>/<kind>_<timestamp>`. Records the upload in the
- * `files` table for audit purposes and returns the storage path (to be
- * stored on the bank row as `logoUrl` / `heroImageUrl`). Returns null on
- * any error.
+ * Uploads a base64 image data URL to OneDrive under
+ * "Wasl Platform/bank-images/<bankId>/<kind>_<timestamp>.<ext>".
+ * Records the upload in the `files` table for auditing and returns
+ * "onedrive:<itemId>" (to be stored as `logoUrl` / `heroImageUrl`).
+ * Returns null on any error.
  */
 async function uploadBankImage(
   bankId: string,
@@ -68,17 +69,22 @@ async function uploadBankImage(
 ): Promise<string | null> {
   const match = IMAGE_DATA_URL_PATTERN.exec(dataUrl);
   if (!match) return null;
+  const ext = match[1].replace("jpeg", "jpg").replace("svg+xml", "svg");
   const contentType = `image/${match[1]}`;
   const buffer = Buffer.from(match[2], "base64");
 
   const timestamp = Date.now();
-  const storagePath = `bank-images/${bankId}/${kind}_${timestamp}`;
+  const folderPath = `bank-images/${bankId}`;
+  const fileName = `${kind}_${timestamp}.${ext}`;
 
+  let onedriveItemId: string;
   try {
-    await uploadToStorage(storagePath, buffer, contentType);
+    onedriveItemId = await uploadToOneDrive(folderPath, fileName, buffer, contentType);
   } catch {
     return null;
   }
+
+  const storagePath = `onedrive:${onedriveItemId}`;
 
   // Track in the files table for auditing. entityType="bank_image" keeps
   // these rows out of normal document lists.
@@ -87,7 +93,7 @@ async function uploadBankImage(
     entityId: bankId,
     title: kind === "logo" ? "Logo" : "Hero image",
     docType: kind,
-    fileName: `${bankId}_${kind}_${timestamp}`,
+    fileName,
     fileType: contentType,
     fileSize: buffer.byteLength,
     storagePath,

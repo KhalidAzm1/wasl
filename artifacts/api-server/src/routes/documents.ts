@@ -18,7 +18,8 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
-import { uploadToStorage, getSignedUrl, parseDataUrl } from "../lib/supabase-storage";
+import { getSignedUrl, parseDataUrl } from "../lib/supabase-storage";
+import { uploadToOneDrive } from "../lib/onedrive-storage";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("documents"));
@@ -68,19 +69,18 @@ async function resolveEntity(
 
 /**
  * Builds the wire representation of a file row for API responses.
- * For rows with a Supabase storagePath a fresh 1-hour signed URL is generated
- * on every read. Rows without a storagePath (link-only records or pre-migration
- * legacy rows) get fileUrl = null; those documents will show "No link" in the UI.
+ * storagePath can be a Supabase path, an "onedrive:<itemId>" value, or null.
+ * resolveStoredUrl handles all three cases transparently.
  */
 async function toWire(row: typeof filesTable.$inferSelect) {
   let fileUrl: string | null = null;
 
   if (row.storagePath) {
     try {
-      fileUrl = await getSignedUrl(row.storagePath);
+      // resolveStoredUrl handles both Supabase paths and "onedrive:<id>" values
+      const { resolveStoredUrl } = await import("../lib/supabase-storage");
+      fileUrl = await resolveStoredUrl(row.storagePath);
     } catch {
-      // Signed-URL generation failed (e.g. object deleted from storage).
-      // Return null so the UI shows "No link" rather than crashing.
       fileUrl = null;
     }
   }
@@ -174,26 +174,29 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
     return;
   }
 
-  // Sanitize filename: keep only ASCII alphanumeric, dots, dashes, underscores.
-  // Arabic and other non-ASCII characters in filenames are rejected by Supabase Storage.
+  // Build a safe filename for OneDrive (keep original for display, sanitise for path).
   const rawName = parsed.data.fileName ?? "file";
   const ext = rawName.includes(".") ? rawName.slice(rawName.lastIndexOf(".")) : "";
   const safeName = rawName
-    .replace(/[^\x00-\x7F]/g, "")   // strip non-ASCII (Arabic etc.)
-    .replace(/[^a-zA-Z0-9._-]/g, "_") // replace remaining special chars
-    .replace(/^_+|_+$/g, "")         // trim leading/trailing underscores
-    || `file${ext}`;                  // fallback if nothing left
+    .replace(/[^\x00-\x7F]/g, "")     // strip non-ASCII
+    .replace(/[^a-zA-Z0-9._-]/g, "_") // replace special chars
+    .replace(/^_+|_+$/g, "")          // trim underscores
+    || `file${ext}`;
 
-  // Namespaced path: <entityType>/<entityId>/<timestamp>_<safeName>
-  // This prevents collisions across entities and timestamps.
-  const storagePath = `${resolved.entityType}/${resolved.entityId}/${Date.now()}_${safeName}`;
+  // Folder inside OneDrive: documents/<entityType>/<entityId>/
+  const folderPath = `documents/${resolved.entityType}/${resolved.entityId}`;
+  const fileName = `${Date.now()}_${safeName}`;
 
+  let onedriveItemId: string;
   try {
-    await uploadToStorage(storagePath, buffer, contentType);
+    onedriveItemId = await uploadToOneDrive(folderPath, fileName, buffer, contentType);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Upload failed" });
     return;
   }
+
+  // Store as "onedrive:<itemId>" so resolveStoredUrl routes it correctly.
+  const storagePath = `onedrive:${onedriveItemId}`;
 
   const [row] = await db
     .insert(filesTable)
@@ -216,7 +219,7 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
     entityType: "document",
     entityId: row.id,
     entityLabel: row.title,
-    details: { source: "supabase-upload", storagePath },
+    details: { source: "onedrive-upload", onedriveItemId, folderPath },
   });
   res.status(201).json(UploadDocumentResponse.parse(toPlain(await toWire(row))));
 });

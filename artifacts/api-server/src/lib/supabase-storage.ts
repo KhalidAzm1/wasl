@@ -106,20 +106,27 @@ export async function deleteFromStorage(storagePath: string): Promise<void> {
 }
 
 /**
- * Resolves a stored URL/path from the database to a fresh signed URL:
- * - Supabase storage path (e.g. `bank-images/abc/logo_123`) → signed URL
+ * Resolves a stored URL/path from the database to a usable URL:
+ * - `onedrive:<itemId>`  → pre-authenticated OneDrive download URL (via Graph)
+ * - Supabase storage path (e.g. `bank-images/abc/logo_123`) → 1-hour signed URL
  * - Inline base64 data URL (starts with `data:`) → returned as-is
+ * - Full https URL → returned as-is
  * - Legacy OneDrive proxy URL (`/api/files/content/...`) → null (no longer resolvable)
  * - null / undefined → null
  */
 export async function resolveStoredUrl(storedValue: string | null | undefined): Promise<string | null> {
   if (!storedValue) return null;
-  // Inline base64 data URL — no signing needed, return directly
+  // Inline base64 data URL — no signing needed
   if (storedValue.startsWith("data:")) return storedValue;
-  // Full external URL (e.g. https://brand.example.com/logo.svg) — pass through
+  // Full external URL — pass through
   if (storedValue.startsWith("http://") || storedValue.startsWith("https://")) return storedValue;
-  // Legacy OneDrive proxy URL — no longer resolvable after OneDrive removal
+  // Legacy OneDrive proxy URL — no longer resolvable
   if (storedValue.startsWith("/api/files/content/")) return null;
+  // OneDrive item — resolve via Microsoft Graph pre-auth URL
+  if (storedValue.startsWith("onedrive:")) {
+    const { resolveOneDriveUrl } = await import("./onedrive-storage");
+    return resolveOneDriveUrl(storedValue);
+  }
   // Supabase storage path — generate a fresh 1-hour signed URL
   try {
     return await getSignedUrl(storedValue);

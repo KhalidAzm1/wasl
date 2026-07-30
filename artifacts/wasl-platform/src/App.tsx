@@ -28,6 +28,7 @@ import AdminImplementationSettings from '@/pages/admin-implementation-settings';
 import QuickUpdate from '@/pages/QuickUpdate';
 import { AdminPinGate } from '@/components/AdminPinGate';
 import { PostHogProvider } from '@/providers/PostHogProvider';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,11 +39,19 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Mounts the SSE listener for real-time invalidation — renders nothing. */
+function RealtimeUpdater() {
+  useRealtimeUpdates();
+  return null;
+}
+
 function AppRoutes() {
   return (
-    <Switch>
-      {/* ── Public: quick-update form (no auth needed — token carries the permission) */}
-      <Route path="/quick-update/:token" component={QuickUpdate} />
+    <>
+      <RealtimeUpdater />
+      <Switch>
+        {/* ── Public: quick-update form (no auth needed — token carries the permission) */}
+        <Route path="/quick-update/:token" component={QuickUpdate} />
 
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
@@ -145,6 +154,7 @@ function AppRoutes() {
         <Layout><NotFound /></Layout>
       </Route>
     </Switch>
+    </>
   );
 }
 

@@ -14,6 +14,7 @@ import { db, banksTable, auditLogsTable } from "@workspace/db";
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { invalidateActivityCache } from "./banks";
+import { eventBus } from "../lib/event-bus";
 
 const router: IRouter = Router();
 
@@ -121,6 +122,7 @@ router.post("/quick-update/:token/submit", async (req, res): Promise<void> => {
   });
 
   invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId: updated.id });
   res.json({ ok: true, bankNameAr: updated.nameAr });
 });
 

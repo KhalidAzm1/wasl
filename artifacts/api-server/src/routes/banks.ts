@@ -32,6 +32,7 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission, requireBankEditAccess } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
+import { eventBus } from "../lib/event-bus";
 import { getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
 import { uploadToOneDrive } from "../lib/onedrive-storage";
 
@@ -246,6 +247,7 @@ router.post("/banks", requireBankEditAccess, async (req, res): Promise<void> => 
     entityLabel: bank.nameEn,
   });
   invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId: bank.id });
   res.status(201).json(
     CreateBankResponse.parse(
       toPlain(await withSignedImageUrls({ ...bank, productTypeIds: productTypeIds ?? [] })),
@@ -378,6 +380,7 @@ router.patch("/banks/:id", requireBankEditAccess, async (req, res): Promise<void
     details: parsed.data,
   });
   invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId: bank.id });
   const finalProductTypeIds = productTypeIds ?? (await getProductTypeIds(bank.id));
   res.json(
     UpdateBankResponse.parse(
@@ -408,6 +411,7 @@ router.delete("/banks/:id", requireBankEditAccess, async (req, res): Promise<voi
     entityLabel: bank.nameEn,
   });
   invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId: bank.id });
   res.sendStatus(204);
 });
 
@@ -433,6 +437,7 @@ router.post("/banks/:id/restore", requireBankEditAccess, async (req, res): Promi
     entityLabel: bank.nameEn,
   });
   invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId: bank.id });
   res.json(
     RestoreBankResponse.parse(
       toPlain(await withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),

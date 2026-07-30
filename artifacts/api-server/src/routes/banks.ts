@@ -153,28 +153,15 @@ async function fileToWire(row: typeof filesTable.$inferSelect) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-router.get("/banks", async (_req, res): Promise<void> => {
-  const banks = await db
-    .select()
-    .from(banksTable)
-    .where(eq(banksTable.isArchived, false))
-    .orderBy(banksTable.nameEn);
+// ── In-process cache for lastActivityAt (expensive subquery — 5 min TTL) ──────
+let activityCache: { map: Map<string, Date>; expiresAt: number } | null = null;
+const ACTIVITY_CACHE_TTL_MS = 5 * 60_000;
 
-  // Batch-load all product-type mappings in ONE query instead of N
-  const allMappings = await db
-    .select({ bankId: bankProductTypesTable.bankId, productTypeId: bankProductTypesTable.productTypeId })
-    .from(bankProductTypesTable);
-  const ptByBank = new Map<string, number[]>();
-  for (const { bankId, productTypeId } of allMappings) {
-    if (!ptByBank.has(bankId)) ptByBank.set(bankId, []);
-    ptByBank.get(bankId)!.push(productTypeId);
-  }
-
-  // Compute lastActivityAt = MAX date across all related tables (meetings, docs, products, stages)
-  // files uses entity_type/entity_id (not bank_id); meetings/products/impl use bank_id
-  let activityMap = new Map<string, Date>();
+async function getActivityMap(): Promise<Map<string, Date>> {
+  if (activityCache && activityCache.expiresAt > Date.now()) return activityCache.map;
+  const fresh = new Map<string, Date>();
   try {
-    const activityRows = await db.execute<{ bank_id: string; last_activity_at: string | null }>(sql`
+    const rows = await db.execute<{ bank_id: string; last_activity_at: string | null }>(sql`
       SELECT bank_id, MAX(activity_ts) AS last_activity_at FROM (
         SELECT id AS bank_id, updated_at AS activity_ts FROM banks WHERE is_archived = false
         UNION ALL
@@ -186,17 +173,42 @@ router.get("/banks", async (_req, res): Promise<void> => {
         SELECT bank_id, updated_at FROM products WHERE bank_id IS NOT NULL
         UNION ALL
         SELECT bank_id, updated_at FROM bank_implementation_progress WHERE bank_id IS NOT NULL
-      ) AS activities
-      GROUP BY bank_id
+      ) AS activities GROUP BY bank_id
     `);
-    for (const row of activityRows.rows) {
-      if (row.bank_id && row.last_activity_at) {
-        activityMap.set(row.bank_id, new Date(row.last_activity_at));
-      }
+    for (const row of rows.rows) {
+      if (row.bank_id && row.last_activity_at) fresh.set(row.bank_id, new Date(row.last_activity_at));
     }
+    activityCache = { map: fresh, expiresAt: Date.now() + ACTIVITY_CACHE_TTL_MS };
   } catch (err) {
-    // Non-critical — degrade gracefully, show updatedAt instead
-    console.warn("lastActivityAt query failed, falling back to updatedAt:", err);
+    console.warn("[banks] lastActivityAt cache miss, using updatedAt:", err);
+  }
+  return fresh;
+}
+
+/** Invalidate activity cache after any write that changes activity dates */
+export function invalidateActivityCache() { activityCache = null; }
+
+router.get("/banks", async (req, res): Promise<void> => {
+  // Optional pagination — default 200, max 500 (safe for current scale)
+  const rawPage  = parseInt(String(req.query.page  ?? "1"), 10);
+  const rawLimit = parseInt(String(req.query.limit ?? "200"), 10);
+  const page  = Number.isFinite(rawPage)  && rawPage  > 0 ? rawPage  : 1;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 200;
+  const offset = (page - 1) * limit;
+
+  // Run all three expensive queries in parallel
+  const [banks, allMappings, activityMap] = await Promise.all([
+    db.select().from(banksTable).where(eq(banksTable.isArchived, false))
+      .orderBy(banksTable.nameEn).limit(limit).offset(offset),
+    db.select({ bankId: bankProductTypesTable.bankId, productTypeId: bankProductTypesTable.productTypeId })
+      .from(bankProductTypesTable),
+    getActivityMap(),
+  ]);
+
+  const ptByBank = new Map<string, number[]>();
+  for (const { bankId, productTypeId } of allMappings) {
+    if (!ptByBank.has(bankId)) ptByBank.set(bankId, []);
+    ptByBank.get(bankId)!.push(productTypeId);
   }
 
   // Resolve signed image URLs in parallel across all banks
@@ -233,6 +245,7 @@ router.post("/banks", requireBankEditAccess, async (req, res): Promise<void> => 
     entityId: bank.id,
     entityLabel: bank.nameEn,
   });
+  invalidateActivityCache();
   res.status(201).json(
     CreateBankResponse.parse(
       toPlain(await withSignedImageUrls({ ...bank, productTypeIds: productTypeIds ?? [] })),
@@ -364,6 +377,7 @@ router.patch("/banks/:id", requireBankEditAccess, async (req, res): Promise<void
     entityLabel: bank.nameEn,
     details: parsed.data,
   });
+  invalidateActivityCache();
   const finalProductTypeIds = productTypeIds ?? (await getProductTypeIds(bank.id));
   res.json(
     UpdateBankResponse.parse(
@@ -393,6 +407,7 @@ router.delete("/banks/:id", requireBankEditAccess, async (req, res): Promise<voi
     entityId: bank.id,
     entityLabel: bank.nameEn,
   });
+  invalidateActivityCache();
   res.sendStatus(204);
 });
 
@@ -417,6 +432,7 @@ router.post("/banks/:id/restore", requireBankEditAccess, async (req, res): Promi
     entityId: bank.id,
     entityLabel: bank.nameEn,
   });
+  invalidateActivityCache();
   res.json(
     RestoreBankResponse.parse(
       toPlain(await withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),

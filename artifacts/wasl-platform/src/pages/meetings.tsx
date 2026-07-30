@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavControls } from '@/components/NavControls';
-import { useListMeetings, useListBanks } from '@workspace/api-client-react';
+import { useListMeetings } from '@workspace/api-client-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, getStatusColor } from '@/lib/utils';
@@ -8,9 +8,8 @@ import { Calendar } from 'lucide-react';
 
 export default function Meetings() {
   const { data: meetings, isLoading: meetingsLoading } = useListMeetings();
-  const { data: banks, isLoading: banksLoading } = useListBanks();
 
-  const isLoading = meetingsLoading || banksLoading;
+  const isLoading = meetingsLoading;
 
   if (isLoading) {
     return (
@@ -22,7 +21,8 @@ export default function Meetings() {
     );
   }
 
-  const sortedMeetings = [...(meetings || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // API now returns sorted by date desc; no client-side re-sort needed
+  const sortedMeetings = meetings ?? [];
 
   return (
     <div className="p-8 pb-24 max-w-5xl mx-auto w-full space-y-8">
@@ -39,14 +39,15 @@ export default function Meetings() {
 
       <div className="space-y-4">
         {sortedMeetings.map(m => {
-          const bank = banks?.find(b => b.id === m.bankId);
+          // Bank name comes from the JOIN — works even for archived/deleted banks
+          const bankLabel = m.bankNameAr ?? m.bankNameEn ?? 'بنك محذوف';
           return (
             <Card key={m.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all">
               <CardContent className="p-6 flex flex-col md:flex-row gap-6 items-start md:items-center">
                 <div className="md:w-48 shrink-0">
                   <div className="text-foreground/80 font-mono text-sm mb-1">{formatDate(m.date)}</div>
-                  <Badge variant="outline" className="bg-foreground/5 border-foreground/10 text-foreground/70">
-                    {bank?.nameEn || 'Unknown Bank'}
+                  <Badge variant="outline" className={`bg-foreground/5 border-foreground/10 ${m.bankNameEn ? 'text-foreground/70' : 'text-foreground/30 italic'}`}>
+                    {bankLabel}
                   </Badge>
                 </div>
                 <div className="flex-1 min-w-0">

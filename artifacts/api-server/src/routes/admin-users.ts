@@ -110,18 +110,26 @@ function normalizePermissions(role: UserRole, partial?: Partial<UserPermissions>
   return { ...DEFAULT_PERMISSIONS[role], ...(partial ?? {}) };
 }
 
-router.get("/admin/users", async (_req, res): Promise<void> => {
+router.get("/admin/users", async (req, res): Promise<void> => {
+  const rawPage  = parseInt(String(req.query.page  ?? "1"), 10);
+  const rawLimit = parseInt(String(req.query.limit ?? "200"), 10);
+  const page  = Number.isFinite(rawPage)  && rawPage  > 0 ? rawPage  : 1;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 200;
+  const from = (page - 1) * limit;
+  const to   = from + limit - 1;
+
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("profiles")
-    .select(PROFILE_COLUMNS)
-    .order("created_at", { ascending: true });
+    .select(PROFILE_COLUMNS, { count: "exact" })
+    .order("created_at", { ascending: true })
+    .range(from, to);
 
   if (error) {
     res.status(500).json({ error: error.message });
     return;
   }
-  res.json({ users: data });
+  res.json({ users: data, total: count ?? data?.length ?? 0, page, limit });
 });
 
 router.post("/admin/users", async (req, res): Promise<void> => {

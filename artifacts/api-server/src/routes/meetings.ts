@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
-import { db, meetingsTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
+import { db, meetingsTable, banksTable } from "@workspace/db";
 import {
   ListMeetingsQueryParams,
   ListMeetingsResponse,
@@ -16,6 +16,7 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
+import { invalidateActivityCache } from "./banks";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("meetings"));
@@ -26,12 +27,35 @@ router.get("/meetings", async (req, res): Promise<void> => {
     res.status(400).json({ error: query.error.message });
     return;
   }
-  const rows = query.data.bankId
-    ? await db
-        .select()
-        .from(meetingsTable)
-        .where(and(eq(meetingsTable.bankId, query.data.bankId), eq(meetingsTable.isArchived, false)))
-    : await db.select().from(meetingsTable).where(eq(meetingsTable.isArchived, false));
+
+  // LEFT JOIN banks so we always have the bank name even if the bank is archived/deleted
+  const baseQuery = db
+    .select({
+      id: meetingsTable.id,
+      bankId: meetingsTable.bankId,
+      bankNameEn: banksTable.nameEn,
+      bankNameAr: banksTable.nameAr,
+      date: meetingsTable.date,
+      topic: meetingsTable.topic,
+      summary: meetingsTable.summary,
+      attendees: meetingsTable.attendees,
+      status: meetingsTable.status,
+      updatedBy: meetingsTable.updatedBy,
+      isArchived: meetingsTable.isArchived,
+      archivedAt: meetingsTable.archivedAt,
+      archivedBy: meetingsTable.archivedBy,
+      createdAt: meetingsTable.createdAt,
+      updatedAt: meetingsTable.updatedAt,
+    })
+    .from(meetingsTable)
+    .leftJoin(banksTable, eq(meetingsTable.bankId, banksTable.id))
+    .$dynamic();
+
+  const rows = await (query.data.bankId
+    ? baseQuery.where(and(eq(meetingsTable.bankId, query.data.bankId), eq(meetingsTable.isArchived, false)))
+    : baseQuery.where(eq(meetingsTable.isArchived, false))
+  ).orderBy(desc(meetingsTable.date));
+
   res.json(ListMeetingsResponse.parse(toPlain(rows)));
 });
 
@@ -51,6 +75,7 @@ router.post("/meetings", async (req, res): Promise<void> => {
     entityId: row.id,
     entityLabel: row.topic,
   });
+  invalidateActivityCache();
   res.status(201).json(CreateMeetingResponse.parse(toPlain(row)));
 });
 
@@ -81,6 +106,7 @@ router.patch("/meetings/:id", async (req, res): Promise<void> => {
     entityLabel: row.topic,
     details: parsed.data,
   });
+  invalidateActivityCache();
   res.json(UpdateMeetingResponse.parse(toPlain(row)));
 });
 

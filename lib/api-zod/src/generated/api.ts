@@ -656,6 +656,8 @@ export const ListMeetingsQueryParams = zod.object({
 export const ListMeetingsResponseItem = zod.object({
   "id": zod.number(),
   "bankId": zod.string(),
+  "bankNameEn": zod.string().nullish(),
+  "bankNameAr": zod.string().nullish(),
   "date": zod.string(),
   "topic": zod.string(),
   "summary": zod.string().nullish(),

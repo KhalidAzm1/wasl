@@ -18,27 +18,43 @@ declare global {
 }
 
 // ── Auth cache ────────────────────────────────────────────────────────────────
-// Cache the resolved authUser per bearer token for up to 60 seconds.
-// This eliminates 2 Supabase network round-trips on every API request.
-// The TTL is well below Supabase's 1-hour token expiry so stale sessions
-// are detected quickly. Cache is in-process only — cleared on restart.
+// Cache the resolved authUser per bearer token for 5 minutes.
+// Eliminates 2-3 Supabase round-trips on every API request.
+// TTL << Supabase 1-hour expiry → stale sessions still detected promptly.
 //
-// inflight map: if N concurrent requests arrive with the same token before
-// the first lookup completes, they all await the same promise instead of
-// each firing their own Supabase calls.
-const AUTH_CACHE_TTL_MS = 60_000;
+// inflight map: N concurrent requests with the same token share one lookup.
+const AUTH_CACHE_TTL_MS = 5 * 60_000; // 5 min
+const AUTH_STALE_TTL_MS = 10 * 60_000; // keep stale entry for circuit-breaker fallback
+
+// ── Circuit breaker ───────────────────────────────────────────────────────────
+// Opens after 3 consecutive Supabase failures; auto-resets after 30 s.
+// When open, serves stale cache if available instead of failing outright.
+let cbFailures = 0;
+let cbOpenUntil = 0;
+const CB_THRESHOLD = 3;
+const CB_RESET_MS = 30_000;
+function cbIsOpen() { return cbOpenUntil > Date.now(); }
+function cbSuccess() { cbFailures = 0; cbOpenUntil = 0; }
+function cbFailure(log: (msg: string) => void) {
+  cbFailures++;
+  if (cbFailures >= CB_THRESHOLD) {
+    cbOpenUntil = Date.now() + CB_RESET_MS;
+    log(`Auth circuit breaker opened (${cbFailures} failures). Will retry after ${CB_RESET_MS / 1000}s.`);
+  }
+}
 interface CachedAuth {
   authUser: NonNullable<Request["authUser"]>;
   expiresAt: number;
+  staleUntil: number; // kept longer for circuit-breaker fallback
 }
 const authCache = new Map<string, CachedAuth>();
 const authInflight = new Map<string, Promise<CachedAuth | null>>();
 
-// Purge expired entries periodically so the Maps don't grow unboundedly.
+// Purge entries past their stale window periodically.
 setInterval(() => {
   const now = Date.now();
   for (const [token, entry] of authCache) {
-    if (entry.expiresAt <= now) authCache.delete(token);
+    if (entry.staleUntil <= now) authCache.delete(token);
   }
 }, 120_000).unref();
 
@@ -57,11 +73,25 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  // Fast path: return cached auth if still valid
+  const now = Date.now();
+
+  // Fast path: cache hit (not expired)
   const cached = authCache.get(token);
-  if (cached && cached.expiresAt > Date.now()) {
+  if (cached && cached.expiresAt > now) {
     req.authUser = cached.authUser;
     next();
+    return;
+  }
+
+  // Circuit-breaker: Supabase is struggling — serve stale cache if available
+  if (cbIsOpen()) {
+    if (cached && cached.staleUntil > now) {
+      req.authUser = cached.authUser; // serve stale entry
+      next();
+      return;
+    }
+    // No stale entry — fail closed with 503 so the client knows to retry
+    res.status(503).json({ error: "Auth service temporarily unavailable — please retry shortly" });
     return;
   }
 
@@ -70,50 +100,68 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   let inflight = authInflight.get(token);
   if (!inflight) {
     inflight = (async (): Promise<CachedAuth | null> => {
-      const supabase = getSupabaseAdmin();
-      const { data: userData, error: userError } = await supabase.auth.getUser(token);
-      if (userError || !userData?.user) return null;
-
-      // Critical: role + permissions — must succeed or we reject the request
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, email, name, role, permissions, deleted_at")
-        .eq("id", userData.user.id)
-        .single();
-      if (profileError || !profile || profile.deleted_at) return null;
-
-      const role = profile.role as UserRole;
-      const permissions: UserPermissions = {
-        ...DEFAULT_PERMISSIONS[role],
-        ...(profile.permissions && typeof profile.permissions === "object" ? profile.permissions : {}),
-      };
-
-      // Non-critical: assigned_bank_ids — PostgREST cache may not know this column yet; default to []
-      let assignedBankIds: string[] = [];
       try {
-        const { data: bankData } = await supabase
+        const supabase = getSupabaseAdmin();
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !userData?.user) {
+          cbFailure((msg) => console.warn("[auth]", msg));
+          return null;
+        }
+
+        // Critical: role + permissions — must succeed or we reject the request
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("assigned_bank_ids")
+          .select("id, email, name, role, permissions, deleted_at")
           .eq("id", userData.user.id)
           .single();
-        if (Array.isArray(bankData?.assigned_bank_ids)) {
-          assignedBankIds = bankData.assigned_bank_ids as string[];
+        if (profileError || !profile || profile.deleted_at) {
+          cbFailure((msg) => console.warn("[auth]", msg));
+          return null;
         }
-      } catch {
-        // safe to ignore — no bank restriction applied when unknown
-      }
 
-      const authUser = {
-        id: profile.id,
-        email: profile.email,
-        name: profile.name ?? profile.email,
-        role,
-        permissions,
-        assignedBankIds,
-      };
-      const entry: CachedAuth = { authUser, expiresAt: Date.now() + AUTH_CACHE_TTL_MS };
-      authCache.set(token, entry);
-      return entry;
+        cbSuccess(); // clear failure count on successful profile load
+
+        const role = profile.role as UserRole;
+        const permissions: UserPermissions = {
+          ...DEFAULT_PERMISSIONS[role],
+          ...(profile.permissions && typeof profile.permissions === "object" ? profile.permissions : {}),
+        };
+
+        // Non-critical: assigned_bank_ids — PostgREST cache may lag; default to []
+        let assignedBankIds: string[] = [];
+        try {
+          const { data: bankData } = await supabase
+            .from("profiles")
+            .select("assigned_bank_ids")
+            .eq("id", userData.user.id)
+            .single();
+          if (Array.isArray(bankData?.assigned_bank_ids)) {
+            assignedBankIds = bankData.assigned_bank_ids as string[];
+          }
+        } catch {
+          // non-critical — no bank restriction when unknown
+        }
+
+        const authUser = {
+          id: profile.id,
+          email: profile.email,
+          name: profile.name ?? profile.email,
+          role,
+          permissions,
+          assignedBankIds,
+        };
+        const entry: CachedAuth = {
+          authUser,
+          expiresAt: now + AUTH_CACHE_TTL_MS,
+          staleUntil: now + AUTH_STALE_TTL_MS,
+        };
+        authCache.set(token, entry);
+        return entry;
+      } catch (err) {
+        cbFailure((msg) => console.warn("[auth]", msg));
+        console.error("[auth] unexpected error:", err);
+        return null;
+      }
     })().finally(() => authInflight.delete(token));
 
     authInflight.set(token, inflight);

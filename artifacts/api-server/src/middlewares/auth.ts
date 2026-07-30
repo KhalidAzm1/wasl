@@ -74,9 +74,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       const { data: userData, error: userError } = await supabase.auth.getUser(token);
       if (userError || !userData?.user) return null;
 
+      // Critical: role + permissions — must succeed or we reject the request
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, name, role, permissions, assigned_bank_ids, deleted_at")
+        .select("id, email, name, role, permissions, deleted_at")
         .eq("id", userData.user.id)
         .single();
       if (profileError || !profile || profile.deleted_at) return null;
@@ -86,13 +87,29 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         ...DEFAULT_PERMISSIONS[role],
         ...(profile.permissions && typeof profile.permissions === "object" ? profile.permissions : {}),
       };
+
+      // Non-critical: assigned_bank_ids — PostgREST cache may not know this column yet; default to []
+      let assignedBankIds: string[] = [];
+      try {
+        const { data: bankData } = await supabase
+          .from("profiles")
+          .select("assigned_bank_ids")
+          .eq("id", userData.user.id)
+          .single();
+        if (Array.isArray(bankData?.assigned_bank_ids)) {
+          assignedBankIds = bankData.assigned_bank_ids as string[];
+        }
+      } catch {
+        // safe to ignore — no bank restriction applied when unknown
+      }
+
       const authUser = {
         id: profile.id,
         email: profile.email,
         name: profile.name ?? profile.email,
         role,
         permissions,
-        assignedBankIds: Array.isArray(profile.assigned_bank_ids) ? (profile.assigned_bank_ids as string[]) : [],
+        assignedBankIds,
       };
       const entry: CachedAuth = { authUser, expiresAt: Date.now() + AUTH_CACHE_TTL_MS };
       authCache.set(token, entry);

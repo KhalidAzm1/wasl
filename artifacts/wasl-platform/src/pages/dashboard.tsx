@@ -1013,7 +1013,7 @@ function CompactBankCard({
             </div>
 
             <div className="hidden lg:block w-28 shrink-0 text-xs text-foreground/40 truncate">
-              {formatDateTime(displayBank.updatedAt).split(',')[0]}
+              {formatDateTime((displayBank.lastActivityAt ?? displayBank.updatedAt) as string).split(',')[0]}
             </div>
           </div>
 
@@ -1232,7 +1232,7 @@ function CompactBankCard({
               </span>
               <span className="hidden xl:flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {formatDateTime(displayBank.updatedAt).split(',')[0]}
+                {formatDateTime((displayBank.lastActivityAt ?? displayBank.updatedAt) as string).split(',')[0]}
               </span>
             </div>
           </div>

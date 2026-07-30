@@ -54,7 +54,8 @@ export const ListBanksResponseItem = zod.object({
   "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
   "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
-  "updatedAt": zod.string()
+  "updatedAt": zod.string(),
+  "lastActivityAt": zod.string().nullish()
 })
 export const ListBanksResponse = zod.array(ListBanksResponseItem)
 

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   db,
   banksTable,
@@ -170,10 +170,34 @@ router.get("/banks", async (_req, res): Promise<void> => {
     ptByBank.get(bankId)!.push(productTypeId);
   }
 
+  // Compute lastActivityAt = MAX date across all related tables (meetings, docs, products, stages)
+  const activityRows = await db.execute<{ bank_id: string; last_activity_at: Date | null }>(sql`
+    SELECT bank_id, MAX(activity_ts) AS last_activity_at FROM (
+      SELECT id AS bank_id, updated_at AS activity_ts FROM banks WHERE is_archived = false
+      UNION ALL
+      SELECT bank_id, updated_at FROM meetings WHERE archived_at IS NULL AND bank_id IS NOT NULL
+      UNION ALL
+      SELECT bank_id, COALESCE(updated_at, uploaded_at) FROM files WHERE archived_at IS NULL AND bank_id IS NOT NULL
+      UNION ALL
+      SELECT bank_id, updated_at FROM products WHERE bank_id IS NOT NULL
+      UNION ALL
+      SELECT bank_id, updated_at FROM bank_implementation_progress WHERE bank_id IS NOT NULL
+    ) AS activities
+    GROUP BY bank_id
+  `);
+  const activityMap = new Map<string, Date>();
+  for (const row of activityRows.rows) {
+    if (row.bank_id && row.last_activity_at) activityMap.set(row.bank_id, row.last_activity_at);
+  }
+
   // Resolve signed image URLs in parallel across all banks
   const withProductTypes = await Promise.all(
     banks.map((bank) =>
-      withSignedImageUrls({ ...bank, productTypeIds: ptByBank.get(bank.id) ?? [] }),
+      withSignedImageUrls({
+        ...bank,
+        productTypeIds: ptByBank.get(bank.id) ?? [],
+        lastActivityAt: activityMap.get(bank.id) ?? null,
+      }),
     ),
   );
   res.json(ListBanksResponse.parse(toPlain(withProductTypes)));

@@ -171,23 +171,32 @@ router.get("/banks", async (_req, res): Promise<void> => {
   }
 
   // Compute lastActivityAt = MAX date across all related tables (meetings, docs, products, stages)
-  const activityRows = await db.execute<{ bank_id: string; last_activity_at: Date | null }>(sql`
-    SELECT bank_id, MAX(activity_ts) AS last_activity_at FROM (
-      SELECT id AS bank_id, updated_at AS activity_ts FROM banks WHERE is_archived = false
-      UNION ALL
-      SELECT bank_id, updated_at FROM meetings WHERE archived_at IS NULL AND bank_id IS NOT NULL
-      UNION ALL
-      SELECT bank_id, COALESCE(updated_at, uploaded_at) FROM files WHERE archived_at IS NULL AND bank_id IS NOT NULL
-      UNION ALL
-      SELECT bank_id, updated_at FROM products WHERE bank_id IS NOT NULL
-      UNION ALL
-      SELECT bank_id, updated_at FROM bank_implementation_progress WHERE bank_id IS NOT NULL
-    ) AS activities
-    GROUP BY bank_id
-  `);
-  const activityMap = new Map<string, Date>();
-  for (const row of activityRows.rows) {
-    if (row.bank_id && row.last_activity_at) activityMap.set(row.bank_id, row.last_activity_at);
+  // files uses entity_type/entity_id (not bank_id); meetings/products/impl use bank_id
+  let activityMap = new Map<string, Date>();
+  try {
+    const activityRows = await db.execute<{ bank_id: string; last_activity_at: string | null }>(sql`
+      SELECT bank_id, MAX(activity_ts) AS last_activity_at FROM (
+        SELECT id AS bank_id, updated_at AS activity_ts FROM banks WHERE is_archived = false
+        UNION ALL
+        SELECT bank_id, updated_at FROM meetings WHERE bank_id IS NOT NULL
+        UNION ALL
+        SELECT entity_id AS bank_id, COALESCE(updated_at, uploaded_at) AS activity_ts
+          FROM files WHERE entity_type = 'bank' AND entity_id IS NOT NULL AND is_archived = false
+        UNION ALL
+        SELECT bank_id, updated_at FROM products WHERE bank_id IS NOT NULL
+        UNION ALL
+        SELECT bank_id, updated_at FROM bank_implementation_progress WHERE bank_id IS NOT NULL
+      ) AS activities
+      GROUP BY bank_id
+    `);
+    for (const row of activityRows.rows) {
+      if (row.bank_id && row.last_activity_at) {
+        activityMap.set(row.bank_id, new Date(row.last_activity_at));
+      }
+    }
+  } catch (err) {
+    // Non-critical — degrade gracefully, show updatedAt instead
+    console.warn("lastActivityAt query failed, falling back to updatedAt:", err);
   }
 
   // Resolve signed image URLs in parallel across all banks

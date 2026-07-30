@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureStorageBucket } from "./lib/supabase-storage";
+import { db } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -16,7 +17,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
+const server = app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -29,4 +30,32 @@ app.listen(port, (err) => {
   ensureStorageBucket().catch((err) => {
     logger.warn({ err }, "Failed to ensure Supabase Storage bucket");
   });
+});
+
+// --- Graceful shutdown: drain in-flight requests then close DB pool ---
+function shutdown(signal: string) {
+  logger.info({ signal }, "Shutdown signal received — closing server");
+  server.close(async () => {
+    logger.info("HTTP server closed, draining DB pool");
+    try {
+      await (db as unknown as { $client?: { end?: () => Promise<void> } }).$client?.end?.();
+    } catch {
+      // ignore pool close errors
+    }
+    logger.info("Shutdown complete");
+    process.exit(0);
+  });
+  // Force-kill if graceful close takes > 10 s
+  setTimeout(() => {
+    logger.warn("Graceful shutdown timeout — forcing exit");
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Catch unhandled promise rejections so they don't silently crash Node
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled promise rejection");
 });

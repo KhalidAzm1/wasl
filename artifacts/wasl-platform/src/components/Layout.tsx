@@ -136,24 +136,43 @@ export function Layout({ children }: LayoutProps) {
         className="no-mirror pointer-events-none select-none fixed bottom-[-6%] right-[-4%] w-[38rem] max-w-[60vw] opacity-[0.05] z-0"
       />
 
-      {/* Floating Settings Button */}
-      <div className="fixed top-6 right-6 z-40 safe-area-top flex gap-2">
+      {/* Floating Settings Button
+          Desktop: top-right corner
+          Mobile:  bottom-right corner, above AI chat widget (which sits at bottom-6) */}
+      <div className="fixed z-40
+                      bottom-[5.5rem] right-4 flex-col gap-2
+                      sm:bottom-auto sm:top-6 sm:right-6 sm:flex-row
+                      flex safe-area-bottom">
+        {/* Theme toggle — hidden on mobile to keep the corner clean; accessible via the settings panel */}
         <button
           type="button"
           aria-label="Toggle theme"
           aria-pressed={theme === 'light'}
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="w-12 h-12 rounded-full bg-card/60 backdrop-blur-xl border border-foreground/10 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-foreground/10 transition-all shadow-xl hover:shadow-primary/20 hover:scale-105 hover:border-foreground/20"
+          className="hidden sm:flex w-11 h-11 sm:w-12 sm:h-12 rounded-full
+                     bg-foreground/[0.06] dark:bg-background/70
+                     backdrop-blur-xl border border-foreground/[0.12]
+                     items-center justify-center
+                     text-foreground/70 hover:text-foreground
+                     hover:bg-foreground/[0.1] hover:border-foreground/20
+                     transition-all shadow-lg hover:shadow-primary/20 hover:scale-105"
         >
-          {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
         </button>
+        {/* Settings / nav panel — always visible */}
         <button
           type="button"
           aria-label="Open settings panel"
           onClick={() => setPanelOpen(true)}
-          className="w-12 h-12 rounded-full bg-card/60 backdrop-blur-xl border border-foreground/10 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-foreground/10 transition-all shadow-xl hover:shadow-primary/20 hover:scale-105 hover:border-foreground/20"
+          className="flex w-11 h-11 sm:w-12 sm:h-12 rounded-full
+                     bg-foreground/[0.06] dark:bg-background/70
+                     backdrop-blur-xl border border-foreground/[0.12]
+                     items-center justify-center
+                     text-foreground/70 hover:text-foreground
+                     hover:bg-foreground/[0.1] hover:border-foreground/20
+                     transition-all shadow-lg hover:shadow-primary/20 hover:scale-105"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
 

@@ -6,3 +6,10 @@ id = "PgCl3NOjzvEMAI-qFNaP8"
 uri = "file://export/wasl-source-code.zip"
 type = "unspecified"
 title = "WASL Platform - Source Code"
+
+[[outputs]]
+id = "aFhh_tsufV48txFN3m5XL"
+uri = "file://wasl_banking_data.sql"
+type = "unspecified"
+title = "wasl_banking_data.sql"
+description = "Complete PostgreSQL data export — 582 records across all 12 banking tables. Import this into the new Replit after running migrations."

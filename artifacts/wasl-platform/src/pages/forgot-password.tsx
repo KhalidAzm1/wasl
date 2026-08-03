@@ -29,6 +29,15 @@ export default function ForgotPassword() {
         throw new Error((data as any).error ?? `HTTP ${res.status}`);
       }
 
+      const json = await res.json().catch(() => ({})) as { ok: boolean; link?: string };
+
+      // If the backend returns a direct recovery link, redirect immediately —
+      // no email needed, no external configuration required.
+      if (json.link) {
+        window.location.href = json.link;
+        return;
+      }
+
       setSent(true);
     } catch (err: any) {
       toast({

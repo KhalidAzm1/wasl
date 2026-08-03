@@ -58,15 +58,23 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     const redirectTo = `${appBase}/reset-password`;
 
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type:    "recovery",
+      email,
+      options: { redirectTo },
+    });
 
-    if (error) {
-      req.log?.warn({ email, err: error.message }, "[auth] forgot-password: failed");
-    } else {
-      req.log?.info({ email }, "[auth] forgot-password: sent ✓");
+    if (error || !data?.properties?.action_link) {
+      req.log?.warn({ email, err: error?.message }, "[auth] forgot-password: user not found or link failed");
+      // Return ok silently — don't reveal whether the email exists
+      res.json({ ok: true });
+      return;
     }
 
-    res.json({ ok: true });
+    req.log?.info({ email }, "[auth] forgot-password: link generated ✓");
+    // Return the link directly — the frontend will redirect the user immediately.
+    // This avoids any email-sending or Supabase Site URL configuration.
+    res.json({ ok: true, link: data.properties.action_link });
   } catch (err: any) {
     req.log?.error({ err: err?.message }, "[auth] forgot-password: unexpected error");
     res.json({ ok: true });

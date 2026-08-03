@@ -851,10 +851,11 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
     // ── Collect which data domains were mutated ────────────────────────────────
     // Walk every tool result we accumulated and flag domains where success=true.
-    const mutations: { banks: boolean; meetings: boolean; risks: boolean } = {
+    const mutations: { banks: boolean; meetings: boolean; risks: boolean; mutatedBankIds: string[] } = {
       banks: false,
       meetings: false,
       risks: false,
+      mutatedBankIds: [],
     };
     const BANK_WRITE_FNS    = new Set(["update_bank", "create_bank"]);
     const MEETING_WRITE_FNS = new Set(["add_meeting", "update_meeting"]);
@@ -876,7 +877,15 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
         const tc = toolCalls.find((t) => t.id === toolCallId);
         if (!tc) continue;
         const fn = tc.function.name;
-        if (BANK_WRITE_FNS.has(fn))    mutations.banks    = true;
+        if (BANK_WRITE_FNS.has(fn)) {
+          mutations.banks = true;
+          // Capture the bank_id returned by the write function so the client
+          // can invalidate the individual bank detail query for that bank.
+          const bankId = parsed.bank_id as string | undefined;
+          if (bankId && !mutations.mutatedBankIds.includes(bankId)) {
+            mutations.mutatedBankIds.push(bankId);
+          }
+        }
         if (MEETING_WRITE_FNS.has(fn)) mutations.meetings = true;
         if (RISK_WRITE_FNS.has(fn))    mutations.risks    = true;
         break;

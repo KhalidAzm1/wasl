@@ -10,6 +10,7 @@ import {
   getGetDashboardSummaryQueryKey,
   getListMeetingsQueryKey,
   getListRisksQueryKey,
+  getGetBankQueryKey,
 } from '@workspace/api-client-react';
 
 async function authedPost(path: string, body: unknown) {
@@ -303,10 +304,15 @@ export function WaslAIChat() {
       setMessages((prev) => [...prev, { role: 'assistant', content: replyText }]);
 
       // ── Invalidate stale queries after any write action ──────────────────────
-      const mut = data.mutations as { banks?: boolean; meetings?: boolean; risks?: boolean } | undefined;
+      const mut = data.mutations as { banks?: boolean; meetings?: boolean; risks?: boolean; mutatedBankIds?: string[] } | undefined;
       if (mut?.banks) {
         await queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
         await queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+        // Invalidate the individual bank detail page so a user with that bank
+        // open sees the updated data without a manual refresh.
+        for (const bankId of mut.mutatedBankIds ?? []) {
+          await queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+        }
       }
       if (mut?.meetings) {
         await queryClient.invalidateQueries({ queryKey: getListMeetingsQueryKey() });

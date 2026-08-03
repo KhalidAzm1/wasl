@@ -202,13 +202,19 @@ function UserBubble({ text }: { text: string }) {
 }
 
 function AiBubble({ msg }: { msg: Message }) {
+  const hasTable = msg.content.includes('|');
   return (
     <div className="wa-in" style={{ display: 'flex', gap: 9, alignItems: 'flex-start', justifyContent: 'flex-end' }}>
       <div style={{
-        maxWidth: '88%', padding: '11px 14px', borderRadius: '14px 4px 14px 14px',
+        /* Full width when tables are present so overflowX:auto on the table wrapper actually works */
+        width: hasTable ? 'calc(100% - 46px)' : undefined,
+        maxWidth: hasTable ? undefined : '88%',
+        padding: '11px 14px', borderRadius: '14px 4px 14px 14px',
         background: 'transparent',
         borderRight: '2px solid rgba(99,102,241,.35)',
         fontFamily: 'Tajawal,sans-serif',
+        minWidth: 0,
+        overflow: 'hidden',
       }} dir="rtl">
         <Md text={msg.content} />
       </div>

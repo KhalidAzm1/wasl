@@ -224,7 +224,6 @@ export default function Dashboard() {
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [filterRisk, setFilterRisk] = useState<string>('All');
   const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk' | 'implInProduction' | 'implInTesting' | 'implBlocked' | 'implReadyForGoLive'>('all');
-  const [implProgressFilter, setImplProgressFilter] = useState<'all' | '0-25' | '26-50' | '51-75' | '76-100'>('all');
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
@@ -334,15 +333,6 @@ export default function Dashboard() {
     return true;
   };
 
-  const matchesImplProgressFilter = (bank: Bank) => {
-    if (implProgressFilter === 'all') return true;
-    const pct = implByBank.get(bank.id)?.completionPercentage ?? 0;
-    if (implProgressFilter === '0-25') return pct <= 25;
-    if (implProgressFilter === '26-50') return pct > 25 && pct <= 50;
-    if (implProgressFilter === '51-75') return pct > 50 && pct <= 75;
-    if (implProgressFilter === '76-100') return pct > 75;
-    return true;
-  };
 
   const highRiskBankCount = banks.filter(b => b.riskLevel === 'High').length;
 
@@ -355,7 +345,6 @@ export default function Dashboard() {
       if (filterCategory !== 'All' && b.category !== filterCategory) return false;
       if (filterRisk !== 'All' && b.riskLevel !== filterRisk) return false;
       if (!matchesKpi(b)) return false;
-      if (!matchesImplProgressFilter(b)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -380,8 +369,6 @@ export default function Dashboard() {
   kanbanStatuses.forEach(s => existingStatuses.delete(s));
   const allKanbanStatuses = [...kanbanStatuses, ...Array.from(existingStatuses)];
 
-  const isImplActive = ['implInProduction','implInTesting','implBlocked','implReadyForGoLive'].includes(kpiFilter);
-  const isStatusActive = ['inProgress','completed','delayed','highRisk'].includes(kpiFilter);
 
   return (
     <div className={cn("min-h-full flex flex-col w-full", viewMode !== 'kanban' && "overflow-x-hidden")}>
@@ -399,17 +386,13 @@ export default function Dashboard() {
 
           <div className="w-px h-5 bg-foreground/[0.08] shrink-0" />
 
-          {/* Status KPI chips — scrollable, takes all flex space */}
+          {/* Status KPI chips — 3 only */}
           <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar flex-1 min-w-0">
-            <KpiChip dot="bg-foreground/50" label="All Banks" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} dimmed={isImplActive} />
+            <KpiChip dot="bg-foreground/50" label="All Banks" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
             <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-amber-400" label="In Progress" value={summary.inProgress} active={kpiFilter === 'inProgress'} onClick={() => setKpiFilter(kpiFilter === 'inProgress' ? 'all' : 'inProgress')} dimmed={isImplActive} />
+            <KpiChip dot="bg-emerald-400" label="Completed" value={summary.completed} active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
             <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-emerald-400" label="Completed" value={summary.completed} active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} dimmed={isImplActive} />
-            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-red-400" label="Delayed" value={summary.delayed} active={kpiFilter === 'delayed'} onClick={() => setKpiFilter(kpiFilter === 'delayed' ? 'all' : 'delayed')} dimmed={isImplActive} />
-            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-rose-500" label="High Risk" value={highRiskBankCount} active={kpiFilter === 'highRisk'} onClick={() => setKpiFilter(kpiFilter === 'highRisk' ? 'all' : 'highRisk')} dimmed={isImplActive} />
+            <KpiChip dot="bg-red-400" label="Blocked" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} />
           </div>
 
           {/* Search — grows on desktop, icon-only toggle on mobile */}
@@ -483,30 +466,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Row 2: Implementation chips */}
-        <div className="flex items-center gap-2 px-4 sm:px-5 pb-2" dir="rtl">
-          {/* Label — hidden on very small screens to save space */}
-          <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-            <BarChart3 className="w-3 h-3 text-violet-400/60" />
-            <span className="text-[9px] text-foreground/25 uppercase tracking-[0.2em] font-bold">Implementation</span>
-          </div>
-          <BarChart3 className="sm:hidden w-3 h-3 text-violet-400/60 shrink-0" />
-          <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
-          <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar flex-1 min-w-0">
-            <KpiChip dot="bg-violet-400" label="Avg. Progress" value={avgImplProgress} suffix="%" active={false} onClick={() => {}} dimmed={isStatusActive} />
-            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-emerald-400" label="In Production" value={banksInProduction} active={kpiFilter === 'implInProduction'} onClick={() => setKpiFilter(kpiFilter === 'implInProduction' ? 'all' : 'implInProduction')} dimmed={isStatusActive} />
-            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-blue-400" label="In Testing" value={banksInTesting} active={kpiFilter === 'implInTesting'} onClick={() => setKpiFilter(kpiFilter === 'implInTesting' ? 'all' : 'implInTesting')} dimmed={isStatusActive} />
-            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-red-400" label="Blocked" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} dimmed={isStatusActive} />
-            <div className="w-px h-3 bg-foreground/[0.07] mx-0.5 shrink-0" />
-            <KpiChip dot="bg-amber-400" label="Ready Go-Live" value={banksReadyForGoLive} active={kpiFilter === 'implReadyForGoLive'} onClick={() => setKpiFilter(kpiFilter === 'implReadyForGoLive' ? 'all' : 'implReadyForGoLive')} dimmed={isStatusActive} />
-          </div>
-        </div>
       </div>
 
-      {(kpiFilter !== 'all' || filterCategory !== 'All' || filterRisk !== 'All' || searchQuery !== '' || implProgressFilter !== 'all') && (
+      {(kpiFilter !== 'all' || filterCategory !== 'All' || filterRisk !== 'All' || searchQuery !== '') && (
         <div className="px-8 md:px-10 max-w-[1920px] mx-auto w-full -mb-4 pt-6">
           <div className="flex flex-wrap items-center gap-3">
              <span className="text-[10px] text-foreground/40 uppercase tracking-[0.2em] font-bold">Active Filters:</span>
@@ -514,10 +476,9 @@ export default function Dashboard() {
              {filterCategory !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Category: {filterCategory}</span>}
              {filterRisk !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Risk: {filterRisk}</span>}
              {searchQuery !== '' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Search: {searchQuery}</span>}
-             {implProgressFilter !== 'all' && <span className="text-[11px] font-medium bg-purple-500/10 text-purple-500 border border-purple-500/30 px-3 py-1 rounded-full">Impl: {implProgressFilter}%</span>}
 
              <button
-               onClick={() => { setKpiFilter('all'); setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); setImplProgressFilter('all'); }}
+               onClick={() => { setKpiFilter('all'); setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); }}
                className="text-[11px] font-medium text-foreground/50 hover:text-primary transition-colors ml-1 px-2"
              >
                Clear All
@@ -553,21 +514,6 @@ export default function Dashboard() {
             <SlidersHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
-          <div className="flex items-center gap-0.5 sm:gap-1 p-1 bg-foreground/5 border border-foreground/10 rounded-xl backdrop-blur-md shrink-0 overflow-x-auto hide-scrollbar">
-            <span className="hidden sm:inline text-[9px] text-foreground/30 uppercase tracking-wider font-bold px-2">Impl%</span>
-            {(['all', '0-25', '26-50', '51-75', '76-100'] as const).map(range => (
-              <button
-                key={range}
-                onClick={() => setImplProgressFilter(range)}
-                className={cn(
-                  'px-2 sm:px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors focus:outline-none whitespace-nowrap',
-                  implProgressFilter === range ? 'bg-purple-500/20 text-purple-400 shadow-sm' : 'text-foreground/40 hover:text-foreground hover:bg-foreground/10'
-                )}
-              >
-                {range === 'all' ? 'All' : `${range}%`}
-              </button>
-            ))}
-          </div>
         </div>
 
         <AdvancedFiltersPanel 

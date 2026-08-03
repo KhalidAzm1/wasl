@@ -1344,14 +1344,34 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
     const openai = getOpenAI();
 
-    // Build live context once per request, then trim if needed
+    // Build full context once — always passed to tools unchanged
     const rawContext = await buildBankContext();
-    const [bankContext, trimPass] = trimBankContext(rawContext);
-    if (trimPass > 0) {
-      req.log?.warn({ trimPass, banks: bankContext.length }, "[ai-chat] context trimmed to fit token budget");
-    }
 
-    const contextBlock = `\n\n<live_bank_data total="${bankContext.length}" as_of="${new Date().toISOString()}"${trimPass > 0 ? ` detail_level="${4 - trimPass}"` : ""}>\n${JSON.stringify(bankContext, null, 0)}\n</live_bank_data>`;
+    // Detect report / aggregate requests: skip injecting full JSON into system prompt
+    // (the generate_weekly_report tool already computes everything it needs from rawContext)
+    const lastMsg = (messages[messages.length - 1]?.content ?? "").toLowerCase();
+    const isAggregateRequest = /تقرير|أسبوعي|weekly|report|ملخص.{0,6}تنفيذي|executive.{0,6}summary/i.test(lastMsg);
+
+    let contextBlock: string;
+    if (isAggregateRequest) {
+      // Minimal metadata only — tool will supply all detail
+      const byStatus = rawContext.reduce<Record<string, number>>((acc, b) => {
+        acc[b.status] = (acc[b.status] ?? 0) + 1; return acc;
+      }, {});
+      const avgPct = rawContext.length
+        ? Math.round(rawContext.reduce((s, b) => s + b.implementation.completion_pct, 0) / rawContext.length)
+        : 0;
+      contextBlock = `\n\n<live_bank_data total="${rawContext.length}" as_of="${new Date().toISOString()}" mode="aggregate_request">\n` +
+        `summary: avg_completion=${avgPct}%, statuses=${JSON.stringify(byStatus)}\n` +
+        `Use generate_weekly_report or get_dashboard_summary tool for full detail.\n</live_bank_data>`;
+    } else {
+      // Normal queries — inject trimmed bank JSON
+      const [bankContext, trimPass] = trimBankContext(rawContext, 40_000);
+      if (trimPass > 0) {
+        req.log?.warn({ trimPass, banks: bankContext.length }, "[ai-chat] context trimmed to fit token budget");
+      }
+      contextBlock = `\n\n<live_bank_data total="${bankContext.length}" as_of="${new Date().toISOString()}"${trimPass > 0 ? ` detail_level="${4 - trimPass}"` : ""}>\n${JSON.stringify(bankContext, null, 0)}\n</live_bank_data>`;
+    }
 
     const systemWithContext = SYSTEM_PROMPT + contextBlock;
 
@@ -1387,7 +1407,7 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
           const fn = (tc as any).function as { name: string; arguments: string };
           let args: Record<string, any> = {};
           try { args = JSON.parse(fn.arguments); } catch { /* ignore */ }
-          const result = await executeFunction(fn.name, args, bankContext);
+          const result = await executeFunction(fn.name, args, rawContext);
           return {
             role: "tool" as const,
             tool_call_id: tc.id,

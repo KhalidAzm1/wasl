@@ -1,9 +1,53 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, RotateCcw, Mic, MicOff, MessageCircle, ChevronDown } from 'lucide-react';
+import { X, Send, Loader2, RotateCcw, Mic, MicOff, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 
+/* ─── global animation styles injected once ─────────────────────────────── */
+const injectStyles = () => {
+  if (document.getElementById('waslaawi-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'waslaawi-styles';
+  s.textContent = `
+    @property --wa-angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+    @keyframes wa-spin   { to { --wa-angle: 360deg } }
+    @keyframes wa-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+    @keyframes wa-ripple { 0%{transform:scale(1);opacity:.6} 100%{transform:scale(2.4);opacity:0} }
+    @keyframes wa-shimmer{
+      0%  { background-position: -200% 0 }
+      100%{ background-position:  200% 0 }
+    }
+    .wa-border-wrap {
+      --wa-angle: 0deg;
+      background: conic-gradient(from var(--wa-angle),
+        #3B82F6 0%, #818CF8 20%, #A78BFA 40%,
+        #F59E0B 55%, #A78BFA 70%, #818CF8 85%, #3B82F6 100%);
+      animation: wa-spin 6s linear infinite;
+      border-radius: 22px;
+      padding: 1.5px;
+    }
+    .wa-fab-float { animation: wa-float 3.5s ease-in-out infinite; }
+    .wa-shimmer-text {
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.5) 0%,
+        #fff 40%,
+        rgba(255,255,255,0.5) 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: wa-shimmer 3s linear infinite;
+    }
+  `;
+  document.head.appendChild(s);
+};
+
+/* ─── Auth fetch ─────────────────────────────────────────────────────────── */
 async function authedPost(path: string, body: unknown) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -15,214 +59,204 @@ async function authedPost(path: string, body: unknown) {
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? `HTTP ${res.status}`);
-  }
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error ?? `HTTP ${res.status}`); }
   return res.json();
 }
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  isWelcome?: boolean;
-}
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+interface Message { role: 'user' | 'assistant'; content: string; isWelcome?: boolean; }
 
 const WELCOME: Message = {
-  role: 'assistant',
-  isWelcome: true,
-  content: `مرحباً! أنا **نور**، وكيلتك التنفيذية في منصة وصل 🏦
+  role: 'assistant', isWelcome: true,
+  content: `أهلاً بك! أنا **وصلاوي**، وكيلك الذكي في منصة وصل 🏦
 
-أقدر أنفّذ أي إجراء في النظام مباشرةً:
+يسعدني أنفّذ أي إجراء مباشرةً:
 
-• 📊 استعراض وتحليل حالة البنوك والتقارير
+• 📊 تحليل وتقارير شاملة لجميع البنوك
 • ✏️ تحديث البنوك — الحالة، المسؤول، الملخص
-• 🏦 إنشاء بنك / أرشفته / استعادته
-• ✅ تحديث مراحل التنفيذ
-• 📅 إدارة الاجتماعات — إضافة، تعديل، حذف
-• ⚠️ إدارة المخاطر — تسجيل وإغلاق
-• 📋 إدارة بنود الإجراءات
-• 📇 جهات الاتصال وأرقام الجوال
-• 🔍 البحث بمعايير ومقارنة البنوك
+• 🏦 إنشاء / أرشفة / استعادة البنوك
+• ✅ إدارة مراحل التنفيذ والتقدم
+• 📅 إضافة وتعديل وحذف الاجتماعات
+• ⚠️ تسجيل المخاطر ومتابعتها
+• 📋 متابعة بنود الإجراءات
+• 📇 جهات الاتصال والجوالات
+• 🔍 بحث ومقارنة البنوك بالمعايير
 
-فقط أخبرني بما تريد وأنا أنفّذ.`,
+ما الذي تريد إنجازه اليوم؟`,
 };
 
 const QUICK_PROMPTS = [
-  { label: '📋 تقرير أسبوعي', text: 'اصنعي لي تقريراً أسبوعياً كاملاً' },
-  { label: '🚨 بنوك عالية الخطر', text: 'أريني البنوك المتأخرة أو عالية المخاطر' },
-  { label: '📊 مقارنة بنكين', text: 'قارني بنك الراجحي مع البنك الأهلي' },
-  { label: '🔍 بحث متقدم', text: 'أريني البنوك التي لم تبدأ بعد وخطرها عالي' },
-  { label: '📇 جهات الاتصال', text: 'أريني جهات الاتصال وأرقام الجوال لبنك الراجحي' },
-  { label: '✅ إجراءات متأخرة', text: 'أرني بنود الإجراءات المتأخرة عن موعدها' },
+  { label: '📋 تقرير أسبوعي',      text: 'اصنع لي تقريراً أسبوعياً شاملاً' },
+  { label: '🚨 بنوك عالية الخطر',  text: 'أرني البنوك المتأخرة أو عالية المخاطر' },
+  { label: '📊 مقارنة بنكين',       text: 'قارن بنك الراجحي مع البنك الأهلي' },
+  { label: '🔍 بحث متقدم',          text: 'أرني البنوك التي لم تبدأ بعد وخطرها عالٍ' },
+  { label: '📇 جهات الاتصال',       text: 'أرني جهات الاتصال وأرقام الجوال لبنك الراجحي' },
+  { label: '✅ إجراءات متأخرة',     text: 'أرني بنود الإجراءات المتأخرة عن موعدها' },
 ];
 
-// ── Markdown renderer ─────────────────────────────────────────────────────────
+/* ─── Markdown ───────────────────────────────────────────────────────────── */
 function renderInline(text: string): React.ReactNode[] {
-  return text.split(/\*\*(.+?)\*\*/g).map((part, j) =>
-    j % 2 === 1 ? <strong key={j} className="font-semibold">{part}</strong> : part
+  return text.split(/\*\*(.+?)\*\*/g).map((p, i) =>
+    i % 2 === 1 ? <strong key={i} className="font-semibold text-white">{p}</strong> : p
   );
 }
-
 function renderMarkdown(text: string): React.ReactNode {
-  const lines = text.split('\n');
-  const nodes: React.ReactNode[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (/^## /.test(line)) {
-      nodes.push(
-        <div key={i} className="mt-4 mb-2 pb-1 border-b border-white/10 first:mt-1">
-          <span className="font-bold text-sm text-blue-200">{renderInline(line.replace(/^## /, ''))}</span>
-        </div>
-      );
-    } else if (/^# /.test(line)) {
-      nodes.push(
-        <p key={i} className="font-bold text-base mt-2 mb-1 text-white">
-          {renderInline(line.replace(/^# /, ''))}
-        </p>
-      );
-    } else if (/^[•\-\*] /.test(line.trim())) {
-      nodes.push(
-        <div key={i} className="flex gap-2 items-start py-[2px]">
-          <span className="text-blue-300 mt-[3px] shrink-0 text-xs">•</span>
-          <span className="leading-relaxed text-[13.5px] text-white/90">
-            {renderInline(line.trim().replace(/^[•\-\*] /, ''))}
-          </span>
-        </div>
-      );
-    } else if (/^\d+\. /.test(line.trim())) {
-      const num = line.trim().match(/^(\d+)\./)?.[1];
-      nodes.push(
-        <div key={i} className="flex gap-2 items-start py-[2px]">
-          <span className="text-blue-300 shrink-0 font-mono text-xs mt-[3px] w-4 text-left">{num}.</span>
-          <span className="leading-relaxed text-[13.5px] text-white/90">
-            {renderInline(line.trim().replace(/^\d+\. /, ''))}
-          </span>
-        </div>
-      );
-    } else if (line.trim() === '') {
-      nodes.push(<div key={i} className="h-[5px]" />);
-    } else {
-      nodes.push(
-        <p key={i} className="leading-relaxed text-[13.5px] text-white/90">
-          {renderInline(line)}
-        </p>
-      );
-    }
-    i++;
-  }
-  return <div className="space-y-[1px]">{nodes}</div>;
-}
-
-// ── Speech Recognition ─────────────────────────────────────────────────────────
-const SpeechRecognitionAPI =
-  typeof window !== 'undefined'
-    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    : null;
-
-// ── Noor Avatar ───────────────────────────────────────────────────────────────
-function NoorAvatar({ size = 'md' }: { size?: 'sm' | 'md' }) {
-  const cls = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
   return (
-    <div className={cn(
-      'shrink-0 rounded-full flex items-center justify-center font-bold text-white shadow-lg ring-2 ring-blue-500/30',
-      'bg-gradient-to-br from-blue-500 to-indigo-700',
-      cls
-    )}>ن</div>
+    <div className="space-y-[2px]">
+      {text.split('\n').map((line, i) => {
+        if (/^##\s/.test(line)) return (
+          <p key={i} className="font-bold text-[13px] text-blue-300 mt-3 mb-1 first:mt-0 tracking-wide uppercase">{renderInline(line.replace(/^##\s/, ''))}</p>
+        );
+        if (/^#\s/.test(line))  return (
+          <p key={i} className="font-extrabold text-base text-white mt-2 mb-1">{renderInline(line.replace(/^#\s/, ''))}</p>
+        );
+        if (/^[•\-\*]\s/.test(line.trim())) return (
+          <div key={i} className="flex gap-2 items-start py-[1px]">
+            <span className="text-blue-400 mt-[4px] shrink-0 text-[10px]">◆</span>
+            <span className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line.trim().replace(/^[•\-\*]\s/, ''))}</span>
+          </div>
+        );
+        if (/^\d+\.\s/.test(line.trim())) {
+          const num = line.trim().match(/^(\d+)\./)?.[1];
+          return (
+            <div key={i} className="flex gap-2 items-start py-[1px]">
+              <span className="text-amber-400 shrink-0 font-bold text-xs mt-[3px] w-4">{num}.</span>
+              <span className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line.trim().replace(/^\d+\.\s/, ''))}</span>
+            </div>
+          );
+        }
+        if (line.trim() === '') return <div key={i} className="h-[4px]" />;
+        return <p key={i} className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line)}</p>;
+      })}
+    </div>
   );
 }
 
-// ── Message Bubble ─────────────────────────────────────────────────────────────
+/* ─── Speech ─────────────────────────────────────────────────────────────── */
+const SpeechAPI = typeof window !== 'undefined'
+  ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  : null;
+
+/* ─── Waslaawi Avatar ────────────────────────────────────────────────────── */
+function WaslaawiAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const sizes = { sm: 'w-8 h-8 text-sm', md: 'w-10 h-10 text-base', lg: 'w-14 h-14 text-xl' };
+  return (
+    <div
+      className={cn('shrink-0 rounded-full flex items-center justify-center font-black text-white shadow-xl', sizes[size])}
+      style={{
+        background: 'linear-gradient(135deg, #1D4ED8 0%, #7C3AED 50%, #D97706 100%)',
+        boxShadow: '0 0 16px rgba(124,58,237,0.5), 0 4px 12px rgba(0,0,0,0.4)',
+        fontFamily: 'Tajawal, sans-serif',
+      }}
+    >
+      و
+    </div>
+  );
+}
+
+/* ─── Message Bubble ─────────────────────────────────────────────────────── */
 function MessageBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user';
-
-  if (isUser) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex gap-2 items-end justify-start"
-      >
-        {/* user avatar */}
-        <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center text-white font-bold text-xs shadow ring-2 ring-white/10">
-          أ
-        </div>
-        <div
-          className="max-w-[76%] rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-md"
-          style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)', wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-        >
-          <p className="text-[13.5px] leading-relaxed text-white" dir="auto">{msg.content}</p>
-        </div>
-      </motion.div>
-    );
-  }
+  if (isUser) return (
+    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ type: 'spring', damping: 20 }}
+      className="flex gap-2 items-end justify-start">
+      <div className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-xs shadow"
+        style={{ background: 'linear-gradient(135deg,#334155,#1e293b)', border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'Tajawal,sans-serif' }}>
+        أ
+      </div>
+      <div className="max-w-[76%] px-4 py-2.5 rounded-2xl rounded-bl-sm shadow-lg"
+        style={{
+          background: 'linear-gradient(135deg,#1D4ED8 0%,#5B21B6 100%)',
+          boxShadow: '0 4px 20px rgba(29,78,216,0.35)',
+          wordBreak: 'break-word', overflowWrap: 'anywhere',
+          fontFamily: 'Tajawal, sans-serif',
+        }}>
+        <p className="text-[14px] leading-relaxed text-white" dir="auto">{msg.content}</p>
+      </div>
+    </motion.div>
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex gap-2 items-end justify-end"
-    >
+    <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ type: 'spring', damping: 20 }}
+      className="flex gap-2 items-end justify-end">
       <div
-        className="max-w-[82%] rounded-2xl rounded-br-sm px-4 py-3 shadow-sm"
+        className="max-w-[82%] px-4 py-3 rounded-2xl rounded-br-sm"
         style={{
-          background: 'rgba(255,255,255,0.07)',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)',
           border: '1px solid rgba(255,255,255,0.10)',
-          wordBreak: 'break-word',
-          overflowWrap: 'anywhere',
+          boxShadow: '0 2px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(12px)',
+          wordBreak: 'break-word', overflowWrap: 'anywhere',
+          fontFamily: 'Tajawal, sans-serif',
         }}
         dir="rtl"
       >
         {renderMarkdown(msg.content)}
       </div>
-      <NoorAvatar size="sm" />
+      <WaslaawiAvatar size="sm" />
     </motion.div>
   );
 }
 
-// ── Typing Indicator ──────────────────────────────────────────────────────────
-function TypingIndicator() {
+/* ─── Typing indicator ───────────────────────────────────────────────────── */
+function TypingDots() {
   return (
     <div className="flex gap-2 items-end justify-end">
-      <div
-        className="rounded-2xl rounded-br-sm px-4 py-3 flex gap-1.5 items-center"
-        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)' }}
-      >
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className="w-2 h-2 rounded-full bg-blue-400"
-            animate={{ y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.15 }}
-          />
+      <div className="px-5 py-3.5 rounded-2xl rounded-br-sm flex gap-[5px] items-center"
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}>
+        {[0,1,2].map(i => (
+          <motion.div key={i} className="w-2 h-2 rounded-full"
+            style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}
+            animate={{ y:[0,-6,0], opacity:[0.4,1,0.4] }}
+            transition={{ duration: 0.8, repeat: Infinity, delay: i*0.16 }} />
         ))}
       </div>
-      <NoorAvatar size="sm" />
+      <WaslaawiAvatar size="sm" />
     </div>
   );
 }
 
-// ── Mic Pulse ─────────────────────────────────────────────────────────────────
-function MicPulse() {
+/* ─── Mic ripple ─────────────────────────────────────────────────────────── */
+function MicRipple() {
   return (
-    <div className="relative flex items-center justify-center">
-      {[1, 2, 3].map(i => (
-        <motion.div key={i} className="absolute rounded-full border border-red-400/40"
-          initial={{ width: 38, height: 38, opacity: 0.7 }}
-          animate={{ width: 38 + i * 18, height: 38 + i * 18, opacity: 0 }}
-          transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}
-        />
+    <div className="relative w-14 h-14 flex items-center justify-center">
+      {[1,2,3].map(i => (
+        <div key={i} className="absolute rounded-full border border-red-400/30"
+          style={{ width: 56 + i*18, height: 56 + i*18, animation: `wa-ripple 1.8s ease-out ${i*0.3}s infinite` }} />
       ))}
-      <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
-        <Mic className="w-4 h-4 text-white" />
+      <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
+        style={{ background: 'linear-gradient(135deg,#EF4444,#DC2626)', boxShadow: '0 0 20px rgba(239,68,68,0.5)' }}>
+        <Mic className="w-5 h-5 text-white" />
       </div>
     </div>
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+/* ─── Stars background ───────────────────────────────────────────────────── */
+function StarsBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ borderRadius: 18 }}>
+      {Array.from({ length: 28 }).map((_, i) => (
+        <div key={i}
+          className="absolute rounded-full"
+          style={{
+            width: Math.random() > 0.7 ? 2 : 1,
+            height: Math.random() > 0.7 ? 2 : 1,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            background: Math.random() > 0.5 ? 'rgba(139,92,246,0.6)' : 'rgba(59,130,246,0.5)',
+            opacity: 0.3 + Math.random() * 0.5,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Main Component ─────────────────────────────────────────────────────── */
 export function WaslAIChat() {
+  useEffect(() => { injectStyles(); }, []);
+
   const [open, setOpen]           = useState(false);
   const [messages, setMessages]   = useState<Message[]>([WELCOME]);
   const [input, setInput]         = useState('');
@@ -235,268 +269,322 @@ export function WaslAIChat() {
   const inputRef       = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 350); }, [open]);
 
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 300);
-  }, [open]);
-
-  // auto-grow textarea
   function autoGrow(el: HTMLTextAreaElement) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }
 
-  // ── STT ──────────────────────────────────────────────────────────────────────
   function startListening() {
-    if (!SpeechRecognitionAPI) { setMicError('المتصفح لا يدعم التعرف على الصوت.'); return; }
+    if (!SpeechAPI) { setMicError('المتصفح لا يدعم التعرف على الصوت.'); return; }
     setMicError(null);
-    const rec = new SpeechRecognitionAPI();
-    rec.lang = 'ar-SA'; rec.interimResults = false; rec.maxAlternatives = 1;
+    const rec = new SpeechAPI();
+    rec.lang = 'ar-SA'; rec.interimResults = false;
     rec.onstart  = () => setListening(true);
-    rec.onresult = (e: any) => { const t = e.results[0][0].transcript.trim(); setListening(false); if (t) sendMessage(t); };
+    rec.onresult = (e: any) => { setListening(false); const t = e.results[0][0].transcript.trim(); if (t) sendMessage(t); };
     rec.onerror  = (e: any) => { setListening(false); if (e.error === 'not-allowed') setMicError('يرجى السماح بالوصول للميكروفون.'); };
     rec.onend    = () => setListening(false);
-    recognitionRef.current = rec;
-    rec.start();
+    recognitionRef.current = rec; rec.start();
   }
   function stopListening() { recognitionRef.current?.stop(); setListening(false); }
 
-  // ── Send ──────────────────────────────────────────────────────────────────────
   async function sendMessage(text?: string) {
     const content = (text ?? input).trim();
     if (!content || loading) return;
     setShowQuick(false);
-
     const userMsg: Message = { role: 'user', content };
-    const contextHistory = messages
-      .filter(m => !m.isWelcome).concat(userMsg).slice(-12)
-      .map(({ role, content }) => ({ role, content }));
-
+    const history = messages.filter(m => !m.isWelcome).concat(userMsg).slice(-12).map(({ role, content }) => ({ role, content }));
     setMessages(prev => [...prev, userMsg]);
     setInput('');
-    if (inputRef.current) { inputRef.current.style.height = 'auto'; }
+    if (inputRef.current) inputRef.current.style.height = 'auto';
     setLoading(true);
-
     try {
-      const data = await authedPost('/api/ai/chat', { messages: contextHistory });
-      const replyText: string = data.reply ?? data.error ?? 'حدث خطأ، يرجى المحاولة مجدداً.';
-      setMessages(prev => [...prev, { role: 'assistant', content: replyText }]);
+      const data = await authedPost('/api/ai/chat', { messages: history });
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply ?? data.error ?? 'حدث خطأ.' }]);
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'تعذّر الاتصال بالخادم. تحقق من اتصالك وحاول مجدداً.' }]);
-    } finally {
-      setLoading(false);
-    }
+      setMessages(prev => [...prev, { role: 'assistant', content: 'تعذّر الاتصال بالخادم، يرجى المحاولة مجدداً.' }]);
+    } finally { setLoading(false); }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
-
   function reset() { stopListening(); setMessages([WELCOME]); setInput(''); setMicError(null); setShowQuick(true); }
 
-  const hasSpeech = !!SpeechRecognitionAPI;
+  const canSend = !!input.trim() && !loading;
 
+  /* ── FAB ── */
+  const FAB = (
+    <motion.button
+      key="fab"
+      initial={{ x: 100, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 100, opacity: 0 }}
+      transition={{ type: 'spring', damping: 18, stiffness: 200 }}
+      onClick={() => setOpen(true)}
+      aria-label="افتح وصلاوي"
+      className="fixed bottom-6 right-6 z-40 wa-fab-float"
+    >
+      {/* outer glow ring */}
+      <div className="absolute -inset-[3px] rounded-[22px] opacity-70"
+        style={{ background: 'conic-gradient(from 0deg, #3B82F6, #8B5CF6, #F59E0B, #3B82F6)', filter: 'blur(8px)', zIndex: -1 }} />
+      
+      <div className="relative flex items-center gap-3 px-4 py-[10px] rounded-[18px] overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #0D1F3C 0%, #1a0f3c 50%, #1a1200 100%)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          fontFamily: 'Tajawal, sans-serif',
+        }}>
+        {/* shimmer strip */}
+        <div className="absolute inset-0 opacity-20"
+          style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.15) 50%, transparent 65%)', animation: 'wa-shimmer 3s linear infinite', backgroundSize: '200% auto' }} />
+        
+        <WaslaawiAvatar size="md" />
+        
+        <div className="text-right leading-tight">
+          <p className="font-black text-[15px] tracking-wide wa-shimmer-text" style={{ fontFamily: 'Tajawal, sans-serif' }}>وصلاوي</p>
+          <p className="text-[11px] text-white/50">منصة وصل الذكية</p>
+        </div>
+        
+        <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+      </div>
+    </motion.button>
+  );
+
+  /* ── Panel ── */
   return (
     <>
-      {/* ── FAB ──────────────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {!open && (
-          <motion.button
-            key="fab"
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => setOpen(true)}
-            aria-label="افتح مساعد نور"
-            initial={{ x: 80, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 80, opacity: 0 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 240 }}
-            className="fixed bottom-6 right-6 z-40 flex items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl"
-            style={{
-              background: 'linear-gradient(135deg, #2563eb 0%, #4338ca 100%)',
-              boxShadow: '0 0 30px rgba(59,130,246,0.45), 0 8px 20px rgba(0,0,0,0.3)',
-            }}
-          >
-            <div className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-bold text-white text-sm shrink-0">ن</div>
-            <div className="text-right leading-snug">
-              <p className="text-white font-bold text-sm">نور</p>
-              <p className="text-white/60 text-[11px]">وكيلة وصل الذكية</p>
-            </div>
-            <MessageCircle className="w-4 h-4 text-white/50 shrink-0" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <AnimatePresence>{!open && FAB}</AnimatePresence>
 
-      {/* ── Chat Panel ───────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {open && (
           <>
             {/* mobile backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/50 md:hidden"
-              onClick={() => setOpen(false)}
-            />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 md:hidden" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+              onClick={() => setOpen(false)} />
 
             <motion.div
               dir="rtl"
-              initial={{ opacity: 0, y: 28, scale: 0.94 }}
+              initial={{ opacity: 0, y: 32, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 28, scale: 0.94 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-              className="fixed bottom-6 right-6 z-50 flex flex-col rounded-2xl overflow-hidden"
-              style={{
-                width: 'min(92vw, 460px)',
-                height: 'min(82vh, 660px)',
-                background: 'linear-gradient(170deg, #0c1229 0%, #0f0f2e 55%, #0c1229 100%)',
-                border: '1px solid rgba(99,102,241,0.2)',
-                boxShadow: '0 0 90px rgba(59,130,246,0.10), 0 30px 70px rgba(0,0,0,0.55)',
-              }}
+              exit={{ opacity: 0, y: 32, scale: 0.92 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 260 }}
+              className="fixed bottom-6 right-6 z-50"
             >
+              {/* animated gradient border wrap */}
+              <div className="wa-border-wrap" style={{ boxShadow: '0 0 60px rgba(59,130,246,0.15), 0 24px 60px rgba(0,0,0,0.6)' }}>
+                <div className="flex flex-col overflow-hidden" style={{
+                  width: 'min(90vw, 460px)',
+                  height: 'min(80vh, 650px)',
+                  borderRadius: '20px',
+                  background: 'linear-gradient(160deg, #070F22 0%, #0A0A22 40%, #070F1E 100%)',
+                  position: 'relative',
+                }}>
+                  <StarsBackground />
 
-              {/* ── Header ─────────────────────────────────────────────────── */}
-              <div
-                className="flex items-center gap-3 px-4 py-3 shrink-0"
-                style={{ background: 'rgba(15,15,50,0.9)', borderBottom: '1px solid rgba(99,102,241,0.18)' }}
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-base shadow-lg ring-2 ring-blue-500/40 shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
-                >ن</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-white">نور</span>
-                    <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded-full font-medium">● متصلة</span>
+                  {/* ── Header ─────────────────────────────────────────── */}
+                  <div className="relative shrink-0 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    {/* gold top line */}
+                    <div style={{ height: 2, background: 'linear-gradient(90deg, transparent, #D97706, #7C3AED, #3B82F6, transparent)' }} />
+                    
+                    <div className="flex items-center gap-3 px-4 py-3"
+                      style={{ background: 'linear-gradient(180deg, rgba(13,31,60,0.9) 0%, rgba(7,15,34,0.8) 100%)' }}>
+                      
+                      <WaslaawiAvatar size="md" />
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-[16px] text-white tracking-wide" style={{ fontFamily: 'Tajawal, sans-serif' }}>وصلاوي</span>
+                          <span className="text-[10px] px-2 py-[2px] rounded-full font-bold"
+                            style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(52,211,153,0.25)' }}>
+                            ● نشط
+                          </span>
+                          <span className="text-[10px] px-2 py-[2px] rounded-full"
+                            style={{ background: 'rgba(217,119,6,0.12)', color: '#FCD34D', border: '1px solid rgba(252,211,77,0.2)', fontFamily: 'Tajawal, sans-serif' }}>
+                            AI منصة وصل
+                          </span>
+                        </div>
+                        <p className="text-[11px] mt-[1px]" style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'Tajawal, sans-serif' }}>
+                          {listening ? '🎤 يستمع الآن…' : '20 إجراء · جاهز للمساعدة'}
+                        </p>
+                      </div>
+
+                      <button onClick={reset} title="محادثة جديدة"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+                        style={{ color: 'rgba(255,255,255,0.3)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'white'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.3)'; }}>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setOpen(false)} title="إغلاق"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+                        style={{ color: 'rgba(255,255,255,0.3)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'; (e.currentTarget as HTMLElement).style.color = '#FCA5A5'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.3)'; }}>
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-white/40">{listening ? '🎤 جاري الاستماع…' : 'وكيلة وصل الذكية · 20 إجراء'}</p>
-                </div>
-                <button onClick={reset} title="محادثة جديدة"
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 transition-colors">
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => setOpen(false)} title="إغلاق"
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
-              {/* ── Messages ───────────────────────────────────────────────── */}
-              <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
-                {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
+                  {/* ── Messages ───────────────────────────────────────── */}
+                  <div className="relative flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.2) transparent' }}>
+                    
+                    {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
 
-                {/* Quick prompts */}
-                <AnimatePresence>
-                  {showQuick && !loading && messages.length === 1 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      className="flex flex-wrap gap-2 justify-end pt-1"
-                    >
-                      {QUICK_PROMPTS.map(q => (
-                        <button key={q.text} onClick={() => sendMessage(q.text)}
-                          className="text-[12px] px-3 py-1.5 rounded-full font-medium transition-all"
-                          style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.28)', color: '#93c5fd' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.22)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.12)')}
-                        >
-                          {q.label}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {loading && <TypingIndicator />}
-                <div ref={bottomRef} />
-              </div>
-
-              {/* Listening overlay */}
-              <AnimatePresence>
-                {listening && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                    className="absolute inset-x-4 bottom-24 flex flex-col items-center gap-3 rounded-2xl py-7 z-10"
-                    style={{ background: 'rgba(10,12,30,0.97)', border: '1px solid rgba(239,68,68,0.25)' }}
-                  >
-                    <MicPulse />
-                    <p className="text-sm text-white/70 font-medium">جاري الاستماع…</p>
-                    <button onClick={stopListening} className="text-xs text-red-400 hover:text-red-300">اضغط للإيقاف</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Mic error */}
-              <AnimatePresence>
-                {micError && (
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="mx-3 mb-1 px-3 py-1.5 rounded-lg text-xs text-red-400 text-center"
-                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}
-                  >
-                    {micError}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* ── Input ──────────────────────────────────────────────────── */}
-              <div
-                className="px-3 py-3 shrink-0"
-                style={{ borderTop: '1px solid rgba(99,102,241,0.15)', background: 'rgba(8,10,25,0.7)' }}
-              >
-                {/* Row: RTL → visually RIGHT = first child */}
-                <div
-                  dir="rtl"
-                  className="flex items-end gap-2 rounded-xl px-3 py-2"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}
-                >
-                  {/* Send — first in RTL = appears on RIGHT */}
-                  <button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || loading}
-                    className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-30"
-                    style={{ background: (!input.trim() || loading) ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
-                  >
-                    {loading
-                      ? <Loader2 className="w-4 h-4 text-white animate-spin" />
-                      : <Send className="w-4 h-4 text-white" style={{ transform: 'scaleX(-1)' }} />
-                    }
-                  </button>
-
-                  {/* Textarea — middle */}
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={e => { setInput(e.target.value); autoGrow(e.target); }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="اكتب رسالتك لنور…"
-                    rows={1}
-                    disabled={loading || listening}
-                    dir="auto"
-                    className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none leading-relaxed disabled:opacity-50"
-                    style={{ minHeight: '36px', maxHeight: '120px', paddingTop: '8px', paddingBottom: '8px' }}
-                  />
-
-                  {/* Mic — last in RTL = appears on LEFT */}
-                  {hasSpeech && (
-                    <motion.button
-                      whileTap={{ scale: 0.88 }}
-                      onClick={listening ? stopListening : startListening}
-                      disabled={loading}
-                      className={cn(
-                        'shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30',
-                        listening ? 'bg-red-500 shadow-lg shadow-red-500/30' : 'text-white/40 hover:text-white hover:bg-white/8'
+                    {/* Quick chips */}
+                    <AnimatePresence>
+                      {showQuick && !loading && messages.length === 1 && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                          className="flex flex-wrap gap-2 justify-end pt-1">
+                          {QUICK_PROMPTS.map(q => (
+                            <button key={q.text} onClick={() => sendMessage(q.text)}
+                              className="text-[12px] px-3 py-1.5 rounded-full font-medium transition-all"
+                              style={{
+                                background: 'rgba(99,102,241,0.1)',
+                                border: '1px solid rgba(99,102,241,0.28)',
+                                color: '#A5B4FC',
+                                fontFamily: 'Tajawal, sans-serif',
+                              }}
+                              onMouseEnter={e => {
+                                (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.22)';
+                                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(165,180,252,0.5)';
+                                (e.currentTarget as HTMLElement).style.color = '#E0E7FF';
+                              }}
+                              onMouseLeave={e => {
+                                (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.1)';
+                                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.28)';
+                                (e.currentTarget as HTMLElement).style.color = '#A5B4FC';
+                              }}>
+                              {q.label}
+                            </button>
+                          ))}
+                        </motion.div>
                       )}
-                    >
-                      {listening ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4" />}
-                    </motion.button>
-                  )}
-                </div>
+                    </AnimatePresence>
 
-                <p className="text-center text-[10px] text-white/20 mt-2">
-                  نور AI · اضغط Enter للإرسال · Shift+Enter لسطر جديد
-                </p>
+                    {loading && <TypingDots />}
+                    <div ref={bottomRef} />
+                  </div>
+
+                  {/* Mic overlay */}
+                  <AnimatePresence>
+                    {listening && (
+                      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
+                        className="absolute inset-x-4 bottom-24 rounded-2xl py-8 flex flex-col items-center gap-4 z-20"
+                        style={{ background: 'rgba(5,10,25,0.97)', border: '1px solid rgba(239,68,68,0.2)', backdropFilter: 'blur(16px)' }}>
+                        <MicRipple />
+                        <p className="text-sm text-white/70 font-medium" style={{ fontFamily: 'Tajawal, sans-serif' }}>يستمع إليك الآن…</p>
+                        <button onClick={stopListening} className="text-xs text-red-400 hover:text-red-300 transition-colors" style={{ fontFamily: 'Tajawal, sans-serif' }}>اضغط للإيقاف</button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Mic error */}
+                  <AnimatePresence>
+                    {micError && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="mx-3 mb-1 px-3 py-1.5 rounded-lg text-xs text-center"
+                        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', color: '#FCA5A5', fontFamily: 'Tajawal, sans-serif' }}>
+                        {micError}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* ── Input ──────────────────────────────────────────── */}
+                  <div className="relative shrink-0 px-3 pb-3 pt-2"
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(4,8,18,0.8)' }}>
+                    
+                    {/* decorative gradient line above input */}
+                    <div style={{ height: 1, marginBottom: 8, background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.3), transparent)' }} />
+
+                    <div
+                      dir="rtl"
+                      className="flex items-end gap-2 rounded-xl px-3 py-2 transition-all"
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(99,102,241,0.2)',
+                        boxShadow: '0 0 0 0px rgba(99,102,241,0)',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                      }}
+                      onFocus={e => {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.borderColor = 'rgba(139,92,246,0.5)';
+                        el.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)';
+                      }}
+                      onBlur={e => {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.borderColor = 'rgba(99,102,241,0.2)';
+                        el.style.boxShadow = '0 0 0 0px rgba(99,102,241,0)';
+                      }}
+                    >
+                      {/* Send — RIGHT in RTL (first child) */}
+                      <motion.button
+                        whileTap={{ scale: 0.88 }}
+                        onClick={() => sendMessage()}
+                        disabled={!canSend}
+                        className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-25"
+                        style={{
+                          background: canSend
+                            ? 'linear-gradient(135deg, #4F46E5, #7C3AED)'
+                            : 'rgba(255,255,255,0.06)',
+                          boxShadow: canSend ? '0 0 16px rgba(99,102,241,0.4)' : 'none',
+                        }}
+                      >
+                        {loading
+                          ? <Loader2 className="w-4 h-4 text-white animate-spin" />
+                          : <Send className="w-4 h-4 text-white" style={{ transform: 'scaleX(-1)' }} />
+                        }
+                      </motion.button>
+
+                      {/* Textarea */}
+                      <textarea
+                        ref={inputRef}
+                        value={input}
+                        onChange={e => { setInput(e.target.value); autoGrow(e.target); }}
+                        onKeyDown={handleKey}
+                        placeholder="اكتب رسالتك لوصلاوي…"
+                        rows={1}
+                        disabled={loading || listening}
+                        dir="auto"
+                        className="flex-1 bg-transparent outline-none resize-none disabled:opacity-40 leading-relaxed"
+                        style={{
+                          fontSize: 14, color: 'white', minHeight: 36, maxHeight: 120,
+                          paddingTop: 8, paddingBottom: 8,
+                          fontFamily: 'Tajawal, sans-serif',
+                          caretColor: '#8B5CF6',
+                        }}
+                        style-placeholder-color="rgba(255,255,255,0.25)"
+                      />
+
+                      {/* Mic — LEFT in RTL (last child) */}
+                      {!!SpeechAPI && (
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={listening ? stopListening : startListening}
+                          disabled={loading}
+                          className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-25"
+                          style={{
+                            background: listening ? 'linear-gradient(135deg,#EF4444,#DC2626)' : 'transparent',
+                            color: listening ? 'white' : 'rgba(255,255,255,0.35)',
+                            boxShadow: listening ? '0 0 16px rgba(239,68,68,0.4)' : 'none',
+                          }}
+                        >
+                          {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                        </motion.button>
+                      )}
+                    </div>
+
+                    <p className="text-center text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.18)', fontFamily: 'Tajawal, sans-serif' }}>
+                      وصلاوي · Enter للإرسال · Shift+Enter لسطر جديد
+                    </p>
+                  </div>
+
+                </div>
               </div>
             </motion.div>
           </>

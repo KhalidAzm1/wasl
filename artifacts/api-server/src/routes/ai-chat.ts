@@ -849,8 +849,42 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
       choice = response.choices[0];
     }
 
+    // ── Collect which data domains were mutated ────────────────────────────────
+    // Walk every tool result we accumulated and flag domains where success=true.
+    const mutations: { banks: boolean; meetings: boolean; risks: boolean } = {
+      banks: false,
+      meetings: false,
+      risks: false,
+    };
+    const BANK_WRITE_FNS    = new Set(["update_bank", "create_bank"]);
+    const MEETING_WRITE_FNS = new Set(["add_meeting", "update_meeting"]);
+    const RISK_WRITE_FNS    = new Set(["add_risk"]);
+
+    for (const msg of openaiMessages) {
+      if (msg.role !== "tool") continue;
+      const content = typeof msg.content === "string" ? msg.content : "";
+      let parsed: Record<string, unknown> = {};
+      try { parsed = JSON.parse(content); } catch { /* skip */ }
+      if (parsed.success !== true) continue;
+
+      // Find the tool_call_id → function name by scanning assistant messages
+      const toolCallId = (msg as any).tool_call_id as string | undefined;
+      for (const m of openaiMessages) {
+        if (m.role !== "assistant") continue;
+        const toolCalls = (m as any).tool_calls as Array<{ id: string; function: { name: string } }> | undefined;
+        if (!toolCalls) continue;
+        const tc = toolCalls.find((t) => t.id === toolCallId);
+        if (!tc) continue;
+        const fn = tc.function.name;
+        if (BANK_WRITE_FNS.has(fn))    mutations.banks    = true;
+        if (MEETING_WRITE_FNS.has(fn)) mutations.meetings = true;
+        if (RISK_WRITE_FNS.has(fn))    mutations.risks    = true;
+        break;
+      }
+    }
+
     const content = choice.message?.content ?? "";
-    res.json({ reply: content });
+    res.json({ reply: content, mutations });
   } catch (err: any) {
     console.error("[ai-chat] error:", err?.message ?? err);
     res.status(500).json({ error: "AI service error. Please try again." });

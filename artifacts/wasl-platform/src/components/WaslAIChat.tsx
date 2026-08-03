@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Loader2, RotateCcw, Mic, MicOff, MessageCircle } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
+import {
+  getListBanksQueryKey,
+  getGetDashboardSummaryQueryKey,
+  getListMeetingsQueryKey,
+  getListRisksQueryKey,
+} from '@workspace/api-client-react';
 
 async function authedPost(path: string, body: unknown) {
   const { data } = await supabase.auth.getSession();
@@ -229,6 +237,9 @@ export function WaslAIChat() {
   const inputRef       = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
@@ -290,6 +301,28 @@ export function WaslAIChat() {
       const data = await authedPost('/api/ai/chat', { messages: contextHistory });
       const replyText: string = data.reply ?? data.error ?? 'حدث خطأ، يرجى المحاولة مجدداً.';
       setMessages((prev) => [...prev, { role: 'assistant', content: replyText }]);
+
+      // ── Invalidate stale queries after any write action ──────────────────────
+      const mut = data.mutations as { banks?: boolean; meetings?: boolean; risks?: boolean } | undefined;
+      if (mut?.banks) {
+        await queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+        await queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+      }
+      if (mut?.meetings) {
+        await queryClient.invalidateQueries({ queryKey: getListMeetingsQueryKey() });
+        // meetings also affect bank last-activity views
+        await queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
+        await queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+      }
+      if (mut?.risks) {
+        await queryClient.invalidateQueries({ queryKey: getListRisksQueryKey() });
+      }
+      if (mut?.banks || mut?.meetings || mut?.risks) {
+        toast({
+          title: 'تم تحديث البيانات',
+          description: 'تم حفظ التغييرات وتحديث لوحة التحكم تلقائياً.',
+        });
+      }
     } catch {
       setMessages((prev) => [...prev, {
         role: 'assistant',

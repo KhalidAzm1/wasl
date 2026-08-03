@@ -49,10 +49,11 @@ async function sendResetEmail(to: string, resetLink: string): Promise<void> {
     body:    JSON.stringify(payload),
   });
 
+  const responseText = await response.text().catch(() => "");
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Resend error ${response.status}: ${body}`);
+    throw new Error(`Resend error ${response.status}: ${responseText}`);
   }
+  console.log("[auth] Resend response:", response.status, responseText);
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
@@ -78,29 +79,43 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
                     ?? "https://wasl.app";
     const redirectTo = `${origin}/reset-password`;
 
-    // Ask Supabase Admin to generate the recovery link — no email is sent by Supabase
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type:    "recovery",
-      email,
-      options: { redirectTo },
-    });
 
-    if (error || !data?.properties?.action_link) {
-      // Email not registered or other admin error — return ok to prevent enumeration
-      req.log?.info({ email, err: error?.message }, "[auth] forgot-password: no link generated");
-      res.json({ ok: true });
-      return;
+    // ── Plan A: generate link via Admin + send via Resend (custom template) ──
+    let sentViaResend = false;
+    try {
+      const { data, error } = await supabase.auth.admin.generateLink({
+        type:    "recovery",
+        email,
+        options: { redirectTo },
+      });
+
+      if (!error && data?.properties?.action_link) {
+        await sendResetEmail(email, data.properties.action_link);
+        req.log?.info({ email }, "[auth] forgot-password: sent via Resend ✓");
+        sentViaResend = true;
+      } else {
+        req.log?.warn({ email, err: error?.message }, "[auth] forgot-password: generateLink failed — falling back to Supabase email");
+      }
+    } catch (resendErr: any) {
+      req.log?.warn({ email, err: resendErr?.message }, "[auth] forgot-password: Resend send failed — falling back to Supabase email");
     }
 
-    // Fire the email and wait for confirmation
-    await sendResetEmail(email, data.properties.action_link);
-    req.log?.info({ email }, "[auth] forgot-password: reset email sent via Resend");
+    // ── Plan B: let Supabase send its own email if Plan A failed ──
+    if (!sentViaResend) {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+      if (resetErr) {
+        req.log?.warn({ email, err: resetErr.message }, "[auth] forgot-password: Supabase fallback also failed");
+      } else {
+        req.log?.info({ email }, "[auth] forgot-password: sent via Supabase fallback ✓");
+      }
+    }
 
     res.json({ ok: true });
   } catch (err: any) {
     req.log?.error({ err: err?.message }, "[auth] forgot-password: unexpected error");
-    // Still return ok — never expose internals to the caller
     res.json({ ok: true });
   }
 });

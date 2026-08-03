@@ -376,84 +376,83 @@ export default function Dashboard() {
       {/* ── Clean Strip Header ─────────────────────────────────────────── */}
       <div className="sticky top-0 z-40 bg-background/90 backdrop-blur-3xl border-b border-foreground/[0.06] shadow-2xl">
 
-        {/* Single unified header row */}
-        <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5" dir="rtl">
+        {/* Header: 3 balanced sections with logo centered */}
+        <div className="relative flex items-center px-4 sm:px-5 py-2" style={{ minHeight: 52 }}>
 
-          {/* Logo */}
-          <div className="shrink-0 pl-2 sm:pl-3 border-l border-foreground/[0.08]">
-            <WaslLogo height={24} imgClassName="w-auto" />
-          </div>
-
-          <div className="w-px h-5 bg-foreground/[0.08] shrink-0" />
-
-          {/* 3 KPI chips */}
-          <div className="flex items-center gap-1 shrink-0">
+          {/* ── RIGHT section (RTL): KPI chips + Category + Filter ── */}
+          <div className="flex items-center gap-1.5 shrink-0" dir="rtl">
+            {/* 3 KPI chips */}
             <KpiChip dot="bg-foreground/50" label="الكل" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
             <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
             <KpiChip dot="bg-emerald-400" label="مكتمل" value={summary.completed} active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
             <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
             <KpiChip dot="bg-red-400" label="معلّق" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} />
-          </div>
 
-          <div className="w-px h-5 bg-foreground/[0.08] shrink-0" />
+            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
 
-          {/* Category filter — hidden on small mobile */}
-          <div className="hidden sm:block shrink-0">
-            <CategoryFilter categories={categories} value={filterCategory} onChange={setFilterCategory} />
-          </div>
+            {/* Category */}
+            <div className="hidden sm:block shrink-0">
+              <CategoryFilter categories={categories} value={filterCategory} onChange={setFilterCategory} />
+            </div>
 
-          {/* Advanced filter button */}
-          <button
-            onClick={() => setIsAdvancedFilterOpen(true)}
-            aria-label="Open advanced filters"
-            className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-xl transition-all shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50",
-              filterRisk !== 'All'
-                ? "bg-primary/20 border border-primary/50 text-primary shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]"
-                : "bg-foreground/5 border border-foreground/10 text-foreground/50 hover:text-foreground hover:border-primary/40 hover:bg-primary/10"
-            )}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Spacer */}
-          <div className="flex-1 min-w-0" />
-
-          {/* Search */}
-          <div className="relative shrink-0 hidden sm:block w-40 md:w-48">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="بحث..."
-              aria-label="Search banks"
-              dir="rtl"
-              className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-1.5 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 focus:bg-foreground/[0.06] transition-all"
-            />
-          </div>
-          <button
-            className="sm:hidden shrink-0 p-1.5 rounded-lg border border-foreground/10 text-foreground/50 hover:text-foreground hover:border-foreground/20 transition-colors"
-            aria-label="Search"
-            onClick={() => setMobileSearchOpen(v => !v)}
-          >
-            <Search className="w-3.5 h-3.5" />
-          </button>
-
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
-            <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
-            <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
-            <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
-          </div>
-
-          {/* Theme + Settings */}
-          <div className="hidden sm:flex items-center gap-1 shrink-0">
-            <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] hover:border-foreground/20 transition-all">
-              {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            {/* Advanced filter */}
+            <button
+              onClick={() => setIsAdvancedFilterOpen(true)}
+              aria-label="Open advanced filters"
+              className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-xl transition-all shrink-0 focus:outline-none",
+                filterRisk !== 'All'
+                  ? "bg-primary/20 border border-primary/50 text-primary"
+                  : "bg-foreground/5 border border-foreground/10 text-foreground/50 hover:text-foreground hover:border-primary/40 hover:bg-primary/10"
+              )}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
             </button>
-            <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] hover:border-foreground/20 transition-all">
-              <Settings className="w-3.5 h-3.5" />
+          </div>
+
+          {/* ── CENTER: Logo absolutely centered ── */}
+          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
+            <WaslLogo height={28} imgClassName="w-auto" />
+          </div>
+
+          {/* Spacer pushes right section left and left section right */}
+          <div className="flex-1" />
+
+          {/* ── LEFT section (LTR): Search + View toggle + Theme/Settings ── */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Search desktop */}
+            <div className="relative hidden sm:block w-36 md:w-44">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30" />
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="بحث..."
+                aria-label="Search banks"
+                dir="rtl"
+                className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-1.5 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 focus:bg-foreground/[0.06] transition-all"
+              />
+            </div>
+            {/* Search mobile icon */}
+            <button className="sm:hidden p-1.5 rounded-lg border border-foreground/10 text-foreground/50 hover:text-foreground transition-colors" aria-label="Search" onClick={() => setMobileSearchOpen(v => !v)}>
+              <Search className="w-3.5 h-3.5" />
             </button>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
+              <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
+            </div>
+
+            {/* Theme + Settings */}
+            <div className="hidden sm:flex items-center gap-1">
+              <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+              <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 

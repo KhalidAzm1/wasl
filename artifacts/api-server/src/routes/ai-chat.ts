@@ -177,10 +177,8 @@ async function buildBankContext() {
       open_actions: bankActions
         .filter((a) => a.status !== "done" && a.status !== "completed")
         .map((a) => ({ id: a.id, description: a.description, due_date: a.dueDate, owner: a.owner, status: a.status })),
-      all_actions: bankActions.map((a) => ({ id: a.id, description: a.description, due_date: a.dueDate, owner: a.owner, status: a.status })),
       contacts: ((bank.contacts ?? []) as Array<{ name: string; title?: string | null; phone?: string | null; email?: string | null }>)
-        .map((c) => ({ name: c.name, title: c.title ?? null, phone: c.phone ?? null, email: c.email ?? null })),
-      implementation_stages: bankStages.map((s) => ({ id: s.id, name: s.name, status: s.status, completed: s.completed, skipped: s.skipped, order: s.displayOrder })),
+        .map((c) => ({ name: c.name, phone: c.phone ?? null })),
       isArchived: bank.isArchived,
     };
   });
@@ -993,9 +991,9 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
   if (name === "update_implementation_stage") {
     const match = findBank(args.bank_query as string ?? "", allBanks);
     if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
-    const stages = (match as any).implementation_stages as Array<{ id: number; name: string; status: string; completed: boolean; skipped: boolean; order: number }> ?? [];
+    const stages = await db.select().from(implementationStagesTable).where(eq(implementationStagesTable.bankId, match.id));
     const q = (args.stage_name as string ?? "").toLowerCase();
-    const target = stages.find(s => s.name.toLowerCase().includes(q));
+    const target = stages.find((s: any) => s.name.toLowerCase().includes(q));
     if (!target) {
       return { error: `لم أجد مرحلة باسم "${args.stage_name}" لـ ${match.name_ar || match.name_en}. المراحل المتاحة: ${stages.map(s => s.name).join("، ")}` };
     }

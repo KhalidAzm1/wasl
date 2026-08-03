@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, RotateCcw, Mic, MicOff, ChevronDown } from 'lucide-react';
+import { X, Send, Loader2, RotateCcw, Mic, MicOff, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -325,17 +325,28 @@ export function WaslAIChat() {
         {!open && (
           <motion.button
             key="fab"
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.96 }}
             onClick={() => setOpen(true)}
             aria-label="افتح مساعد نور"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-700 hover:from-blue-400 hover:to-indigo-600 transition-all"
-            style={{ boxShadow: '0 0 30px rgba(59,130,246,0.45)' }}
+            initial={{ x: 60, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 60, opacity: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 260 }}
+            className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 rounded-full shadow-2xl px-4 py-3 bg-gradient-to-l from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 transition-colors"
+            style={{ boxShadow: '0 0 32px rgba(59,130,246,0.5)' }}
           >
-            <span className="text-white font-bold text-lg">ن</span>
+            {/* Avatar circle */}
+            <div className="w-8 h-8 rounded-full bg-white/15 border border-white/30 flex items-center justify-center shrink-0">
+              <span className="text-white font-bold text-sm">ن</span>
+            </div>
+            {/* Label */}
+            <div className="text-right leading-tight">
+              <p className="text-white font-semibold text-sm">نور</p>
+              <p className="text-white/60 text-[10px]">مساعدة وصل AI</p>
+            </div>
+            {/* Chat icon */}
+            <MessageCircle className="w-4 h-4 text-white/50 shrink-0" />
           </motion.button>
         )}
       </AnimatePresence>

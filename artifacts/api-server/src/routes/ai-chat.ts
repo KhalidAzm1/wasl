@@ -44,21 +44,22 @@ function getOpenAI() {
 }
 
 // ── System prompt ──────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are Wasl AI, an intelligent assistant for the Wasl FinTech banking intelligence platform.
+const SYSTEM_PROMPT = `أنت "نور" — مساعدة ذكاء اصطناعي متخصصة في منصة وصل للتمويل العقاري.
 
-Your ONLY domain is the banks tracked in this platform — their implementation progress, risks, meetings, action items, and overall status.
+شخصيتك: موظفة بنك محترفة، ذكية، ودودة، تتكلم بأسلوب خليجي راقٍ ومهني. تستخدمين العربية الفصحى المبسطة مع لمسة خليجية طبيعية. لا تكوني رسمية بشكل مبالغ فيه ولا عامية مفرطة — التوازن هو المفتاح.
 
-Rules:
-1. Answer in the SAME language the user writes in (Arabic → Arabic, English → English).
-2. Be concise, factual, and professional. Use bullet points for lists.
-3. If asked about anything outside the banking/platform domain (cooking, sports, general knowledge, etc.), politely decline and say you are specialized in Wasl platform bank data only.
-4. When referencing data, cite specific bank names and numbers from the context provided.
-5. You can perform actions (create banks, update bank fields) when the user explicitly asks — use the provided functions.
-6. When giving status summaries, be insightful — highlight what needs attention, not just raw data.
-7. For Arabic responses, use formal but clear Arabic (Modern Standard with Gulf-friendly phrasing).
-8. COMPLETENESS RULE — CRITICAL: When asked to list ALL banks (حالة جميع البنوك, all banks, كل البنوك, etc.), you MUST include EVERY SINGLE bank in the live data — no exceptions. Do NOT stop at 10, 15, or 20. If there are 30 banks, list all 30. Never say "وهكذا" or "..." or trail off — finish the complete list.
-9. CONTINUE RULE: If the user says "كمل" or "continue" or "أكمل", they mean your previous response was cut short. Look at which banks were already listed and continue from where you left off, covering ALL remaining banks.
-10. WEEKLY REPORT RULE: When the user asks for a weekly report, executive summary, تقرير أسبوعي, ملخص أسبوعي, or general platform overview — ALWAYS call generate_weekly_report first, then format the result as a structured Arabic report with these EXACT section headers (use ## for each):
+مجالك الوحيد: البنوك والشركات المالية المتابَعة في منصة وصل — حالتها، تقدم التنفيذ، المخاطر، الاجتماعات، بنود الإجراءات، والتقارير.
+
+قواعد أساسية:
+1. ردّي دائماً بالعربية حتى لو كان السؤال بالإنجليزية، إلا إذا طُلب منكِ الإنجليزية صراحةً.
+2. كوني مختصرة وواضحة ومباشرة. استخدمي نقاط للقوائم.
+3. إذا سُئلتِ عن أي موضوع خارج نطاق منصة وصل والبنوك، اعتذري بلطف وأوضحي أنك متخصصة في بيانات المنصة فقط.
+4. عند الإشارة للبيانات، اذكري أسماء البنوك والأرقام بدقة من السياق المتاح.
+5. نفّذي الإجراءات (تحديث، إنشاء، إضافة) عند الطلب الصريح — استخدمي الدوال المتاحة دائماً.
+6. كوني استباقية: سلّطي الضوء على ما يحتاج انتباهاً، لا تكتفي بعرض البيانات الخام.
+7. قاعدة الاكتمال — حرجة: عند طلب قائمة بـ"كل البنوك" أو "جميع البنوك"، أدرجي كل بنك دون استثناء. لا تتوقفي عند 10 أو 15 — إذا كان هناك 30 بنكاً، أدرجي الـ30. لا تكتبي "وهكذا" أو "..." أبداً.
+8. قاعدة الإكمال: إذا قال المستخدم "كمّل" أو "أكمل"، فهو يعني أن ردّك الأخير اقتُطع — انظري أي البنوك تم ذكرها وأكملي من حيث توقفتِ.
+9. قاعدة التقرير الأسبوعي: عند طلب تقرير أسبوعي أو ملخص تنفيذي — استدعي generate_weekly_report أولاً ثم اكتبي التقرير بهذه الأقسام الثمانية بالترتيب (## لكل قسم):
     ## 📊 نظرة عامة
     ## 🚨 بنوك تحتاج تدخل عاجل
     ## 📅 اجتماعات هذا الأسبوع
@@ -67,16 +68,16 @@ Rules:
     ## 🐢 الأقل تقدماً
     ## 💤 بنوك متوقفة
     ## 💡 توصيات
-    Under "## 💡 توصيات" write 3–5 numbered, actionable recommendations based on the data.
-    End the report with the EXACT line: **تاريخ إنشاء التقرير:** YYYY-MM-DD (use the report_generated_at value verbatim).
+    تحت "## 💡 توصيات" اكتبي 5 توصيات مرقمة وقابلة للتنفيذ.
+    أختمي التقرير بهذا السطر تحديداً: **تاريخ إنشاء التقرير:** YYYY-MM-DD
 
-CRITICAL RULES FOR ACTIONS (create/update):
-- ALWAYS call the actual function — never pretend an action was done without calling it.
-- After calling a function, check the result: if it contains "error", report the error clearly to the user. NEVER say "تم" or "done" if the function returned an error.
-- If the function returns { success: true }, confirm the action with the exact fields that were changed.
-- If you cannot identify which bank the user means, ask for clarification — do NOT guess.
+قواعد حرجة للإجراءات:
+- استدعي الدالة الفعلية دائماً — لا تتظاهري بتنفيذ إجراء دون استدعائها.
+- بعد استدعاء الدالة: إذا كانت النتيجة تحتوي "error"، أبلغي المستخدم بالخطأ. لا تقولي "تم" إذا فشلت العملية.
+- إذا كانت النتيجة { success: true }، أكّدي العملية مع ذكر الحقول التي تغيّرت.
+- إذا لم تتعرّفي على البنك المقصود، اطلبي توضيحاً — لا تخمّني.
 
-You have access to LIVE data about all banks in the system. The data is injected into each request.`;
+لديكِ وصول لبيانات حية لكل البنوك في النظام. البيانات تُحقَن في كل طلب.`;
 
 // ── DB context builder ─────────────────────────────────────────────────────────
 async function buildBankContext() {
@@ -274,6 +275,77 @@ const AGENT_FUNCTIONS: OpenAI.Chat.ChatCompletionTool[] = [
       name: "generate_weekly_report",
       description: "Generate a comprehensive weekly executive report covering all banks: overall progress, critical banks needing attention, upcoming meetings this week, overdue action items, top/bottom performers, stalled banks, and smart recommendations. Use this whenever the user asks for a weekly report, executive summary, weekly status, or general platform health overview.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_meeting",
+      description: "Add a new meeting record for a specific bank. Use when the user asks to schedule or log a meeting.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          date: { type: "string", description: "Meeting date YYYY-MM-DD" },
+          topic: { type: "string", description: "Meeting topic or agenda" },
+          summary: { type: "string", description: "Meeting summary or notes (optional)" },
+          attendees: { type: "string", description: "Attendees names (optional)" },
+          status: {
+            type: "string",
+            enum: ["scheduled", "completed", "cancelled"],
+            description: "Meeting status, default is 'scheduled'",
+          },
+        },
+        required: ["bank_query", "date", "topic"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_meeting",
+      description: "Update an existing meeting for a bank. Use when the user asks to reschedule, update, or modify a meeting.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          meeting_index: { type: "number", description: "Which meeting to update — 1 for the most recent, 2 for second most recent, etc." },
+          date: { type: "string", description: "New meeting date YYYY-MM-DD (optional)" },
+          topic: { type: "string", description: "New topic (optional)" },
+          summary: { type: "string", description: "New or updated summary (optional)" },
+          status: {
+            type: "string",
+            enum: ["scheduled", "completed", "cancelled"],
+            description: "New status (optional)",
+          },
+        },
+        required: ["bank_query", "meeting_index"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_risk",
+      description: "Add a new risk entry for a specific bank. Use when the user asks to log or register a risk.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          description: { type: "string", description: "Risk description" },
+          level: {
+            type: "string",
+            enum: ["Low", "Medium", "High"],
+            description: "Risk level",
+          },
+          status: {
+            type: "string",
+            enum: ["open", "mitigated", "resolved"],
+            description: "Risk status, default is 'open'",
+          },
+        },
+        required: ["bank_query", "description", "level"],
+      },
     },
   },
 ];
@@ -581,6 +653,88 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
         "## 💡 توصيات is NON-NEGOTIABLE — write exactly 5 numbered actionable recommendations. Do NOT skip it or replace it with الخلاصة.",
         `End with EXACTLY: **تاريخ إنشاء التقرير:** ${reportDate}`,
       ],
+    };
+  }
+
+  // ── add_meeting ────────────────────────────────────────────────────────────
+  if (name === "add_meeting") {
+    const query = args.bank_query as string ?? "";
+    const match = findBank(query, allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${query}". البنوك المتاحة: ${allBanks.map((b) => b.name_ar || b.name_en).join("، ")}` };
+    if (!args.date || !args.topic) return { error: "التاريخ وموضوع الاجتماع مطلوبان." };
+
+    await db.insert(meetingsTable).values({
+      bankId: match.id,
+      date: args.date as string,
+      topic: args.topic as string,
+      summary: (args.summary as string | undefined) ?? null,
+      attendees: (args.attendees as string | undefined) ?? null,
+      status: (args.status as string | undefined) ?? "scheduled",
+      isArchived: false,
+    });
+
+    return {
+      success: true,
+      bank_id: match.id,
+      bank_name: match.name_ar || match.name_en,
+      meeting: { date: args.date, topic: args.topic, status: args.status ?? "scheduled" },
+      message: `تم إضافة الاجتماع بنجاح لـ ${match.name_ar || match.name_en}`,
+    };
+  }
+
+  // ── update_meeting ─────────────────────────────────────────────────────────
+  if (name === "update_meeting") {
+    const query = args.bank_query as string ?? "";
+    const match = findBank(query, allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${query}".` };
+
+    const idx = Math.max(1, (args.meeting_index as number) ?? 1);
+    const meetings = await db.select().from(meetingsTable)
+      .where(and(eq(meetingsTable.bankId, match.id), eq(meetingsTable.isArchived, false)));
+    meetings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const target = meetings[idx - 1];
+    if (!target) return { error: `لم أجد اجتماع رقم ${idx} لـ ${match.name_ar || match.name_en}. عدد الاجتماعات: ${meetings.length}` };
+
+    const update: Record<string, any> = { updatedAt: new Date() };
+    if (args.date !== undefined)    update.date    = args.date;
+    if (args.topic !== undefined)   update.topic   = args.topic;
+    if (args.summary !== undefined) update.summary = args.summary;
+    if (args.status !== undefined)  update.status  = args.status;
+
+    const changedFields = Object.keys(update).filter((k) => k !== "updatedAt");
+    if (changedFields.length === 0) return { error: "لم يُحدَّد أي حقل للتحديث." };
+
+    await db.update(meetingsTable).set(update).where(eq(meetingsTable.id, target.id));
+    return {
+      success: true,
+      bank_name: match.name_ar || match.name_en,
+      meeting_id: target.id,
+      updated_fields: changedFields,
+      new_values: changedFields.reduce<Record<string, any>>((acc, k) => { acc[k] = update[k]; return acc; }, {}),
+    };
+  }
+
+  // ── add_risk ───────────────────────────────────────────────────────────────
+  if (name === "add_risk") {
+    const query = args.bank_query as string ?? "";
+    const match = findBank(query, allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${query}".` };
+    if (!args.description || !args.level) return { error: "وصف الخطر ومستواه مطلوبان." };
+
+    await db.insert(risksTable).values({
+      bankId: match.id,
+      description: args.description as string,
+      level: args.level as string,
+      status: (args.status as string | undefined) ?? "open",
+    });
+
+    return {
+      success: true,
+      bank_id: match.id,
+      bank_name: match.name_ar || match.name_en,
+      risk: { description: args.description, level: args.level, status: args.status ?? "open" },
+      message: `تم تسجيل الخطر بنجاح لـ ${match.name_ar || match.name_en}`,
     };
   }
 

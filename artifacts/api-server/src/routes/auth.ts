@@ -45,10 +45,17 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
       return;
     }
 
-    const origin     = (req.headers.origin as string | undefined)
-                    ?? process.env.FRONTEND_URL
-                    ?? "https://wasl.app";
-    const redirectTo = `${origin}/reset-password`;
+    // Build the redirect URL: prefer the configured FRONTEND_URL, then
+    // REPLIT_DEV_DOMAIN (always correct in the Replit environment), then
+    // the request Origin header, and finally fall back to the request host.
+    const appBase =
+      process.env.FRONTEND_URL
+      ?? (process.env.REPLIT_DEV_DOMAIN
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+            : null)
+      ?? (req.headers.origin as string | undefined)
+      ?? `https://${req.headers.host}`;
+    const redirectTo = `${appBase}/reset-password`;
 
     const supabase = getSupabaseAdmin();
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });

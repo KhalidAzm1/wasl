@@ -176,7 +176,12 @@ async function buildBankContext() {
         .map((m) => ({ date: m.date, topic: m.topic, summary: m.summary })),
       open_actions: bankActions
         .filter((a) => a.status !== "done" && a.status !== "completed")
-        .map((a) => ({ description: a.description, due_date: a.dueDate, owner: a.owner, status: a.status })),
+        .map((a) => ({ id: a.id, description: a.description, due_date: a.dueDate, owner: a.owner, status: a.status })),
+      all_actions: bankActions.map((a) => ({ id: a.id, description: a.description, due_date: a.dueDate, owner: a.owner, status: a.status })),
+      contacts: ((bank.contacts ?? []) as Array<{ name: string; title?: string | null; phone?: string | null; email?: string | null }>)
+        .map((c) => ({ name: c.name, title: c.title ?? null, phone: c.phone ?? null, email: c.email ?? null })),
+      implementation_stages: bankStages.map((s) => ({ id: s.id, name: s.name, status: s.status, completed: s.completed, skipped: s.skipped, order: s.displayOrder })),
+      isArchived: bank.isArchived,
     };
   });
 
@@ -348,6 +353,107 @@ const AGENT_FUNCTIONS: OpenAI.Chat.ChatCompletionTool[] = [
           status: { type: "string", enum: ["open", "mitigated", "resolved"], description: "Risk status, default is 'open'" },
         },
         required: ["bank_query", "description", "level"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_bank_contacts",
+      description: "Get the full contact list for a bank including names, titles, phone/mobile numbers, and emails. Use when the user asks about who is responsible, mobile numbers, or contact details.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+        },
+        required: ["bank_query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "manage_contact",
+      description: "Add or remove a contact from a bank. Use when the user wants to add a person or delete an existing contact.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          action: { type: "string", enum: ["add", "remove"], description: "add to add a new contact, remove to delete one" },
+          name: { type: "string", description: "Contact full name (required for add; used to identify for remove)" },
+          title: { type: "string", description: "Job title / position (optional)" },
+          phone: { type: "string", description: "Mobile or phone number (optional)" },
+          email: { type: "string", description: "Email address (optional)" },
+        },
+        required: ["bank_query", "action", "name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_implementation_stage",
+      description: "Mark an implementation stage as completed, in_progress, not_started, or skipped for a specific bank. Use when the user wants to advance or reset a stage.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          stage_name: { type: "string", description: "Partial or full stage name to match (e.g. 'NDA', 'Go-Live', 'UAT')" },
+          status: { type: "string", enum: ["not_started", "in_progress", "completed", "skipped", "blocked"], description: "New status for the stage" },
+          completed: { type: "boolean", description: "true to mark as done, false to unmark (auto-derived from status if omitted)" },
+          notes: { type: "string", description: "Optional notes to attach to this stage" },
+        },
+        required: ["bank_query", "stage_name", "status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_banks",
+      description: "Search and filter banks by one or more criteria. Use when the user asks to list banks matching certain conditions.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["Not Started", "In Progress", "Completed", "Delayed", "On Hold"], description: "Filter by status (optional)" },
+          risk_level: { type: "string", enum: ["Low", "Medium", "High"], description: "Filter by risk level (optional)" },
+          category: { type: "string", description: "Filter by category (optional)" },
+          responsible_person: { type: "string", description: "Filter by responsible person name (optional)" },
+          min_completion_pct: { type: "number", description: "Minimum implementation completion % (optional)" },
+          max_completion_pct: { type: "number", description: "Maximum implementation completion % (optional)" },
+          has_overdue_actions: { type: "boolean", description: "Only banks with overdue action items (optional)" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "compare_banks",
+      description: "Compare two banks side by side — status, risk, implementation progress, meetings, open actions. Use when the user asks to compare two specific banks.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query_1: { type: "string", description: "First bank name in Arabic or English" },
+          bank_query_2: { type: "string", description: "Second bank name in Arabic or English" },
+        },
+        required: ["bank_query_1", "bank_query_2"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_action_item",
+      description: "Permanently delete an action item from a bank. Use only when the user explicitly asks to delete (not just close) a task.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          item_index: { type: "number", description: "Which action item to delete — 1 for most recent, 2 for second, etc." },
+        },
+        required: ["bank_query", "item_index"],
       },
     },
   },
@@ -838,6 +944,143 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
       risk: { description: args.description, level: args.level, status: args.status ?? "open" },
       message: `تم تسجيل الخطر بنجاح لـ ${match.name_ar || match.name_en}`,
     };
+  }
+
+  // ── get_bank_contacts ──────────────────────────────────────────────────────
+  if (name === "get_bank_contacts") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    const contacts = (match as any).contacts ?? [];
+    if (contacts.length === 0) return { bank_name: match.name_ar || match.name_en, contacts: [], message: "لا توجد جهات اتصال مسجّلة لهذا البنك." };
+    return {
+      bank_name: match.name_ar || match.name_en,
+      responsible_person: match.responsible_person,
+      relationship_manager: match.relationship_manager,
+      contacts,
+    };
+  }
+
+  // ── manage_contact ─────────────────────────────────────────────────────────
+  if (name === "manage_contact") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    const bankRow = await db.select().from(banksTable).where(eq(banksTable.id, match.id)).then(r => r[0]);
+    const contacts: Array<{ name: string; title?: string | null; phone?: string | null; email?: string | null }> =
+      (bankRow?.contacts as any[]) ?? [];
+
+    if (args.action === "add") {
+      const exists = contacts.some(c => normalizeAr(c.name).includes(normalizeAr(args.name as string)));
+      if (exists) return { error: `جهة الاتصال "${args.name}" موجودة بالفعل.` };
+      const newContact = { name: args.name as string, title: args.title ?? null, phone: args.phone ?? null, email: args.email ?? null };
+      const updated = [...contacts, newContact];
+      await db.update(banksTable).set({ contacts: updated as any }).where(eq(banksTable.id, match.id));
+      return { success: true, bank_name: match.name_ar || match.name_en, action: "added", contact: newContact, total_contacts: updated.length };
+    }
+
+    if (args.action === "remove") {
+      const idx = contacts.findIndex(c => normalizeAr(c.name).includes(normalizeAr(args.name as string)));
+      if (idx === -1) return { error: `لم أجد جهة اتصال باسم "${args.name}".` };
+      const removed = contacts[idx];
+      const updated = contacts.filter((_, i) => i !== idx);
+      await db.update(banksTable).set({ contacts: updated as any }).where(eq(banksTable.id, match.id));
+      return { success: true, bank_name: match.name_ar || match.name_en, action: "removed", removed_contact: removed, total_contacts: updated.length };
+    }
+
+    return { error: "الإجراء يجب أن يكون add أو remove." };
+  }
+
+  // ── update_implementation_stage ────────────────────────────────────────────
+  if (name === "update_implementation_stage") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    const stages = (match as any).implementation_stages as Array<{ id: number; name: string; status: string; completed: boolean; skipped: boolean; order: number }> ?? [];
+    const q = (args.stage_name as string ?? "").toLowerCase();
+    const target = stages.find(s => s.name.toLowerCase().includes(q));
+    if (!target) {
+      return { error: `لم أجد مرحلة باسم "${args.stage_name}" لـ ${match.name_ar || match.name_en}. المراحل المتاحة: ${stages.map(s => s.name).join("، ")}` };
+    }
+    const newStatus = args.status as string;
+    const isCompleted = args.completed !== undefined ? (args.completed as boolean) : newStatus === "completed";
+    const update: Record<string, any> = {
+      status: newStatus,
+      completed: isCompleted,
+      completedAt: isCompleted ? new Date().toISOString().split("T")[0] : null,
+      updatedAt: new Date(),
+    };
+    if (args.notes !== undefined) update.notes = args.notes;
+    await db.update(implementationStagesTable).set(update).where(eq(implementationStagesTable.id, target.id));
+    return {
+      success: true,
+      bank_name: match.name_ar || match.name_en,
+      stage: target.name,
+      new_status: newStatus,
+      completed: isCompleted,
+    };
+  }
+
+  // ── search_banks ───────────────────────────────────────────────────────────
+  if (name === "search_banks") {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let results = [...allBanks];
+    if (args.status)           results = results.filter(b => b.status === args.status);
+    if (args.risk_level)       results = results.filter(b => b.risk_level === args.risk_level);
+    if (args.category)         results = results.filter(b => (b.category ?? "").toLowerCase().includes((args.category as string).toLowerCase()));
+    if (args.responsible_person) results = results.filter(b => (b.responsible_person ?? "").toLowerCase().includes((args.responsible_person as string).toLowerCase()));
+    if (args.min_completion_pct !== undefined) results = results.filter(b => b.implementation.completion_pct >= (args.min_completion_pct as number));
+    if (args.max_completion_pct !== undefined) results = results.filter(b => b.implementation.completion_pct <= (args.max_completion_pct as number));
+    if (args.has_overdue_actions) {
+      results = results.filter(b => (b as any).open_actions.some((a: any) => {
+        if (!a.due_date) return false;
+        return new Date(a.due_date) < today;
+      }));
+    }
+    return {
+      count: results.length,
+      banks: results.map(b => ({
+        name: b.name_ar || b.name_en,
+        id: b.id,
+        status: b.status,
+        risk_level: b.risk_level,
+        completion_pct: b.implementation.completion_pct,
+        responsible_person: b.responsible_person,
+        open_actions_count: (b as any).open_actions.length,
+      })),
+    };
+  }
+
+  // ── compare_banks ──────────────────────────────────────────────────────────
+  if (name === "compare_banks") {
+    const b1 = findBank(args.bank_query_1 as string ?? "", allBanks);
+    const b2 = findBank(args.bank_query_2 as string ?? "", allBanks);
+    if (!b1) return { error: `لم أجد البنك الأول "${args.bank_query_1}".` };
+    if (!b2) return { error: `لم أجد البنك الثاني "${args.bank_query_2}".` };
+    const summarize = (b: typeof b1) => ({
+      name: b!.name_ar || b!.name_en,
+      status: b!.status,
+      risk_level: b!.risk_level,
+      completion_pct: b!.implementation.completion_pct,
+      completed_stages: b!.implementation.completed_stages,
+      total_stages: b!.implementation.total_stages,
+      current_stage: b!.implementation.current_stage,
+      open_risks: b!.risks.filter(r => r.status !== "resolved").length,
+      open_actions: (b as any).open_actions.length,
+      responsible_person: b!.responsible_person,
+      next_meeting: b!.next_meeting_date ?? "غير محدد",
+    });
+    return { bank_1: summarize(b1), bank_2: summarize(b2) };
+  }
+
+  // ── delete_action_item ─────────────────────────────────────────────────────
+  if (name === "delete_action_item") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    const idx = Math.max(1, (args.item_index as number) ?? 1);
+    const items = await db.select().from(actionItemsTable).where(eq(actionItemsTable.bankId, match.id));
+    items.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+    const target = items[idx - 1];
+    if (!target) return { error: `لم أجد بند إجراء رقم ${idx} لـ ${match.name_ar || match.name_en}.` };
+    await db.delete(actionItemsTable).where(eq(actionItemsTable.id, target.id));
+    return { success: true, bank_name: match.name_ar || match.name_en, deleted_item: { description: target.description, status: target.status } };
   }
 
   // ── update_risk ────────────────────────────────────────────────────────────

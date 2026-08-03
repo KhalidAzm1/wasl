@@ -100,33 +100,100 @@ function renderInline(text: string): React.ReactNode[] {
     i % 2 === 1 ? <strong key={i} className="font-semibold text-white">{p}</strong> : p
   );
 }
+type MdBlock =
+  | { type: 'table'; rows: string[][] }
+  | { type: 'lines'; lines: string[] };
+
+function parseBlocks(text: string): MdBlock[] {
+  const lines = text.split('\n');
+  const blocks: MdBlock[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+    if (trimmed.startsWith('|') && trimmed.includes('|', 1)) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // skip separator rows (|---|---|)
+      const rows = tableLines
+        .filter(l => !/^\|\s*[-:]+[\s|:-]*$/.test(l.trim()))
+        .map(l =>
+          l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())
+        );
+      if (rows.length > 0) blocks.push({ type: 'table', rows });
+    } else {
+      const last = blocks[blocks.length - 1];
+      if (last?.type === 'lines') { last.lines.push(lines[i]); }
+      else { blocks.push({ type: 'lines', lines: [lines[i]] }); }
+      i++;
+    }
+  }
+  return blocks;
+}
+
+function renderLine(line: string, key: string | number): React.ReactNode {
+  if (/^##\s/.test(line)) return (
+    <p key={key} className="font-bold text-[13px] text-blue-300 mt-3 mb-1 first:mt-0 tracking-wide">{renderInline(line.replace(/^##\s/, ''))}</p>
+  );
+  if (/^#\s/.test(line)) return (
+    <p key={key} className="font-extrabold text-base text-white mt-2 mb-1">{renderInline(line.replace(/^#\s/, ''))}</p>
+  );
+  if (/^[•\-\*]\s/.test(line.trim())) return (
+    <div key={key} className="flex gap-2 items-start py-[1px]">
+      <span className="text-blue-400 mt-[4px] shrink-0 text-[10px]">◆</span>
+      <span className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line.trim().replace(/^[•\-\*]\s/, ''))}</span>
+    </div>
+  );
+  if (/^\d+\.\s/.test(line.trim())) {
+    const num = line.trim().match(/^(\d+)\./)?.[1];
+    return (
+      <div key={key} className="flex gap-2 items-start py-[1px]">
+        <span className="text-amber-400 shrink-0 font-bold text-xs mt-[3px] w-4">{num}.</span>
+        <span className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line.trim().replace(/^\d+\.\s/, ''))}</span>
+      </div>
+    );
+  }
+  if (line.trim() === '') return <div key={key} className="h-[4px]" />;
+  return <p key={key} className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line)}</p>;
+}
+
 function renderMarkdown(text: string): React.ReactNode {
+  const blocks = parseBlocks(text);
   return (
     <div className="space-y-[2px]">
-      {text.split('\n').map((line, i) => {
-        if (/^##\s/.test(line)) return (
-          <p key={i} className="font-bold text-[13px] text-blue-300 mt-3 mb-1 first:mt-0 tracking-wide uppercase">{renderInline(line.replace(/^##\s/, ''))}</p>
-        );
-        if (/^#\s/.test(line))  return (
-          <p key={i} className="font-extrabold text-base text-white mt-2 mb-1">{renderInline(line.replace(/^#\s/, ''))}</p>
-        );
-        if (/^[•\-\*]\s/.test(line.trim())) return (
-          <div key={i} className="flex gap-2 items-start py-[1px]">
-            <span className="text-blue-400 mt-[4px] shrink-0 text-[10px]">◆</span>
-            <span className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line.trim().replace(/^[•\-\*]\s/, ''))}</span>
-          </div>
-        );
-        if (/^\d+\.\s/.test(line.trim())) {
-          const num = line.trim().match(/^(\d+)\./)?.[1];
+      {blocks.map((block, bi) => {
+        if (block.type === 'table') {
+          const [header, ...body] = block.rows;
           return (
-            <div key={i} className="flex gap-2 items-start py-[1px]">
-              <span className="text-amber-400 shrink-0 font-bold text-xs mt-[3px] w-4">{num}.</span>
-              <span className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line.trim().replace(/^\d+\.\s/, ''))}</span>
+            <div key={bi} className="overflow-x-auto my-2 rounded-xl border border-white/[0.12]">
+              <table className="w-full text-[12px]" dir="rtl">
+                <thead>
+                  <tr style={{ background: 'rgba(99,102,241,0.18)' }}>
+                    {header.map((cell, ci) => (
+                      <th key={ci} className="px-3 py-2 text-right font-bold text-white/90 border-b border-white/10 whitespace-nowrap">
+                        {renderInline(cell)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {body.map((row, ri) => (
+                    <tr key={ri} style={{ background: ri % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)' }}>
+                      {row.map((cell, ci) => (
+                        <td key={ci} className="px-3 py-2 text-right text-white/80 border-b border-white/[0.06]">
+                          {renderInline(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           );
         }
-        if (line.trim() === '') return <div key={i} className="h-[4px]" />;
-        return <p key={i} className="leading-relaxed text-[13.5px] text-white/85">{renderInline(line)}</p>;
+        return block.lines.map((line, li) => renderLine(line, `${bi}-${li}`));
       })}
     </div>
   );

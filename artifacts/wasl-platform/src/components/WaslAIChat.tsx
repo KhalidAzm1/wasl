@@ -303,8 +303,12 @@ export function WaslAIChat() {
     try {
       const data = await authedPost('/api/ai/chat', { messages: history });
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply ?? data.error ?? 'حدث خطأ.' }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'تعذّر الاتصال بالخادم، يرجى المحاولة مجدداً.' }]);
+    } catch (err: any) {
+      // err.message contains the Arabic error text returned by the API (via authedPost)
+      const msg = err?.message && !err.message.startsWith('HTTP ')
+        ? err.message
+        : 'تعذّر الاتصال بالخادم، يرجى المحاولة مجدداً.';
+      setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
     } finally { setLoading(false); }
   }
 

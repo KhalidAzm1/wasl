@@ -741,6 +741,69 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
   return { error: `Unknown function: ${name}` };
 }
 
+// ── collectMutations — exported for unit tests ────────────────────────────────
+export type AnyOAIMessage = {
+  role: string;
+  content?: unknown;
+  tool_calls?: Array<{ id: string; function: { name: string } }>;
+  tool_call_id?: string;
+};
+
+export type MutationResult = {
+  banks: boolean;
+  meetings: boolean;
+  risks: boolean;
+  mutatedBankIds: string[];
+};
+
+const BANK_WRITE_FNS_SET    = new Set(["update_bank", "create_bank"]);
+const MEETING_WRITE_FNS_SET = new Set(["add_meeting", "update_meeting"]);
+const RISK_WRITE_FNS_SET    = new Set(["add_risk"]);
+
+/**
+ * Walk the accumulated OpenAI messages and flag which data domains were mutated.
+ * Pure function — no I/O — exported so it can be unit-tested in isolation.
+ */
+export function collectMutations(openaiMessages: AnyOAIMessage[]): MutationResult {
+  const mutations: MutationResult = {
+    banks: false,
+    meetings: false,
+    risks: false,
+    mutatedBankIds: [],
+  };
+
+  for (const msg of openaiMessages) {
+    if (msg.role !== "tool") continue;
+    const content = typeof msg.content === "string" ? msg.content : "";
+    let parsed: Record<string, unknown> = {};
+    try { parsed = JSON.parse(content); } catch { /* skip */ }
+    if (parsed.success !== true) continue;
+
+    // Find the tool_call_id → function name by scanning assistant messages
+    const toolCallId = msg.tool_call_id;
+    for (const m of openaiMessages) {
+      if (m.role !== "assistant") continue;
+      const toolCalls = m.tool_calls;
+      if (!toolCalls) continue;
+      const tc = toolCalls.find((t) => t.id === toolCallId);
+      if (!tc) continue;
+      const fn = tc.function.name;
+      if (BANK_WRITE_FNS_SET.has(fn)) {
+        mutations.banks = true;
+        const bankId = parsed.bank_id as string | undefined;
+        if (bankId && !mutations.mutatedBankIds.includes(bankId)) {
+          mutations.mutatedBankIds.push(bankId);
+        }
+      }
+      if (MEETING_WRITE_FNS_SET.has(fn)) mutations.meetings = true;
+      if (RISK_WRITE_FNS_SET.has(fn))    mutations.risks    = true;
+      break;
+    }
+  }
+
+  return mutations;
+}
+
 // ── Chat endpoint ─────────────────────────────────────────────────────────────
 interface ChatMessage {
   role: "user" | "assistant";
@@ -850,47 +913,7 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
     }
 
     // ── Collect which data domains were mutated ────────────────────────────────
-    // Walk every tool result we accumulated and flag domains where success=true.
-    const mutations: { banks: boolean; meetings: boolean; risks: boolean; mutatedBankIds: string[] } = {
-      banks: false,
-      meetings: false,
-      risks: false,
-      mutatedBankIds: [],
-    };
-    const BANK_WRITE_FNS    = new Set(["update_bank", "create_bank"]);
-    const MEETING_WRITE_FNS = new Set(["add_meeting", "update_meeting"]);
-    const RISK_WRITE_FNS    = new Set(["add_risk"]);
-
-    for (const msg of openaiMessages) {
-      if (msg.role !== "tool") continue;
-      const content = typeof msg.content === "string" ? msg.content : "";
-      let parsed: Record<string, unknown> = {};
-      try { parsed = JSON.parse(content); } catch { /* skip */ }
-      if (parsed.success !== true) continue;
-
-      // Find the tool_call_id → function name by scanning assistant messages
-      const toolCallId = (msg as any).tool_call_id as string | undefined;
-      for (const m of openaiMessages) {
-        if (m.role !== "assistant") continue;
-        const toolCalls = (m as any).tool_calls as Array<{ id: string; function: { name: string } }> | undefined;
-        if (!toolCalls) continue;
-        const tc = toolCalls.find((t) => t.id === toolCallId);
-        if (!tc) continue;
-        const fn = tc.function.name;
-        if (BANK_WRITE_FNS.has(fn)) {
-          mutations.banks = true;
-          // Capture the bank_id returned by the write function so the client
-          // can invalidate the individual bank detail query for that bank.
-          const bankId = parsed.bank_id as string | undefined;
-          if (bankId && !mutations.mutatedBankIds.includes(bankId)) {
-            mutations.mutatedBankIds.push(bankId);
-          }
-        }
-        if (MEETING_WRITE_FNS.has(fn)) mutations.meetings = true;
-        if (RISK_WRITE_FNS.has(fn))    mutations.risks    = true;
-        break;
-      }
-    }
+    const mutations = collectMutations(openaiMessages as AnyOAIMessage[]);
 
     const content = choice.message?.content ?? "";
     res.json({ reply: content, mutations });

@@ -5,13 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
-import {
-  getListBanksQueryKey,
-  getGetDashboardSummaryQueryKey,
-  getListMeetingsQueryKey,
-  getListRisksQueryKey,
-  getGetBankQueryKey,
-} from '@workspace/api-client-react';
+import { applyMutationInvalidations } from '@/lib/mutation-invalidations';
 
 async function authedPost(path: string, body: unknown) {
   const { data } = await supabase.auth.getSession();
@@ -305,23 +299,8 @@ export function WaslAIChat() {
 
       // ── Invalidate stale queries after any write action ──────────────────────
       const mut = data.mutations as { banks?: boolean; meetings?: boolean; risks?: boolean; mutatedBankIds?: string[] } | undefined;
-      if (mut?.banks) {
-        await queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
-        await queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-        // Invalidate the individual bank detail page so a user with that bank
-        // open sees the updated data without a manual refresh.
-        for (const bankId of mut.mutatedBankIds ?? []) {
-          await queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
-        }
-      }
-      if (mut?.meetings) {
-        await queryClient.invalidateQueries({ queryKey: getListMeetingsQueryKey() });
-        // meetings also affect bank last-activity views
-        await queryClient.invalidateQueries({ queryKey: getListBanksQueryKey() });
-        await queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-      }
-      if (mut?.risks) {
-        await queryClient.invalidateQueries({ queryKey: getListRisksQueryKey() });
+      if (mut) {
+        await applyMutationInvalidations(queryClient, mut);
       }
       if (mut?.banks || mut?.meetings || mut?.risks) {
         toast({

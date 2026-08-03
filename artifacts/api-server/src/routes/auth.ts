@@ -3,12 +3,10 @@
  * Mounted BEFORE secured routers in routes/index.ts.
  *
  * POST /api/auth/forgot-password
- *   – Generates a Supabase recovery link (Supabase does NOT send email)
- *   – Sends a branded Arabic email via Resend immediately
+ *   – Uses Supabase's built-in password-reset email (no custom domain needed)
  *   – Always returns { ok: true } to prevent email enumeration
  */
 import { Router, type IRouter } from "express";
-import { ReplitConnectors } from "@replit/connectors-sdk";
 import { getSupabaseAdmin } from "@workspace/supabase";
 
 const router: IRouter = Router();
@@ -31,35 +29,6 @@ function isRateLimited(email: string): boolean {
   return false;
 }
 
-// ── Resend email sender ───────────────────────────────────────────────────────
-async function sendResetEmail(to: string, resetLink: string): Promise<void> {
-  const apiKey    = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
-
-  if (!apiKey) throw new Error("RESEND_API_KEY is not configured");
-
-  const payload = {
-    from:    `منصة وصل <${fromEmail}>`,
-    to:      [to],
-    subject: "إعادة تعيين كلمة المرور — منصة وصل",
-    html:    buildEmailHtml(to, resetLink),
-  };
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method:  "POST",
-    headers: {
-      "Content-Type":  "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const responseText = await response.text().catch(() => "");
-  if (!response.ok) {
-    throw new Error(`Resend error ${response.status}: ${responseText}`);
-  }
-}
-
 // ── Route ─────────────────────────────────────────────────────────────────────
 router.post("/auth/forgot-password", async (req, res): Promise<void> => {
   try {
@@ -71,50 +40,23 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
       return;
     }
 
-    // Rate-limit silently — still return ok so attackers learn nothing
     if (isRateLimited(email)) {
       res.json({ ok: true });
       return;
     }
 
-    // Determine the redirect URL for the reset page
     const origin     = (req.headers.origin as string | undefined)
                     ?? process.env.FRONTEND_URL
                     ?? "https://wasl.app";
     const redirectTo = `${origin}/reset-password`;
 
     const supabase = getSupabaseAdmin();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
-    // ── Plan A: generate link via Admin + send via Resend (custom template) ──
-    let sentViaResend = false;
-    try {
-      const { data, error } = await supabase.auth.admin.generateLink({
-        type:    "recovery",
-        email,
-        options: { redirectTo },
-      });
-
-      if (!error && data?.properties?.action_link) {
-        await sendResetEmail(email, data.properties.action_link);
-        req.log?.info({ email }, "[auth] forgot-password: sent via Resend ✓");
-        sentViaResend = true;
-      } else {
-        req.log?.warn({ email, err: error?.message }, "[auth] forgot-password: generateLink failed — falling back to Supabase email");
-      }
-    } catch (resendErr: any) {
-      req.log?.warn({ email, err: resendErr?.message }, "[auth] forgot-password: Resend send failed — falling back to Supabase email");
-    }
-
-    // ── Plan B: let Supabase send its own email if Plan A failed ──
-    if (!sentViaResend) {
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      });
-      if (resetErr) {
-        req.log?.warn({ email, err: resetErr.message }, "[auth] forgot-password: Supabase fallback also failed");
-      } else {
-        req.log?.info({ email }, "[auth] forgot-password: sent via Supabase fallback ✓");
-      }
+    if (error) {
+      req.log?.warn({ email, err: error.message }, "[auth] forgot-password: failed");
+    } else {
+      req.log?.info({ email }, "[auth] forgot-password: sent ✓");
     }
 
     res.json({ ok: true });

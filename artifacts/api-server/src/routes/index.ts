@@ -20,12 +20,14 @@ import aiChatRouter from "./ai-chat";
 import productStagesRouter from "./product-stages";
 import quickUpdateRouter from "./quick-update";
 import eventsRouter from "./events";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
 // ── Public routes (no auth) — must come BEFORE any secured router
 // because secured routers use router.use(requireAuth) which intercepts
 // every unauthenticated request regardless of path.
+router.use(authRouter);       // forgot-password (Resend)
 router.use(eventsRouter);
 router.use(quickUpdateRouter);
 

@@ -1242,6 +1242,77 @@ export function collectMutations(openaiMessages: AnyOAIMessage[]): MutationResul
   return mutations;
 }
 
+// ── Token budget helpers ──────────────────────────────────────────────────────
+// Rough estimate: 1 token ≈ 4 chars (good enough for budget checks)
+function estimateTokens(text: string) { return Math.ceil(text.length / 4); }
+
+// Trim bank summaries progressively until they fit within a char budget.
+// Budget = (model_limit - system_prompt - history - output_reserve) × 4
+// gpt-4o-mini context: 128K tokens. OpenRouter free tier: ~25K.
+// We target 18K tokens for the context block = 72,000 chars.
+function trimBankContext(
+  banks: Awaited<ReturnType<typeof buildBankContext>>,
+  budgetChars = 72_000,
+): [trimmed: typeof banks, pass: number] {
+  const raw = JSON.stringify(banks, null, 0);
+  if (raw.length <= budgetChars) return [banks, 0];
+
+  // Pass 1 – drop open_actions details, keep count only
+  const p1 = banks.map((b) => ({
+    ...b,
+    open_actions: (b as any).open_actions?.length ?? 0,
+  }));
+  const r1 = JSON.stringify(p1, null, 0);
+  if (r1.length <= budgetChars) return [p1 as any, 1];
+
+  // Pass 2 – also drop recent_meetings details
+  const p2 = p1.map((b) => ({
+    ...b,
+    recent_meetings: (b as any).recent_meetings?.length ?? 0,
+  }));
+  const r2 = JSON.stringify(p2, null, 0);
+  if (r2.length <= budgetChars) return [p2 as any, 2];
+
+  // Pass 3 – drop risks details, keep count + high-risk count
+  const p3 = p2.map((b) => ({
+    ...b,
+    risks: {
+      total: (b as any).risks?.length ?? 0,
+      high: (b as any).risks?.filter((r: any) => r.level === "High").length ?? 0,
+    },
+    contacts: undefined,
+  }));
+  const r3 = JSON.stringify(p3, null, 0);
+  if (r3.length <= budgetChars) return [p3 as any, 3];
+
+  // Pass 4 – ultra-minimal: one-line summary per bank
+  const p4 = banks.map((b) => ({
+    id: b.id, name: b.name_ar || b.name_en,
+    status: b.status, risk_level: b.risk_level,
+    completion_pct: b.implementation.completion_pct,
+    responsible: b.responsible_person,
+  }));
+  return [p4 as any, 4];
+}
+
+// ── Arabic error messages for known failure modes ─────────────────────────────
+function toArabicError(err: any): string {
+  const msg: string = err?.message ?? String(err);
+  const status: number | undefined = err?.status ?? err?.response?.status;
+
+  if (status === 402 || msg.includes("Prompt tokens limit") || msg.includes("tokens limit"))
+    return "عذراً، حجم البيانات أكبر من الحد المسموح حالياً. جرّب سؤالاً أضيق نطاقاً (مثل بنك واحد بدل كل البنوك).";
+  if (status === 429 || msg.includes("rate limit") || msg.includes("Too Many Requests"))
+    return "وصلاوي مشغولة الآن — يرجى الانتظار لحظة والمحاولة مجدداً.";
+  if (status === 401 || msg.includes("Incorrect API key") || msg.includes("No auth"))
+    return "مشكلة في إعداد مفتاح الذكاء الاصطناعي — يرجى إبلاغ فريق التقنية.";
+  if (status === 503 || msg.includes("overloaded") || msg.includes("unavailable"))
+    return "خدمة الذكاء الاصطناعي مثقلة الآن — حاول مجدداً بعد ثوانٍ.";
+  if (status === 400 && msg.includes("context"))
+    return "الرسالة أكبر من الحد المدعوم. جرّب محادثة جديدة أو اسأل عن نطاق أضيق.";
+  return "تعذّر معالجة الطلب. إذا تكرّر الخطأ يرجى إبلاغ الدعم التقني.";
+}
+
 // ── Chat endpoint ─────────────────────────────────────────────────────────────
 interface ChatMessage {
   role: "user" | "assistant";
@@ -1258,9 +1329,14 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
     const openai = getOpenAI();
 
-    // Build live context once per request
-    const bankContext = await buildBankContext();
-    const contextBlock = `\n\n<live_bank_data total="${bankContext.length}" as_of="${new Date().toISOString()}">\n${JSON.stringify(bankContext, null, 0)}\n</live_bank_data>`;
+    // Build live context once per request, then trim if needed
+    const rawContext = await buildBankContext();
+    const [bankContext, trimPass] = trimBankContext(rawContext);
+    if (trimPass > 0) {
+      req.log?.warn({ trimPass, banks: bankContext.length }, "[ai-chat] context trimmed to fit token budget");
+    }
+
+    const contextBlock = `\n\n<live_bank_data total="${bankContext.length}" as_of="${new Date().toISOString()}"${trimPass > 0 ? ` detail_level="${4 - trimPass}"` : ""}>\n${JSON.stringify(bankContext, null, 0)}\n</live_bank_data>`;
 
     const systemWithContext = SYSTEM_PROMPT + contextBlock;
 
@@ -1356,8 +1432,10 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
     const content = choice.message?.content ?? "";
     res.json({ reply: content, mutations });
   } catch (err: any) {
-    console.error("[ai-chat] error:", err?.message ?? err);
-    res.status(500).json({ error: "AI service error. Please try again." });
+    req.log?.error({ err: err?.message ?? String(err) }, "[ai-chat] error");
+    const arabicMsg = toArabicError(err);
+    const status = (err?.status === 400 || err?.status === 402 || err?.status === 429) ? err.status : 500;
+    res.status(status).json({ error: arabicMsg });
   }
 });
 

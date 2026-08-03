@@ -20,10 +20,12 @@ import {
   meetingsTable,
   actionItemsTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router: IRouter = Router();
 router.use(requireAuth);
+// Noor AI agent — super_admin only
+router.use(requireRole("super_admin"));
 
 // ── OpenAI-compatible client ───────────────────────────────────────────────────
 // Supports both OpenAI (sk-...) and OpenRouter (sk-or-v1-...) keys transparently.
@@ -71,11 +73,20 @@ const SYSTEM_PROMPT = `أنت "نور" — مساعدة ذكاء اصطناعي 
     تحت "## 💡 توصيات" اكتبي 5 توصيات مرقمة وقابلة للتنفيذ.
     أختمي التقرير بهذا السطر تحديداً: **تاريخ إنشاء التقرير:** YYYY-MM-DD
 
+الإجراءات الكاملة التي تستطيعين تنفيذها الآن:
+• قراءة: حالة أي بنك، ملخص لوحة التحكم، اجتماعات، مخاطر، بنود إجراءات
+• تحديث البنوك: الحالة، مستوى الخطر، المسؤول، الاجتماع القادم، الملخص التنفيذي
+• إنشاء بنك جديد / أرشفته / استعادته
+• إدارة الاجتماعات: إضافة، تعديل، حذف
+• إدارة المخاطر: إضافة، تحديث الحالة (open/mitigated/resolved)
+• إدارة بنود الإجراءات: إضافة، تحديث، إغلاق
+
 قواعد حرجة للإجراءات:
 - استدعي الدالة الفعلية دائماً — لا تتظاهري بتنفيذ إجراء دون استدعائها.
 - بعد استدعاء الدالة: إذا كانت النتيجة تحتوي "error"، أبلغي المستخدم بالخطأ. لا تقولي "تم" إذا فشلت العملية.
 - إذا كانت النتيجة { success: true }، أكّدي العملية مع ذكر الحقول التي تغيّرت.
 - إذا لم تتعرّفي على البنك المقصود، اطلبي توضيحاً — لا تخمّني.
+- لإجراءات الأرشفة والحذف: اطلبي تأكيداً من المستخدم قبل التنفيذ إذا لم يكن الطلب صريحاً.
 
 لديكِ وصول لبيانات حية لكل البنوك في النظام. البيانات تُحقَن في كل طلب.`;
 
@@ -333,18 +344,109 @@ const AGENT_FUNCTIONS: OpenAI.Chat.ChatCompletionTool[] = [
         properties: {
           bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
           description: { type: "string", description: "Risk description" },
-          level: {
-            type: "string",
-            enum: ["Low", "Medium", "High"],
-            description: "Risk level",
-          },
-          status: {
-            type: "string",
-            enum: ["open", "mitigated", "resolved"],
-            description: "Risk status, default is 'open'",
-          },
+          level: { type: "string", enum: ["Low", "Medium", "High"], description: "Risk level" },
+          status: { type: "string", enum: ["open", "mitigated", "resolved"], description: "Risk status, default is 'open'" },
         },
         required: ["bank_query", "description", "level"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_risk",
+      description: "Update the status or level of an existing risk for a bank. Use when the user wants to resolve, mitigate, or change a risk.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          risk_index: { type: "number", description: "Which risk to update — 1 for most recent, 2 for second, etc." },
+          status: { type: "string", enum: ["open", "mitigated", "resolved"], description: "New status" },
+          level: { type: "string", enum: ["Low", "Medium", "High"], description: "New level (optional)" },
+          description: { type: "string", description: "Updated description (optional)" },
+        },
+        required: ["bank_query", "risk_index", "status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "archive_bank",
+      description: "Archive (soft-delete) a bank. Use only when the user explicitly asks to archive or remove a bank from active tracking. This is reversible.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          reason: { type: "string", description: "Reason for archiving (optional)" },
+        },
+        required: ["bank_query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "restore_bank",
+      description: "Restore a previously archived bank back to active status.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+        },
+        required: ["bank_query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_meeting",
+      description: "Cancel or delete a meeting for a bank. Use when the user asks to cancel, remove, or delete a meeting.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          meeting_index: { type: "number", description: "Which meeting — 1 for most recent, 2 for second, etc." },
+        },
+        required: ["bank_query", "meeting_index"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_action_item",
+      description: "Add a new action item (task) for a bank. Use when the user wants to log a follow-up task or responsibility.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          description: { type: "string", description: "What needs to be done" },
+          owner: { type: "string", description: "Person responsible (optional)" },
+          due_date: { type: "string", description: "Due date YYYY-MM-DD (optional)" },
+          status: { type: "string", enum: ["open", "in_progress", "done"], description: "Status, default is 'open'" },
+        },
+        required: ["bank_query", "description"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_action_item",
+      description: "Update or close an existing action item for a bank.",
+      parameters: {
+        type: "object",
+        properties: {
+          bank_query: { type: "string", description: "Bank name in Arabic or English, or bank ID" },
+          item_index: { type: "number", description: "Which action item — 1 for most recent, 2 for second, etc." },
+          status: { type: "string", enum: ["open", "in_progress", "done"], description: "New status" },
+          description: { type: "string", description: "Updated description (optional)" },
+          owner: { type: "string", description: "Updated owner (optional)" },
+          due_date: { type: "string", description: "Updated due date YYYY-MM-DD (optional)" },
+        },
+        required: ["bank_query", "item_index", "status"],
       },
     },
   },
@@ -736,6 +838,101 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
       risk: { description: args.description, level: args.level, status: args.status ?? "open" },
       message: `تم تسجيل الخطر بنجاح لـ ${match.name_ar || match.name_en}`,
     };
+  }
+
+  // ── update_risk ────────────────────────────────────────────────────────────
+  if (name === "update_risk") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    const idx = Math.max(1, (args.risk_index as number) ?? 1);
+    const risks = await db.select().from(risksTable).where(eq(risksTable.bankId, match.id));
+    risks.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+    const target = risks[idx - 1];
+    if (!target) return { error: `لم أجد مخاطرة رقم ${idx} لـ ${match.name_ar || match.name_en}.` };
+    const update: Record<string, any> = {};
+    if (args.status !== undefined)      update.status      = args.status;
+    if (args.level !== undefined)       update.level       = args.level;
+    if (args.description !== undefined) update.description = args.description;
+    if (Object.keys(update).length === 0) return { error: "لم يُحدَّد أي حقل للتحديث." };
+    await db.update(risksTable).set(update).where(eq(risksTable.id, target.id));
+    return { success: true, bank_name: match.name_ar || match.name_en, risk_id: target.id, updated: update };
+  }
+
+  // ── archive_bank ───────────────────────────────────────────────────────────
+  if (name === "archive_bank") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    if (match.isArchived) return { error: `البنك "${match.name_ar || match.name_en}" مؤرشف بالفعل.` };
+    await db.update(banksTable).set({
+      isArchived: true,
+      archivedAt: new Date(),
+      archivedBy: args.reason ? `AI Agent: ${args.reason}` : "AI Agent",
+    }).where(eq(banksTable.id, match.id));
+    return { success: true, bank_id: match.id, bank_name: match.name_ar || match.name_en, message: `تم أرشفة البنك بنجاح.` };
+  }
+
+  // ── restore_bank ───────────────────────────────────────────────────────────
+  if (name === "restore_bank") {
+    // Need to find archived banks too — query DB directly
+    const allBanksRaw = await db.select().from(banksTable);
+    const q = (args.bank_query as string ?? "").toLowerCase().trim();
+    const target = allBanksRaw.find(b =>
+      b.id.toLowerCase() === q ||
+      normalizeAr(b.nameAr ?? "").includes(normalizeAr(q)) ||
+      (b.nameEn ?? "").toLowerCase().includes(q)
+    );
+    if (!target) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    if (!target.isArchived) return { error: `البنك "${target.nameAr || target.nameEn}" غير مؤرشف أصلاً.` };
+    await db.update(banksTable).set({ isArchived: false, archivedAt: null, archivedBy: null }).where(eq(banksTable.id, target.id));
+    return { success: true, bank_id: target.id, bank_name: target.nameAr || target.nameEn, message: `تم استعادة البنك بنجاح.` };
+  }
+
+  // ── delete_meeting ─────────────────────────────────────────────────────────
+  if (name === "delete_meeting") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    const idx = Math.max(1, (args.meeting_index as number) ?? 1);
+    const meetings = await db.select().from(meetingsTable)
+      .where(and(eq(meetingsTable.bankId, match.id), eq(meetingsTable.isArchived, false)));
+    meetings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const target = meetings[idx - 1];
+    if (!target) return { error: `لم أجد اجتماع رقم ${idx} لـ ${match.name_ar || match.name_en}.` };
+    await db.update(meetingsTable).set({ isArchived: true }).where(eq(meetingsTable.id, target.id));
+    return { success: true, bank_name: match.name_ar || match.name_en, deleted_meeting: { date: target.date, topic: target.topic } };
+  }
+
+  // ── add_action_item ────────────────────────────────────────────────────────
+  if (name === "add_action_item") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    if (!args.description) return { error: "وصف بند الإجراء مطلوب." };
+    await db.insert(actionItemsTable).values({
+      bankId: match.id,
+      description: args.description as string,
+      owner: (args.owner as string | undefined) ?? null,
+      dueDate: (args.due_date as string | undefined) ?? null,
+      status: (args.status as string | undefined) ?? "open",
+    });
+    return { success: true, bank_name: match.name_ar || match.name_en, action_item: { description: args.description, status: args.status ?? "open" } };
+  }
+
+  // ── update_action_item ─────────────────────────────────────────────────────
+  if (name === "update_action_item") {
+    const match = findBank(args.bank_query as string ?? "", allBanks);
+    if (!match) return { error: `لم أجد بنكاً باسم "${args.bank_query}".` };
+    const idx = Math.max(1, (args.item_index as number) ?? 1);
+    const items = await db.select().from(actionItemsTable).where(eq(actionItemsTable.bankId, match.id));
+    items.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+    const target = items[idx - 1];
+    if (!target) return { error: `لم أجد بند إجراء رقم ${idx} لـ ${match.name_ar || match.name_en}.` };
+    const update: Record<string, any> = {};
+    if (args.status !== undefined)      update.status      = args.status;
+    if (args.description !== undefined) update.description = args.description;
+    if (args.owner !== undefined)       update.owner       = args.owner;
+    if (args.due_date !== undefined)    update.dueDate     = args.due_date;
+    if (Object.keys(update).length === 0) return { error: "لم يُحدَّد أي حقل للتحديث." };
+    await db.update(actionItemsTable).set(update).where(eq(actionItemsTable.id, target.id));
+    return { success: true, bank_name: match.name_ar || match.name_en, item_id: target.id, updated: update };
   }
 
   return { error: `Unknown function: ${name}` };

@@ -412,7 +412,7 @@ export default function Dashboard() {
 
           {/* ── CENTER: Logo absolutely centered ── */}
           <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
-            <WaslLogo height={28} imgClassName="w-auto" />
+            <WaslLogo height={40} imgClassName="w-auto" />
           </div>
 
           {/* Spacer pushes right section left and left section right */}

@@ -33,8 +33,10 @@ function isRateLimited(email: string): boolean {
 
 // ── Resend email sender ───────────────────────────────────────────────────────
 async function sendResetEmail(to: string, resetLink: string): Promise<void> {
-  const connectors = new ReplitConnectors();
-  const fromEmail  = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const apiKey    = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+
+  if (!apiKey) throw new Error("RESEND_API_KEY is not configured");
 
   const payload = {
     from:    `منصة وصل <${fromEmail}>`,
@@ -43,17 +45,19 @@ async function sendResetEmail(to: string, resetLink: string): Promise<void> {
     html:    buildEmailHtml(to, resetLink),
   };
 
-  const response = await connectors.proxy("resend", "/emails", {
+  const response = await fetch("https://api.resend.com/emails", {
     method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(payload),
+    headers: {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
   });
 
   const responseText = await response.text().catch(() => "");
   if (!response.ok) {
     throw new Error(`Resend error ${response.status}: ${responseText}`);
   }
-  console.log("[auth] Resend response:", response.status, responseText);
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────

@@ -3,15 +3,12 @@ import { getSupabaseAdmin } from "@workspace/supabase";
 const BUCKET = "wasl-documents";
 /** Maximum file size accepted (binary). */
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
-/** Signed-URL time-to-live in seconds (1 hour). */
-const SIGNED_URL_TTL = 3600;
+/** Signed-URL time-to-live in seconds (24 hours — logos are not sensitive). */
+const SIGNED_URL_TTL = 86_400; // 24 h
 
 // ── Signed-URL in-process cache ───────────────────────────────────────────────
-// Supabase Storage signed URLs are valid for 1 hour (SIGNED_URL_TTL).
-// Caching them for 55 minutes eliminates repeated Supabase API calls when
-// the same logo/hero image is loaded on the bank list, bank detail, and
-// dashboard in the same session.
-const SIGNED_URL_CACHE_TTL_MS = 55 * 60 * 1000; // 55 min
+// Cache for 23 hours so the URL is regenerated 1 h before it expires.
+const SIGNED_URL_CACHE_TTL_MS = 23 * 60 * 60 * 1000; // 23 h
 interface CachedUrl { url: string; expiresAt: number }
 const signedUrlCache = new Map<string, CachedUrl>();
 
@@ -80,16 +77,25 @@ export async function getSignedUrl(storagePath: string): Promise<string> {
   if (cached && cached.expiresAt > Date.now()) return cached.url;
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_TTL);
-  if (error || !data?.signedUrl) {
-    throw new Error(
-      `Failed to sign storage URL: ${error?.message ?? "no URL returned"}`,
-    );
+
+  // Retry up to 3 times with exponential backoff — needed when 28+ banks
+  // all request signed URLs in parallel and hit Supabase rate limits.
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, attempt * 300));
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(storagePath, SIGNED_URL_TTL);
+    if (!error && data?.signedUrl) {
+      signedUrlCache.set(storagePath, {
+        url: data.signedUrl,
+        expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,
+      });
+      return data.signedUrl;
+    }
+    lastError = new Error(`Failed to sign storage URL: ${error?.message ?? "no URL returned"}`);
   }
-  signedUrlCache.set(storagePath, { url: data.signedUrl, expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS });
-  return data.signedUrl;
+  throw lastError!;
 }
 
 /**

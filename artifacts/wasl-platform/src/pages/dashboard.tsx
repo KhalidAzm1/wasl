@@ -4,7 +4,7 @@ import type { Bank, BankSummaryV2 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Link } from 'wouter';
-import { Pencil, Save, Search, SlidersHorizontal, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, ChevronDown, Check, BarChart3, Bookmark, Sun, Moon, Settings, Building2 } from 'lucide-react';
+import { Pencil, Save, Search, LayoutGrid, List, Columns3, User, Clock, AlertTriangle, FileText, BarChart3, Bookmark, Sun, Moon, Settings, Building2, ChevronDown, Check } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { BankLogo } from '@/components/BankLogo';
 import { Button } from '@/components/ui/button';
@@ -32,181 +32,6 @@ const itemVariants: Variants = {
 };
 
 
-function CategoryFilter({ categories, value, onChange }: { categories: string[], value: string, onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative shrink-0">
-      <button 
-        onClick={() => setOpen(!open)} 
-        className={cn(
-          "flex items-center gap-2 h-9 sm:h-[48px] px-3 sm:px-5 rounded-full border text-[13px] sm:text-[15px] transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 glass-panel",
-          open 
-            ? "bg-white/80 dark:bg-primary/10 border-primary/40 shadow-[0_0_15px_-3px_rgba(47,107,255,0.3)] dark:shadow-[0_0_15px_-3px_rgba(79,50,214,0.3)]" 
-            : "hover:bg-white/60 dark:hover:bg-foreground/10 hover:border-primary/30"
-        )}
-      >
-        <span className="max-w-[120px] truncate font-medium">{value === 'All' ? 'All Categories' : value}</span>
-        <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
-      </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-2 w-[260px] z-50 bg-background/95 backdrop-blur-3xl border border-foreground/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-             <Command className="w-full bg-transparent flex flex-col">
-               <div className="flex items-center border-b border-foreground/10 px-3" cmdk-input-wrapper="">
-                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-foreground/50" />
-                 <Command.Input 
-                   placeholder="Search category..." 
-                   className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-foreground/40 disabled:cursor-not-allowed disabled:opacity-50 text-foreground" 
-                 />
-               </div>
-               <Command.List className="max-h-[240px] overflow-y-auto p-1 hide-scrollbar">
-                 <Command.Empty className="py-4 text-center text-xs text-foreground/40">No categories found.</Command.Empty>
-                 {categories.map(cat => (
-                   <Command.Item 
-                     key={cat} 
-                     value={cat} 
-                     onSelect={(v) => { 
-                       const original = categories.find(c => c.toLowerCase() === v.toLowerCase()) || cat;
-                       onChange(original); 
-                       setOpen(false); 
-                     }}
-                     className={cn(
-                       "relative flex cursor-pointer select-none items-center rounded-lg px-3 py-2 text-sm outline-none aria-selected:bg-foreground/10 transition-colors",
-                       value === cat ? "bg-primary/15 text-primary font-medium" : "text-foreground/80 hover:bg-foreground/5 hover:text-foreground"
-                     )}
-                   >
-                     {cat === 'All' ? 'All Categories' : cat}
-                     {value === cat && <Check className="ml-auto h-4 w-4" />}
-                   </Command.Item>
-                 ))}
-               </Command.List>
-             </Command>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function AdvancedFiltersPanel({ 
-  open, 
-  onOpenChange, 
-  filterCategory, 
-  setFilterCategory, 
-  categories,
-  filterRisk,
-  setFilterRisk,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  filterCategory: string;
-  setFilterCategory: (v: string) => void;
-  categories: string[];
-  filterRisk: string;
-  setFilterRisk: (v: string) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px] bg-background/90 backdrop-blur-3xl border-foreground/10 text-foreground !rounded-3xl shadow-[0_0_50px_-12px_rgba(79,50,214,0.15)]">
-        <DialogHeader className="border-b border-foreground/5 pb-4">
-          <DialogTitle className="text-xl font-light tracking-wide flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
-              <SlidersHorizontal className="w-5 h-5 text-primary" />
-            </div>
-            Advanced Filters
-          </DialogTitle>
-        </DialogHeader>
-        <div className="py-6 flex flex-col gap-8">
-          
-          {/* Category Filter */}
-          <div className="space-y-3.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] uppercase tracking-[0.2em] text-foreground/50 font-bold">Category</label>
-              {filterCategory !== 'All' && (
-                <button onClick={() => setFilterCategory('All')} className="text-[10px] text-primary hover:text-foreground transition-colors">CLEAR</button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-               {categories.slice(0, 8).map(c => (
-                 <button
-                   key={c}
-                   onClick={() => setFilterCategory(c)}
-                   className={cn(
-                     "px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-center truncate",
-                     filterCategory === c 
-                       ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_15px_-3px_rgba(79,50,214,0.2)]" 
-                       : "bg-foreground/5 text-foreground/70 border border-foreground/5 hover:bg-foreground/10 hover:text-foreground"
-                   )}
-                 >
-                   {c === 'All' ? 'All' : c}
-                 </button>
-               ))}
-            </div>
-          </div>
-
-          {/* Risk Level Filter */}
-          <div className="space-y-3.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] uppercase tracking-[0.2em] text-foreground/50 font-bold">Risk Level</label>
-              {filterRisk !== 'All' && (
-                <button onClick={() => setFilterRisk('All')} className="text-[10px] text-primary hover:text-foreground transition-colors">CLEAR</button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-               {['All', 'Low', 'Medium', 'High'].map(r => (
-                  <button 
-                    key={r}
-                    onClick={() => setFilterRisk(r)}
-                    className={cn(
-                      "px-5 py-2.5 rounded-xl text-xs font-medium transition-all",
-                      filterRisk === r 
-                        ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_15px_-3px_rgba(79,50,214,0.2)]" 
-                        : "bg-foreground/5 text-foreground/70 border border-foreground/5 hover:bg-foreground/10 hover:text-foreground"
-                    )}
-                  >{r}</button>
-               ))}
-            </div>
-          </div>
-
-        </div>
-        <div className="pt-4 border-t border-foreground/5 flex justify-end">
-          <Button onClick={() => onOpenChange(false)} className="bg-primary text-primary-foreground hover:bg-primary/80 font-semibold rounded-xl px-8 transition-colors shadow-[0_0_15px_-3px_rgba(79,50,214,0.4)]">
-            Apply Filters
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function KpiChip({
-  dot, label, value, active, onClick, suffix, dimmed
-}: { dot: string; label: string; value: number | string; active: boolean; onClick: () => void; suffix?: string; dimmed?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 shrink-0 focus:outline-none",
-        active
-          ? "bg-foreground/10 border-foreground/25 shadow-sm"
-          : "border-transparent hover:bg-foreground/[0.04] hover:border-foreground/10",
-        dimmed && "opacity-35"
-      )}
-    >
-      <span className={cn("w-2 h-2 rounded-full shrink-0 shadow-[0_0_6px_currentColor]", dot)} />
-      <span className={cn("text-[20px] font-black leading-none tracking-tight", active ? "text-foreground" : "text-foreground/80")}>
-        {value}{suffix && <span className="text-sm ml-0.5 opacity-50">{suffix}</span>}
-      </span>
-      <span className={cn("text-[10px] leading-tight font-medium max-w-[52px] text-right", active ? "text-foreground/70" : "text-foreground/35")}>
-        {label}
-      </span>
-    </button>
-  );
-}
 
 export default function Dashboard() {
   const { theme, setTheme } = useTheme();
@@ -221,10 +46,6 @@ export default function Dashboard() {
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('All');
-  const [filterRisk, setFilterRisk] = useState<string>('All');
-  const [kpiFilter, setKpiFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed' | 'highRisk' | 'implInProduction' | 'implInTesting' | 'implBlocked' | 'implReadyForGoLive'>('all');
-  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   // ── Analytics: Dashboard Loaded ─────────────────────────────────────────
@@ -257,7 +78,7 @@ export default function Dashboard() {
       analytics.searchUsed({
         query: searchQuery,
         results_count: count,
-        filters_active: filterCategory !== 'All' || filterRisk !== 'All',
+        filters_active: false,
       });
     }, 800);
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
@@ -300,51 +121,12 @@ export default function Dashboard() {
   const implByBank = new Map<string, BankSummaryV2>();
   for (const s of implSummaries || []) implByBank.set(s.bankId, s);
 
-  const testingKeywords = ['integration', 'testing', 'uat', 'pt', 'penetration'];
-  const allImplPct = banks.map(b => implByBank.get(b.id)?.completionPercentage ?? 0);
-  const avgImplProgress = Math.round(allImplPct.reduce((a, v) => a + v, 0) / Math.max(banks.length, 1));
-  const banksInProduction = banks.filter(b => (implByBank.get(b.id)?.completionPercentage ?? 0) === 100).length;
-  const banksInTesting = banks.filter(b => {
-    const cs = implByBank.get(b.id)?.currentStageName?.toLowerCase() ?? '';
-    return testingKeywords.some(kw => cs.includes(kw));
-  }).length;
-  const banksBlocked = banks.filter(b => implByBank.get(b.id)?.isBlocked).length;
-  const banksReadyForGoLive = banks.filter(b => {
-    const pct = implByBank.get(b.id)?.completionPercentage ?? 0;
-    return pct >= 87.5 && pct < 100;
-  }).length;
-
-  const categories = ["All", ...Array.from(new Set(banks.map(b => b.category).filter(Boolean)))];
-
-  const normalizeStatus = (s: string) => s.toLowerCase();
-  const matchesKpi = (bank: Bank) => {
-    if (kpiFilter === 'all') return true;
-    if (kpiFilter === 'highRisk') return bank.riskLevel === 'High';
-    const status = normalizeStatus(bank.status || '');
-    if (kpiFilter === 'completed') return status.includes('complet');
-    if (kpiFilter === 'delayed') return status.includes('delay');
-    if (kpiFilter === 'inProgress') return status.includes('progress');
-    // Implementation filters
-    const impl = implByBank.get(bank.id);
-    if (kpiFilter === 'implInProduction') return (impl?.completionPercentage ?? 0) === 100;
-    if (kpiFilter === 'implInTesting') return impl ? testingKeywords.some(kw => (impl.currentStageName ?? '').toLowerCase().includes(kw)) : false;
-    if (kpiFilter === 'implBlocked') return impl?.isBlocked ?? false;
-    if (kpiFilter === 'implReadyForGoLive') { const pct = impl?.completionPercentage ?? 0; return pct >= 87.5 && pct < 100; }
-    return true;
-  };
-
-
-  const highRiskBankCount = banks.filter(b => b.riskLevel === 'High').length;
-
   // Per-bank access restriction: non-admin users with assigned banks see only their own
   const isBankScopeRestricted = userRole !== 'super_admin' && userRole !== 'admin' && assignedBankIds.length > 0;
 
   const filteredBanks = [...banks]
     .filter(b => {
       if (isBankScopeRestricted && !assignedBankIds.includes(b.id)) return false;
-      if (filterCategory !== 'All' && b.category !== filterCategory) return false;
-      if (filterRisk !== 'All' && b.riskLevel !== filterRisk) return false;
-      if (!matchesKpi(b)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -379,36 +161,8 @@ export default function Dashboard() {
         {/* Header: 3 balanced sections with logo centered */}
         <div className="relative flex items-center px-4 sm:px-5 py-2" style={{ minHeight: 52 }}>
 
-          {/* ── RIGHT section (RTL): KPI chips + Category + Filter ── */}
-          <div className="flex items-center gap-1.5 shrink-0" dir="rtl">
-            {/* 3 KPI chips */}
-            <KpiChip dot="bg-foreground/50" label="الكل" value={summary.totalBanks} active={kpiFilter === 'all'} onClick={() => setKpiFilter('all')} />
-            <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
-            <KpiChip dot="bg-emerald-400" label="مكتمل" value={summary.completed} active={kpiFilter === 'completed'} onClick={() => setKpiFilter(kpiFilter === 'completed' ? 'all' : 'completed')} />
-            <div className="w-px h-4 bg-foreground/[0.07] shrink-0" />
-            <KpiChip dot="bg-red-400" label="معلّق" value={banksBlocked} active={kpiFilter === 'implBlocked'} onClick={() => setKpiFilter(kpiFilter === 'implBlocked' ? 'all' : 'implBlocked')} />
-
-            <div className="w-px h-4 bg-foreground/[0.07] mx-0.5 shrink-0" />
-
-            {/* Category */}
-            <div className="hidden sm:block shrink-0">
-              <CategoryFilter categories={categories} value={filterCategory} onChange={setFilterCategory} />
-            </div>
-
-            {/* Advanced filter */}
-            <button
-              onClick={() => setIsAdvancedFilterOpen(true)}
-              aria-label="Open advanced filters"
-              className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-xl transition-all shrink-0 focus:outline-none",
-                filterRisk !== 'All'
-                  ? "bg-primary/20 border border-primary/50 text-primary"
-                  : "bg-foreground/5 border border-foreground/10 text-foreground/50 hover:text-foreground hover:border-primary/40 hover:bg-primary/10"
-              )}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {/* ── RIGHT section: empty spacer to keep logo centered ── */}
+          <div className="shrink-0 w-[180px] sm:w-[220px]" />
 
           {/* ── CENTER: Logo absolutely centered ── */}
           <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
@@ -468,24 +222,6 @@ export default function Dashboard() {
 
       </div>
 
-      {(kpiFilter !== 'all' || filterCategory !== 'All' || filterRisk !== 'All' || searchQuery !== '') && (
-        <div className="px-8 md:px-10 max-w-[1920px] mx-auto w-full -mb-4 pt-6">
-          <div className="flex flex-wrap items-center gap-3">
-             <span className="text-[10px] text-foreground/40 uppercase tracking-[0.2em] font-bold">Active Filters:</span>
-             {kpiFilter !== 'all' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">KPI: {kpiFilter}</span>}
-             {filterCategory !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Category: {filterCategory}</span>}
-             {filterRisk !== 'All' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Risk: {filterRisk}</span>}
-             {searchQuery !== '' && <span className="text-[11px] font-medium bg-primary/10 text-primary border border-primary/30 px-3 py-1 rounded-full shadow-[0_0_10px_-2px_rgba(79,50,214,0.2)]">Search: {searchQuery}</span>}
-
-             <button
-               onClick={() => { setKpiFilter('all'); setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); }}
-               className="text-[11px] font-medium text-foreground/50 hover:text-primary transition-colors ml-1 px-2"
-             >
-               Clear All
-             </button>
-          </div>
-        </div>
-      )}
 
       <div className="flex-1 p-4 sm:p-8 md:p-10 max-w-[1920px] mx-auto w-full flex flex-col gap-5 sm:gap-8">
         
@@ -497,23 +233,13 @@ export default function Dashboard() {
           </div>
         )}
 
-        <AdvancedFiltersPanel 
-          open={isAdvancedFilterOpen} 
-          onOpenChange={setIsAdvancedFilterOpen} 
-          filterCategory={filterCategory} 
-          setFilterCategory={setFilterCategory} 
-          categories={categories}
-          filterRisk={filterRisk}
-          setFilterRisk={setFilterRisk}
-        />
-
         {/* Main Content Area */}
         <AnimatePresence mode="wait">
           {filteredBanks.length === 0 ? (
             <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-32 flex flex-col items-center justify-center gap-4 text-foreground/30 text-center">
                <div className="w-16 h-16 rounded-full bg-foreground/5 border border-foreground/10 flex items-center justify-center shadow-lg"><Search className="w-6 h-6 text-foreground/20" /></div>
                <p className="text-xl font-light tracking-wide mt-2">No matching records found.</p>
-               <button onClick={() => { setFilterCategory('All'); setFilterRisk('All'); setSearchQuery(''); setKpiFilter('all'); }} className="text-primary text-sm hover:underline mt-2">Clear all filters</button>
+               <button onClick={() => setSearchQuery('')} className="text-primary text-sm hover:underline mt-2">مسح البحث</button>
             </motion.div>
           ) : viewMode === 'kanban' ? (
             <motion.div 

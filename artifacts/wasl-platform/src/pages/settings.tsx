@@ -311,7 +311,14 @@ function BanksManager() {
           </div>
           </div>
           <DialogFooter className="shrink-0 pt-4">
-            <Button onClick={handleSave} className="w-full gap-2"><Save className="w-4 h-4" /> Save</Button>
+            <Button
+              onClick={handleSave}
+              disabled={createBank.isPending || updateBank.isPending}
+              className="w-full gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {createBank.isPending || updateBank.isPending ? 'جارٍ الحفظ…' : 'Save'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

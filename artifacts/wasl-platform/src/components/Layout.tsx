@@ -249,8 +249,8 @@ export function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
-      {/* Wasl AI Chat Widget */}
-      <WaslAIChat />
+      {/* Wasl AI Chat Widget — super_admin only */}
+      {role === 'super_admin' && <WaslAIChat />}
     </div>
   );
 }

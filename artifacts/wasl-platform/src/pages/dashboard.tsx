@@ -161,18 +161,35 @@ export default function Dashboard() {
         {/* Header: 3 balanced sections with logo centered */}
         <div className="relative flex items-center px-4 sm:px-5 py-2" style={{ minHeight: 52 }}>
 
-          {/* ── RIGHT section: empty spacer to keep logo centered ── */}
-          <div className="shrink-0 w-[180px] sm:w-[220px]" />
+          {/* ── LEFT section: View toggle + Theme/Settings ── */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* View toggle */}
+            <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
+              <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
+            </div>
+
+            {/* Theme + Settings */}
+            <div className="hidden sm:flex items-center gap-1">
+              <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+              <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
 
           {/* ── CENTER: Logo absolutely centered ── */}
           <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
             <WaslLogo height={40} imgClassName="w-auto" />
           </div>
 
-          {/* Spacer pushes right section left and left section right */}
+          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* ── LEFT section (LTR): Search + View toggle + Theme/Settings ── */}
+          {/* ── RIGHT section: Search ── */}
           <div className="flex items-center gap-1.5 shrink-0">
             {/* Search desktop */}
             <div className="relative hidden sm:block w-36 md:w-44">
@@ -190,23 +207,6 @@ export default function Dashboard() {
             <button className="sm:hidden p-1.5 rounded-lg border border-foreground/10 text-foreground/50 hover:text-foreground transition-colors" aria-label="Search" onClick={() => setMobileSearchOpen(v => !v)}>
               <Search className="w-3.5 h-3.5" />
             </button>
-
-            {/* View toggle */}
-            <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
-              <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
-            </div>
-
-            {/* Theme + Settings */}
-            <div className="hidden sm:flex items-center gap-1">
-              <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
-                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              </button>
-              <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
         </div>
 

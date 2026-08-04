@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureStorageBucket } from "./lib/supabase-storage";
+import { fixLogoPaths } from "./lib/fix-logo-paths";
 import { db } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -29,6 +30,11 @@ const server = app.listen(port, (err) => {
   // never fail on a missing bucket. Never blocks server startup.
   ensureStorageBucket().catch((err) => {
     logger.warn({ err }, "Failed to ensure Supabase Storage bucket");
+  });
+
+  // One-time idempotent fix: sync missing/broken logo paths for known banks.
+  fixLogoPaths().catch((err) => {
+    logger.warn({ err }, "fixLogoPaths failed (non-fatal)");
   });
 });
 

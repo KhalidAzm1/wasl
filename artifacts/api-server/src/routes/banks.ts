@@ -33,8 +33,7 @@ import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission, requireBankEditAccess, requireRole } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 import { eventBus } from "../lib/event-bus";
-import { getSignedUrl, resolveStoredUrl } from "../lib/supabase-storage";
-import { uploadToOneDrive } from "../lib/onedrive-storage";
+import { getSignedUrl, resolveStoredUrl, uploadToStorage, parseDataUrl } from "../lib/supabase-storage";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
@@ -56,10 +55,10 @@ function validateImageDataUrl(dataUrl: string): string | null {
 }
 
 /**
- * Uploads a base64 image data URL to OneDrive under
- * "Wasl Platform/bank-images/<bankId>/<kind>_<timestamp>.<ext>".
+ * Uploads a base64 image data URL to Supabase Storage under
+ * "bank-images/<bankId>/<kind>_<timestamp>.<ext>".
  * Records the upload in the `files` table for auditing and returns
- * "onedrive:<itemId>" (to be stored as `logoUrl` / `heroImageUrl`).
+ * the storage path (to be stored as `logoUrl` / `heroImageUrl`).
  * Returns null on any error.
  */
 async function uploadBankImage(
@@ -68,24 +67,24 @@ async function uploadBankImage(
   dataUrl: string,
   uploadedBy: string | null,
 ): Promise<string | null> {
-  const match = IMAGE_DATA_URL_PATTERN.exec(dataUrl);
-  if (!match) return null;
-  const ext = match[1].replace("jpeg", "jpg").replace("svg+xml", "svg");
-  const contentType = `image/${match[1]}`;
-  const buffer = Buffer.from(match[2], "base64");
-
-  const timestamp = Date.now();
-  const folderPath = `bank-images/${bankId}`;
-  const fileName = `${kind}_${timestamp}.${ext}`;
-
-  let onedriveItemId: string;
+  let parsed: { contentType: string; buffer: Buffer };
   try {
-    onedriveItemId = await uploadToOneDrive(folderPath, fileName, buffer, contentType);
+    parsed = parseDataUrl(dataUrl);
   } catch {
     return null;
   }
 
-  const storagePath = `onedrive:${onedriveItemId}`;
+  const { contentType, buffer } = parsed;
+  const ext = contentType.replace("image/", "").replace("jpeg", "jpg").replace("svg+xml", "svg");
+  const timestamp = Date.now();
+  const storagePath = `bank-images/${bankId}/${kind}_${timestamp}.${ext}`;
+  const fileName = `${kind}_${timestamp}.${ext}`;
+
+  try {
+    await uploadToStorage(storagePath, buffer, contentType);
+  } catch {
+    return null;
+  }
 
   // Track in the files table for auditing. entityType="bank_image" keeps
   // these rows out of normal document lists.

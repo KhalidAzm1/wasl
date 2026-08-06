@@ -28,13 +28,14 @@ router.use(requireAuth);
 router.use(requireRole("super_admin"));
 
 // ── AI client ─────────────────────────────────────────────────────────────────
-// Uses OPENAI_API_KEY directly against api.openai.com — reliable, no proxy limits.
+// Uses Replit AI Integrations proxy for OpenAI — keys auto-provisioned.
 const AI_MODEL = "gpt-4o-mini";
 
 function getOpenAI() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
-  return new OpenAI({ apiKey });
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey  = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
+  if (!baseURL || !apiKey) throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL or key is not set");
+  return new OpenAI({ apiKey, baseURL });
 }
 
 /** Call the model with up to 3 retries on empty-choices responses. */

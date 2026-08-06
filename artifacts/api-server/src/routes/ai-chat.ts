@@ -27,26 +27,30 @@ router.use(requireAuth);
 // Noor AI agent — super_admin only
 router.use(requireRole("super_admin"));
 
-// ── AI client — prefers OpenRouter (free, open-source), falls back to OpenAI ──
-// OpenRouter env vars are set automatically by the Replit AI integration.
-const AI_MODEL = "openai/gpt-oss-20b:free"; // 20B open-source, 131k ctx, free, Arabic + tool calling ✓
+// ── AI client ─────────────────────────────────────────────────────────────────
+// Uses OPENAI_API_KEY directly against api.openai.com — reliable, no proxy limits.
+const AI_MODEL = "gpt-4o-mini";
 
 function getOpenAI() {
-  const orBaseUrl = process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL;
-  const orApiKey  = process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY;
-
-  if (orBaseUrl && orApiKey) {
-    return new OpenAI({
-      apiKey:  orApiKey,
-      baseURL: orBaseUrl,
-      defaultHeaders: { "HTTP-Referer": "https://wasl.app", "X-Title": "Wasl AI" },
-    });
-  }
-
-  // Legacy fallback — direct OpenAI key
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("Neither AI_INTEGRATIONS_OPENROUTER_BASE_URL nor OPENAI_API_KEY is set");
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
   return new OpenAI({ apiKey });
+}
+
+/** Call the model with up to 3 retries on empty-choices responses. */
+async function callWithRetry(
+  openai: OpenAI,
+  params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+  maxAttempts = 3,
+): Promise<OpenAI.Chat.ChatCompletion> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const response = await openai.chat.completions.create(params);
+    if (response.choices && response.choices.length > 0) return response;
+    if (attempt < maxAttempts) {
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+  }
+  throw new Error("النموذج لم يرجع أي رد بعد عدة محاولات. حاولي مرة أخرى.");
 }
 
 // ── System prompt ──────────────────────────────────────────────────────────────
@@ -1357,10 +1361,12 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
     const isAggregateRequest = /تقرير|أسبوعي|weekly|report|ملخص.{0,6}تنفيذي|executive.{0,6}summary/i.test(lastMsg);
 
     // ── Token budget ───────────────────────────────────────────────────────────
-    // nemotron-3-ultra-550b supports 1 000 000 tokens — no practical limit.
-    // We still use trimBankContext to keep responses snappy, not because of hard limits.
-    const FULL_CONTEXT_BUDGET = 80_000;   // ~20 000 tokens — full detail for all banks
-    const SINGLE_BANK_BUDGET  = 80_000;   // same — single bank fits easily
+    // gpt-4o-mini: 128k context. Fixed overhead ≈ 8k tokens (system+tools+msgs+response).
+    // That leaves ~120k tokens (~480k chars) for bank data — we cap lower to stay snappy.
+    //   FULL_CONTEXT_BUDGET: all banks summary (general questions)
+    //   SINGLE_BANK_BUDGET:  one bank in full detail
+    const FULL_CONTEXT_BUDGET = 40_000;   // ~10k tokens — all banks with good detail
+    const SINGLE_BANK_BUDGET  = 80_000;   // ~20k tokens — one bank, very detailed
 
     // If the user is asking about a specific bank, narrow the context to that bank
     // only — this dramatically reduces prompt size and prevents 402 token-limit errors.
@@ -1414,12 +1420,12 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
     ];
 
     // First call — may trigger a function
-    let response = await openai.chat.completions.create({
+    let response = await callWithRetry(openai, {
       model: AI_MODEL,
       messages: openaiMessages,
       tools: AGENT_FUNCTIONS,
       tool_choice: "auto",
-      max_tokens: 8192,
+      max_tokens: 4096,
       temperature: 0.3,
     });
 
@@ -1505,12 +1511,12 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
       }
 
       // Get next response
-      response = await openai.chat.completions.create({
+      response = await callWithRetry(openai, {
         model: AI_MODEL,
         messages: openaiMessages,
         tools: AGENT_FUNCTIONS,
         tool_choice: calledReport ? "none" : "auto",
-        max_tokens: 8192,
+        max_tokens: 4096,
         temperature: 0.3,
       });
       choice = response.choices[0];

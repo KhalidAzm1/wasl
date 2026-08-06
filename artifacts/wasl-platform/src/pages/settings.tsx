@@ -37,22 +37,22 @@ import { analytics } from '@/lib/analytics';
 
 export default function Settings() {
   return (
-    <div className="p-8 pb-24 max-w-7xl mx-auto w-full space-y-8">
-      <header className="mb-8 flex items-start justify-between gap-4">
+    <div className="p-4 sm:p-8 pb-24 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8">
+      <header className="mb-4 sm:mb-8 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-foreground to-foreground/60 mb-2">
+          <h1 className="text-2xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-foreground to-foreground/60 mb-1 sm:mb-2">
             Banks &amp; Products Management
           </h1>
-          <p className="text-foreground/50 text-lg">Manage financing entities, product types and archive</p>
+          <p className="text-foreground/50 text-sm sm:text-lg">Manage financing entities, product types and archive</p>
         </div>
         <NavControls />
       </header>
 
       <Tabs defaultValue="banks" className="w-full">
-        <TabsList className="w-full justify-start border-b border-foreground/10 bg-transparent rounded-none p-0 h-auto mb-8 overflow-x-auto hide-scrollbar">
-          <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg">Banks &amp; Financing Entities</TabsTrigger>
-          <TabsTrigger value="productTypes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Tag className="w-4 h-4" /> Product Types</TabsTrigger>
-          <TabsTrigger value="archive" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-6 text-lg gap-2"><Archive className="w-4 h-4" /> Archive</TabsTrigger>
+        <TabsList className="w-full justify-start border-b border-foreground/10 bg-transparent rounded-none p-0 h-auto mb-6 sm:mb-8 overflow-x-auto hide-scrollbar">
+          <TabsTrigger value="banks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3 sm:pb-4 px-3 sm:px-6 text-sm sm:text-lg whitespace-nowrap">Banks &amp; Entities</TabsTrigger>
+          <TabsTrigger value="productTypes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3 sm:pb-4 px-3 sm:px-6 text-sm sm:text-lg gap-2 whitespace-nowrap"><Tag className="w-4 h-4" /> Product Types</TabsTrigger>
+          <TabsTrigger value="archive" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3 sm:pb-4 px-3 sm:px-6 text-sm sm:text-lg gap-2 whitespace-nowrap"><Archive className="w-4 h-4" /> Archive</TabsTrigger>
         </TabsList>
 
         <TabsContent value="banks">

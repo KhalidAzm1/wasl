@@ -148,7 +148,7 @@ export function Layout({ children }: LayoutProps) {
           Mobile:  bottom-right corner, above AI chat widget (which sits at bottom-6) */}
       {/* On desktop (sm+) these buttons live inside the dashboard header — only show on mobile */}
       <div className="fixed z-40
-                      bottom-[5.5rem] right-4 flex-col gap-2
+                      bottom-[11rem] right-4 flex-col gap-2
                       flex sm:hidden safe-area-bottom">
         {/* Theme toggle — hidden on mobile to keep the corner clean; accessible via the settings panel */}
         <button

@@ -13,12 +13,22 @@ const injectStyles = () => {
   s.id = 'wa2-styles';
   s.textContent = `
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap');
-    @keyframes wa-dot  { 0%,100%{opacity:.9} 50%{opacity:.3} }
-    @keyframes wa-in   { from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:none} }
-    @keyframes wa-spin { to{transform:rotate(360deg)} }
-    .wa-blink { animation: wa-dot 2s ease-in-out infinite; }
-    .wa-in    { animation: wa-in .22s ease both; }
-    .wa-spin  { animation: wa-spin .9s linear infinite; }
+    @keyframes wa-dot    { 0%,100%{opacity:.9} 50%{opacity:.3} }
+    @keyframes wa-in     { from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:none} }
+    @keyframes wa-spin   { to{transform:rotate(360deg)} }
+    @keyframes wa-float  { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
+    @keyframes wa-pulse  { 0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.0), -4px 4px 24px rgba(0,0,0,.5)} 50%{box-shadow:0 0 0 8px rgba(99,102,241,.18), -4px 4px 32px rgba(99,102,241,.35)} }
+    @keyframes wa-star   { 0%,100%{opacity:0;transform:scale(0) rotate(0deg)} 50%{opacity:1;transform:scale(1) rotate(180deg)} }
+    @keyframes wa-wink   { 0%,85%,100%{transform:scaleY(1)} 90%{transform:scaleY(0.1)} }
+    .wa-blink  { animation: wa-dot 2s ease-in-out infinite; }
+    .wa-in     { animation: wa-in .22s ease both; }
+    .wa-spin   { animation: wa-spin .9s linear infinite; }
+    .wa-float  { animation: wa-float 2.8s ease-in-out infinite; }
+    .wa-pulse  { animation: wa-pulse 2.4s ease-in-out infinite; }
+    .wa-star-1 { animation: wa-star 2.2s 0.0s ease-in-out infinite; }
+    .wa-star-2 { animation: wa-star 2.2s 0.7s ease-in-out infinite; }
+    .wa-star-3 { animation: wa-star 2.2s 1.4s ease-in-out infinite; }
+    .wa-wink   { animation: wa-wink 4s 2s ease-in-out infinite; }
     .wa-panel * { box-sizing: border-box; }
     .wa-panel ::-webkit-scrollbar { width: 3px; }
     .wa-panel ::-webkit-scrollbar-track { background: transparent; }
@@ -707,28 +717,88 @@ function Trigger({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       title="Wasalawi — Smart Assistant"
       style={{
-        position: 'fixed', bottom: 28, right: 0, zIndex: 40,
-        display: 'flex', alignItems: 'center', gap: 0,
+        position: 'fixed', bottom: 32, right: 0, zIndex: 40,
+        display: 'flex', alignItems: 'center',
         padding: 0, border: 'none', cursor: 'pointer', background: 'transparent',
       }}
     >
-      {/* Pull tab */}
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        width: 36, paddingBlock: 14, gap: 8,
-        background: '#0d1526',
-        border: '1px solid rgba(99,102,241,.3)',
-        borderRight: 'none',
-        borderRadius: '12px 0 0 12px',
-        boxShadow: '-4px 4px 24px rgba(0,0,0,.5)',
-      }}>
-        <Zap style={{ width: 14, height: 14, color: 'rgba(165,180,252,.8)' }} />
-        <span style={{
-          fontSize: 10, fontWeight: 700, color: 'rgba(165,180,252,.7)',
-          writingMode: 'vertical-lr', transform: 'rotate(180deg)',
-          fontFamily: 'Tajawal,sans-serif', letterSpacing: '.06em',
-        }}>Wasalawi</span>
-        <ChevronRight style={{ width: 12, height: 12, color: 'rgba(255,255,255,.25)' }} />
+      {/* Floating avatar tab */}
+      <div className="wa-float" style={{ position: 'relative' }}>
+        {/* Sparkle stars */}
+        <span className="wa-star-1" style={{
+          position: 'absolute', top: -6, left: 2, fontSize: 10, pointerEvents: 'none',
+        }}>✦</span>
+        <span className="wa-star-2" style={{
+          position: 'absolute', top: 4, left: -6, fontSize: 8, pointerEvents: 'none', color: '#a5b4fc',
+        }}>★</span>
+        <span className="wa-star-3" style={{
+          position: 'absolute', bottom: 0, left: 0, fontSize: 7, pointerEvents: 'none', color: '#c4b5fd',
+        }}>✦</span>
+
+        {/* Tab backing */}
+        <div className="wa-pulse" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 6,
+          width: 48, paddingBlock: 12,
+          background: 'linear-gradient(160deg,#0d1526 0%,#1a1040 100%)',
+          border: '1px solid rgba(99,102,241,.4)',
+          borderRight: 'none',
+          borderRadius: '14px 0 0 14px',
+        }}>
+          {/* Anime avatar — bigger, winking right eye */}
+          <div style={{
+            width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+            background: 'linear-gradient(140deg,#1e3a8a,#4c1d95)',
+            border: '2px solid rgba(165,180,252,.55)',
+            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="36" height="36" fill="url(#tg)"/>
+              <defs>
+                <linearGradient id="tg" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#1e3a8a"/>
+                  <stop offset="1" stopColor="#4c1d95"/>
+                </linearGradient>
+              </defs>
+              {/* hair */}
+              <ellipse cx="18" cy="11" rx="9" ry="8" fill="#4338ca"/>
+              <rect x="9" y="10" width="18" height="6" fill="#4338ca"/>
+              <ellipse cx="12" cy="13" rx="3.5" ry="3" fill="#3730a3"/>
+              <ellipse cx="24" cy="13" rx="3.5" ry="3" fill="#3730a3"/>
+              {/* face */}
+              <ellipse cx="18" cy="18" rx="8" ry="8.5" fill="#fde8d8"/>
+              {/* left eye (normal) */}
+              <ellipse cx="14.5" cy="17" rx="2.2" ry="2.6" fill="white"/>
+              <ellipse cx="14.5" cy="17.3" rx="1.5" ry="1.9" fill="#1e3a8a"/>
+              <ellipse cx="14.5" cy="17.3" rx="0.8" ry="1" fill="#0f172a"/>
+              <ellipse cx="15.1" cy="16.6" rx="0.45" ry="0.45" fill="white"/>
+              {/* right eye (winking animation) */}
+              <g className="wa-wink" style={{ transformOrigin: '21.5px 17px' }}>
+                <ellipse cx="21.5" cy="17" rx="2.2" ry="2.6" fill="white"/>
+                <ellipse cx="21.5" cy="17.3" rx="1.5" ry="1.9" fill="#1e3a8a"/>
+                <ellipse cx="21.5" cy="17.3" rx="0.8" ry="1" fill="#0f172a"/>
+                <ellipse cx="22.1" cy="16.6" rx="0.45" ry="0.45" fill="white"/>
+              </g>
+              {/* blush */}
+              <ellipse cx="12" cy="20" rx="1.8" ry="0.9" fill="#fca5a5" opacity="0.6"/>
+              <ellipse cx="24" cy="20" rx="1.8" ry="0.9" fill="#fca5a5" opacity="0.6"/>
+              {/* big smile */}
+              <path d="M14.5 21.8 Q18 24.2 21.5 21.8" stroke="#e11d48" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
+              {/* body */}
+              <path d="M10 36 Q14 28 18 27 Q22 28 26 36" fill="#4f46e5"/>
+            </svg>
+          </div>
+
+          {/* Label */}
+          <span style={{
+            fontSize: 8.5, fontWeight: 800, color: 'rgba(165,180,252,.75)',
+            writingMode: 'vertical-lr', transform: 'rotate(180deg)',
+            fontFamily: 'system-ui,sans-serif', letterSpacing: '.1em',
+            textTransform: 'uppercase',
+          }}>AI</span>
+
+          <ChevronRight style={{ width: 11, height: 11, color: 'rgba(165,180,252,.4)' }} />
+        </div>
       </div>
     </motion.button>
   );

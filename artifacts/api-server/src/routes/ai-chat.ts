@@ -29,7 +29,7 @@ router.use(requireRole("super_admin"));
 
 // ── AI client — prefers OpenRouter (free, open-source), falls back to OpenAI ──
 // OpenRouter env vars are set automatically by the Replit AI integration.
-const AI_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"; // 550B params, 1M ctx, free
+const AI_MODEL = "openai/gpt-oss-20b:free"; // 20B open-source, 131k ctx, free, Arabic + tool calling ✓
 
 function getOpenAI() {
   const orBaseUrl = process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL;

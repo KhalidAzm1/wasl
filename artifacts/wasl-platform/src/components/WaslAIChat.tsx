@@ -110,8 +110,9 @@ const T = {
 };
 
 function renderLine(line: string, key: string | number): React.ReactNode {
-  if (/^##\s/.test(line)) return <p key={key} style={T.h2}>{bold(line.replace(/^##\s/, ''))}</p>;
-  if (/^#\s/.test(line))  return <p key={key} style={{ ...T.p, fontSize: 14, fontWeight: 700, color: 'white', marginTop: 8 }}>{bold(line.replace(/^#\s/, ''))}</p>;
+  if (/^###\s/.test(line)) return <p key={key} style={{ ...T.h2, fontSize: 10, color: 'rgba(148,163,184,.75)', marginTop: 10 }}>{bold(line.replace(/^###\s/, ''))}</p>;
+  if (/^##\s/.test(line))  return <p key={key} style={T.h2}>{bold(line.replace(/^##\s/, ''))}</p>;
+  if (/^#\s/.test(line))   return <p key={key} style={{ ...T.p, fontSize: 14, fontWeight: 700, color: 'white', marginTop: 8 }}>{bold(line.replace(/^#\s/, ''))}</p>;
   if (/^[•\-\*]\s/.test(line.trim())) return (
     <div key={key} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '1.5px 0' }}>
       <span style={T.dot}>◆</span>
@@ -176,6 +177,23 @@ function isWeeklyReport(text: string): boolean {
   return REPORT_MARKERS.some(m => text.includes(m));
 }
 
+/** Split an emoji prefix from text so it can be isolated from Arabic BiDi context. */
+function splitEmoji(text: string): [string, string] {
+  // Match one or more emoji characters (+ optional variation selectors / ZWJ) at the start
+  const m = text.match(/^((?:\p{Emoji_Presentation}|\p{Extended_Pictographic})[\uFE00-\uFE0F\u200D\u20E3]*\s*)+/u);
+  if (m) return [m[0].trimEnd(), text.slice(m[0].length)];
+  return ['', text];
+}
+
+/** Render a heading tag with the emoji isolated so Arabic BiDi doesn't garble the text. */
+function renderHtmlHeading(tag: string, content: string): string {
+  const [emoji, rest] = splitEmoji(content);
+  const inner = emoji
+    ? `<span class="hdr-emoji">${emoji}</span> ${escHtml(rest)}`
+    : escHtml(content);
+  return `<${tag}>${inner}</${tag}>`;
+}
+
 function buildReportHtml(markdown: string): string {
   // Convert markdown to styled HTML for PDF rendering
   const lines = markdown.split('\n');
@@ -202,10 +220,12 @@ function buildReportHtml(markdown: string): string {
       continue;
     }
     // Headings / bullets / paragraphs
-    if (/^##\s/.test(line)) {
-      html += `<h2>${escHtml(line.replace(/^##\s/, ''))}</h2>`;
+    if (/^###\s/.test(line)) {
+      html += renderHtmlHeading('h3', line.replace(/^###\s/, ''));
+    } else if (/^##\s/.test(line)) {
+      html += renderHtmlHeading('h2', line.replace(/^##\s/, ''));
     } else if (/^#\s/.test(line)) {
-      html += `<h1>${escHtml(line.replace(/^#\s/, ''))}</h1>`;
+      html += renderHtmlHeading('h1', line.replace(/^#\s/, ''));
     } else if (/^[•\-\*]\s/.test(tr)) {
       html += `<p class="bullet">◆ ${escHtml(tr.replace(/^[•\-\*]\s/, ''))}</p>`;
     } else if (/^\d+\.\s/.test(tr)) {
@@ -257,7 +277,12 @@ async function exportReportAsPdf(markdown: string) {
       h1 { font-size:20px; font-weight:700; color:#1e3a8a; margin:20px 0 6px; }
       h2 { font-size:13px; font-weight:700; color:#4f46e5; text-transform:uppercase;
            letter-spacing:.07em; margin:18px 0 4px; border-bottom:1px solid #e5e7eb; padding-bottom:4px; }
+      h3 { font-size:12px; font-weight:700; color:#374151; margin:12px 0 3px; }
       p  { font-size:13px; color:#374151; margin:3px 0; }
+      .hdr-emoji {
+        font-family:'Noto Color Emoji','Segoe UI Emoji','Apple Color Emoji',sans-serif;
+        unicode-bidi:isolate; display:inline-block; margin-left:4px;
+      }
       p.bullet { padding-right:14px; color:#374151; }
       p.num    { padding-right:14px; color:#374151; }
       strong { font-weight:700; color:#111827; }
@@ -415,7 +440,13 @@ async function exportReportAsDocx(markdown: string) {
       continue;
     }
 
-    if (/^##\s/.test(line)) {
+    if (/^###\s/.test(line)) {
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_3,
+        alignment: AlignmentType.RIGHT, bidirectional: true,
+        children: [new TextRun({ text: stripBold(line.replace(/^###\s/, '')), bold: true, color: '374151', size: 22 })],
+      }));
+    } else if (/^##\s/.test(line)) {
       children.push(new Paragraph({
         heading: HeadingLevel.HEADING_2,
         alignment: AlignmentType.RIGHT, bidirectional: true,

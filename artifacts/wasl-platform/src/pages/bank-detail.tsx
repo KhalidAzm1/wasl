@@ -493,15 +493,54 @@ export default function BankDetail() {
                 </span>
               )}
             </div>
-            <div className="bg-foreground/5 rounded-2xl p-6 border border-foreground/10">
-              <h3 className="text-sm font-medium text-foreground/40 mb-3 uppercase tracking-wide">Executive Summary</h3>
-              <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap text-lg">
-                {bank.executiveSummary || 'No summary available.'}
-              </p>
-            </div>
-            {bank.descriptionNotes && (
+            {bank.executiveSummary ? (
               <div className="bg-foreground/5 rounded-2xl p-6 border border-foreground/10">
-                <h3 className="text-sm font-medium text-foreground/40 mb-3 uppercase tracking-wide">Description Notes</h3>
+                <h3 className="text-sm font-medium text-foreground/40 mb-3 uppercase tracking-wide">الملخص التنفيذي</h3>
+                <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap text-lg">
+                  {bank.executiveSummary}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Key facts grid shown instead of missing summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {bank.responsiblePerson && (
+                    <div className="bg-foreground/5 rounded-2xl p-5 border border-foreground/10 flex flex-col gap-1">
+                      <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">المسؤول</span>
+                      <span className="text-foreground/90 font-medium text-lg">{bank.responsiblePerson}</span>
+                    </div>
+                  )}
+                  {bank.lastMeetingDate && (
+                    <div className="bg-foreground/5 rounded-2xl p-5 border border-foreground/10 flex flex-col gap-1">
+                      <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">آخر اجتماع</span>
+                      <span className="text-foreground/90 font-medium text-lg">{formatDate(bank.lastMeetingDate)}</span>
+                    </div>
+                  )}
+                  {bank.nextMeetingDate && (
+                    <div className="bg-foreground/5 rounded-2xl p-5 border border-foreground/10 flex flex-col gap-1">
+                      <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">الاجتماع القادم</span>
+                      <span className="text-foreground/90 font-medium text-lg">{formatDate(bank.nextMeetingDate)}</span>
+                    </div>
+                  )}
+                </div>
+                {bank.descriptionNotes && (
+                  <div className="bg-foreground/5 rounded-2xl p-6 border border-foreground/10">
+                    <h3 className="text-sm font-medium text-foreground/40 mb-3 uppercase tracking-wide">ملاحظات</h3>
+                    <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                      {bank.descriptionNotes}
+                    </p>
+                  </div>
+                )}
+                {/* Hint to add a summary */}
+                <div className="flex items-center gap-3 px-5 py-4 rounded-2xl border border-dashed border-foreground/20 bg-foreground/3 text-foreground/50 text-sm">
+                  <Maximize2 className="w-4 h-4 shrink-0 text-foreground/30" />
+                  <span>لم يُضف ملخص تنفيذي بعد — يمكنك إضافته من تبويب <strong className="text-foreground/70">نظرة عامة</strong></span>
+                </div>
+              </div>
+            )}
+            {bank.executiveSummary && bank.descriptionNotes && (
+              <div className="bg-foreground/5 rounded-2xl p-6 border border-foreground/10">
+                <h3 className="text-sm font-medium text-foreground/40 mb-3 uppercase tracking-wide">ملاحظات</h3>
                 <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
                   {bank.descriptionNotes}
                 </p>

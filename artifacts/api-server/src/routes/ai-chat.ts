@@ -1435,16 +1435,38 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
       openaiMessages.push(choice.message);
 
       // Execute all tool calls
+      // Tool results are capped at 10 000 chars each so that the follow-up API
+      // call (which includes system + tools + all messages + these results)
+      // stays well under the Replit proxy token limit (~16 384 tokens).
+      const TOOL_RESULT_MAX_CHARS = 10_000;
       const toolResults = await Promise.all(
         toolCalls.map(async (tc) => {
           const fn = (tc as any).function as { name: string; arguments: string };
           let args: Record<string, any> = {};
           try { args = JSON.parse(fn.arguments); } catch { /* ignore */ }
           const result = await executeFunction(fn.name, args, rawContext);
+          let content = JSON.stringify(result);
+          if (content.length > TOOL_RESULT_MAX_CHARS) {
+            // For structured objects, try to keep top-level keys and truncate arrays
+            if (typeof result === "object" && result !== null && !Array.isArray(result)) {
+              const compact = Object.fromEntries(
+                Object.entries(result as Record<string, unknown>).map(([k, v]) => {
+                  if (Array.isArray(v) && v.length > 10) return [k, [...v.slice(0, 10), `…(${v.length - 10} more)`]];
+                  return [k, v];
+                }),
+              );
+              const compactStr = JSON.stringify(compact);
+              content = compactStr.length <= TOOL_RESULT_MAX_CHARS
+                ? compactStr
+                : compactStr.slice(0, TOOL_RESULT_MAX_CHARS) + "…[truncated]";
+            } else {
+              content = content.slice(0, TOOL_RESULT_MAX_CHARS) + "…[truncated]";
+            }
+          }
           return {
             role: "tool" as const,
             tool_call_id: tc.id,
-            content: JSON.stringify(result),
+            content,
           };
         }),
       );

@@ -1352,18 +1352,33 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
     const lastMsg = (messages[messages.length - 1]?.content ?? "").toLowerCase();
     const isAggregateRequest = /تقرير|أسبوعي|weekly|report|ملخص.{0,6}تنفيذي|executive.{0,6}summary/i.test(lastMsg);
 
-    // If the user is asking about a specific bank, narrow the context to that bank only.
-    // This prevents token-limit errors when many banks with rich data are loaded.
+    // ── Token budget ───────────────────────────────────────────────────────────
+    // Replit AI proxy limit ≈ 16 384 tokens.
+    // Fixed overhead: system prompt (~810) + tools (~3 969) + messages + response
+    //   ≈ 6 500–8 000 tokens reserved → at most ~8 000 tokens free for bank data.
+    // 8 000 tokens × 4 chars ≈ 32 000 chars — but we keep a safety margin:
+    //   FULL_CONTEXT_BUDGET: used when we must send all banks (general questions)
+    //   SINGLE_BANK_BUDGET:  used when one bank is identified (much more headroom)
+    const FULL_CONTEXT_BUDGET = 14_000;   // ~3 500 tokens — safe for all banks
+    const SINGLE_BANK_BUDGET  = 36_000;   // ~9 000 tokens — fine for one bank
+
+    // If the user is asking about a specific bank, narrow the context to that bank
+    // only — this dramatically reduces prompt size and prevents 402 token-limit errors.
+    // Use the same findBank logic already used by tool execution (handles Arabic
+    // normalization, partial matches, bank ID matching).
     const singleBankContext = (() => {
       if (isAggregateRequest || rawContext.length <= 1) return null;
-      const matches = rawContext.filter((b) => {
-        const nameAr = (b.name_ar ?? "").toLowerCase();
-        const nameEn = (b.name_en ?? "").toLowerCase();
-        return (nameAr && lastMsg.includes(nameAr)) ||
-               (nameEn && lastMsg.includes(nameEn)) ||
-               (b.id && lastMsg.includes(b.id.toLowerCase()));
-      });
-      return matches.length === 1 ? matches : null;
+      // Tokenise the last message: try every 2–5 word window as a potential query.
+      const words = lastMsg.trim().split(/\s+/).filter((w) => w.length >= 2);
+      const candidates = new Set<typeof rawContext[0]>();
+      for (let start = 0; start < words.length; start++) {
+        for (let len = 1; len <= 5 && start + len <= words.length; len++) {
+          const phrase = words.slice(start, start + len).join(" ");
+          const hit = findBank(phrase, rawContext);
+          if (hit) candidates.add(hit);
+        }
+      }
+      return candidates.size === 1 ? [...candidates] : null;
     })();
 
     let contextBlock: string;
@@ -1380,10 +1395,11 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
         `Use generate_weekly_report or get_dashboard_summary tool for full detail.\n</live_bank_data>`;
     } else {
       // Normal queries — inject trimmed bank JSON.
-      // If a single bank was identified in the message, use only that bank's data
-      // to stay well within the token budget.
+      // Single-bank: use full detail with a generous budget.
+      // General (all banks): use a tight budget to stay under the proxy token limit.
       const contextToTrim = singleBankContext ?? rawContext;
-      const [bankContext, trimPass] = trimBankContext(contextToTrim, 40_000);
+      const budget = singleBankContext ? SINGLE_BANK_BUDGET : FULL_CONTEXT_BUDGET;
+      const [bankContext, trimPass] = trimBankContext(contextToTrim, budget);
       if (trimPass > 0) {
         req.log?.warn({ trimPass, banks: bankContext.length }, "[ai-chat] context trimmed to fit token budget");
       }

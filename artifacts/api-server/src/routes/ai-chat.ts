@@ -27,22 +27,26 @@ router.use(requireAuth);
 // Noor AI agent — super_admin only
 router.use(requireRole("super_admin"));
 
-// ── OpenAI-compatible client ───────────────────────────────────────────────────
-// Supports both OpenAI (sk-...) and OpenRouter (sk-or-v1-...) keys transparently.
-function getOpenAI() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+// ── AI client — prefers OpenRouter (free, open-source), falls back to OpenAI ──
+// OpenRouter env vars are set automatically by the Replit AI integration.
+const AI_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"; // 550B params, 1M ctx, free
 
-  const isOpenRouter = apiKey.startsWith("sk-or-");
-  return new OpenAI({
-    apiKey,
-    ...(isOpenRouter
-      ? {
-          baseURL: "https://openrouter.ai/api/v1",
-          defaultHeaders: { "HTTP-Referer": "https://wasl.app", "X-Title": "Wasl AI" },
-        }
-      : {}),
-  });
+function getOpenAI() {
+  const orBaseUrl = process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL;
+  const orApiKey  = process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY;
+
+  if (orBaseUrl && orApiKey) {
+    return new OpenAI({
+      apiKey:  orApiKey,
+      baseURL: orBaseUrl,
+      defaultHeaders: { "HTTP-Referer": "https://wasl.app", "X-Title": "Wasl AI" },
+    });
+  }
+
+  // Legacy fallback — direct OpenAI key
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("Neither AI_INTEGRATIONS_OPENROUTER_BASE_URL nor OPENAI_API_KEY is set");
+  return new OpenAI({ apiKey });
 }
 
 // ── System prompt ──────────────────────────────────────────────────────────────
@@ -1263,7 +1267,7 @@ function estimateTokens(text: string) { return Math.ceil(text.length / 4); }
 
 // Trim bank summaries progressively until they fit within a char budget.
 // Budget = (model_limit - system_prompt - history - output_reserve) × 4
-// gpt-4o-mini context: 128K tokens. OpenRouter free tier: ~25K.
+// nemotron-3-ultra-550b context: 1 000 000 tokens — no budget constraints needed.
 // We target 18K tokens for the context block = 72,000 chars.
 function trimBankContext(
   banks: Awaited<ReturnType<typeof buildBankContext>>,
@@ -1353,14 +1357,10 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
     const isAggregateRequest = /تقرير|أسبوعي|weekly|report|ملخص.{0,6}تنفيذي|executive.{0,6}summary/i.test(lastMsg);
 
     // ── Token budget ───────────────────────────────────────────────────────────
-    // Replit AI proxy limit ≈ 16 384 tokens.
-    // Fixed overhead: system prompt (~810) + tools (~3 969) + messages + response
-    //   ≈ 6 500–8 000 tokens reserved → at most ~8 000 tokens free for bank data.
-    // 8 000 tokens × 4 chars ≈ 32 000 chars — but we keep a safety margin:
-    //   FULL_CONTEXT_BUDGET: used when we must send all banks (general questions)
-    //   SINGLE_BANK_BUDGET:  used when one bank is identified (much more headroom)
-    const FULL_CONTEXT_BUDGET = 14_000;   // ~3 500 tokens — safe for all banks
-    const SINGLE_BANK_BUDGET  = 36_000;   // ~9 000 tokens — fine for one bank
+    // nemotron-3-ultra-550b supports 1 000 000 tokens — no practical limit.
+    // We still use trimBankContext to keep responses snappy, not because of hard limits.
+    const FULL_CONTEXT_BUDGET = 80_000;   // ~20 000 tokens — full detail for all banks
+    const SINGLE_BANK_BUDGET  = 80_000;   // same — single bank fits easily
 
     // If the user is asking about a specific bank, narrow the context to that bank
     // only — this dramatically reduces prompt size and prevents 402 token-limit errors.
@@ -1415,11 +1415,11 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
     // First call — may trigger a function
     let response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: AI_MODEL,
       messages: openaiMessages,
       tools: AGENT_FUNCTIONS,
       tool_choice: "auto",
-      max_tokens: 4096,
+      max_tokens: 8192,
       temperature: 0.3,
     });
 
@@ -1506,11 +1506,11 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
       // Get next response
       response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: AI_MODEL,
         messages: openaiMessages,
         tools: AGENT_FUNCTIONS,
         tool_choice: calledReport ? "none" : "auto",
-        max_tokens: 4096,
+        max_tokens: 8192,
         temperature: 0.3,
       });
       choice = response.choices[0];

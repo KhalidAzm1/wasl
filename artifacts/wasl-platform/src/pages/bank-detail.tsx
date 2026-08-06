@@ -277,7 +277,7 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
         <DialogContent dir="ltr">
           <DialogHeader><DialogTitle>Attachments — {label}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+            <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv" />
             <Button variant="outline" size="sm" className="gap-2 w-full" onClick={() => fileInputRef.current?.click()}>
               <UploadCloud className="w-4 h-4" /> Upload File
             </Button>
@@ -307,10 +307,10 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
                       {d.uploadedBy && <p className="text-xs text-foreground/30">Uploaded by {d.uploadedBy}</p>}
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50 shrink-0" onClick={() => deleteDoc.mutate({ id: d.id }, {
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50 shrink-0" onClick={() => { if (!confirm('هل أنت متأكد من حذف هذا المرفق؟')) return; deleteDoc.mutate({ id: d.id }, {
                     onSuccess: () => { invalidate(); toast({ title: 'File archived' }); },
                     onError: (err: any) => toast({ title: 'Failed to delete file', description: err?.message, variant: 'destructive' }),
-                  })}><Trash2 className="w-3 h-3" /></Button>
+                  }); }}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               ))}
               {docs.length === 0 && <div className="py-6 text-center text-foreground/30 text-sm">No files attached yet</div>}
@@ -403,6 +403,7 @@ export default function BankDetail() {
   const [, navigate] = useLocation();
   const { role } = useAuth();
   const [qrOpen, setQrOpen] = useState(false);
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
   const { data: bank, isLoading } = useGetBank(id!, { query: { enabled: !!id, queryKey: getGetBankQueryKey(id!) } });
   const { data: allBanks } = useListBanks();
 
@@ -456,6 +457,50 @@ export default function BankDetail() {
 
   return (
     <div className="p-8 pb-24 max-w-7xl mx-auto w-full space-y-8">
+      {/* Presentation Mode Dialog */}
+      <Dialog open={isPresentationMode} onOpenChange={setIsPresentationMode}>
+        <DialogContent className="max-w-4xl w-full bg-background border-foreground/10" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-right">
+              {bank.nameAr || bank.nameEn}
+              {bank.nameAr && bank.nameEn && <span className="text-foreground/40 text-lg font-normal mr-2">— {bank.nameEn}</span>}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="flex flex-wrap gap-3">
+              {bank.status && (
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(bank.status).text} bg-foreground/5 border border-foreground/10`}>
+                  {bank.status}
+                </span>
+              )}
+              {bank.riskLevel && (
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-foreground/5 border border-foreground/10 text-foreground/70">
+                  Risk: {bank.riskLevel}
+                </span>
+              )}
+              {bank.responsiblePerson && (
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-foreground/5 border border-foreground/10 text-foreground/70">
+                  {bank.responsiblePerson}
+                </span>
+              )}
+            </div>
+            <div className="bg-foreground/5 rounded-2xl p-6 border border-foreground/10">
+              <h3 className="text-sm font-medium text-foreground/40 mb-3 uppercase tracking-wide">Executive Summary</h3>
+              <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap text-lg">
+                {bank.executiveSummary || 'No summary available.'}
+              </p>
+            </div>
+            {bank.descriptionNotes && (
+              <div className="bg-foreground/5 rounded-2xl p-6 border border-foreground/10">
+                <h3 className="text-sm font-medium text-foreground/40 mb-3 uppercase tracking-wide">Description Notes</h3>
+                <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                  {bank.descriptionNotes}
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-4 text-foreground/50 text-sm">
@@ -575,7 +620,7 @@ export default function BankDetail() {
                     type="button"
                     title="Enable Presentation Mode"
                     className="flex items-center gap-1.5 text-xs text-foreground/40 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
-                    onClick={() => analytics.executivePresentationModeEnabled({ bank_id: bank.id, bank_name: bank.nameEn })}
+                    onClick={() => { analytics.executivePresentationModeEnabled({ bank_id: bank.id, bank_name: bank.nameEn }); setIsPresentationMode(true); }}
                   >
                     <Maximize2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Presentation</span>
@@ -723,13 +768,20 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
 
   const handleSave = () => {
     if (createProduct.isPending || updateProduct.isPending) return;
+    const productCode = (editing.productCode || '').trim();
+    const categoryStage = (editing.categoryStage || '').trim();
+    const status = (editing.status || '').trim();
+    if (!productCode || !categoryStage || !status) {
+      toast({ title: 'حقول مطلوبة', description: 'رمز المنتج والمرحلة والحالة مطلوبة.', variant: 'destructive' });
+      return;
+    }
     const payload = {
       bankId,
-      productCode: editing.productCode,
-      categoryStage: editing.categoryStage,
-      status: editing.status,
+      productCode,
+      categoryStage,
+      status,
       progressPercent: Number(editing.progressPercent) / 100,
-      responsiblePerson: editing.responsiblePerson || undefined,
+      responsiblePerson: (editing.responsiblePerson || '').trim() || undefined,
     };
     if (editing.id) {
       updateProduct.mutate({ id: editing.id, data: payload }, {
@@ -837,7 +889,13 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
 
   const handleSave = () => {
     if (createMeeting.isPending) return;
-    createMeeting.mutate({ data: { bankId, topic: editing.topic, date: editing.date, summary: editing.summary } }, {
+    const topic = (editing.topic || '').trim();
+    const date = (editing.date || '').trim();
+    if (!topic || !date) {
+      toast({ title: 'حقول مطلوبة', description: 'التاريخ والموضوع مطلوبان.', variant: 'destructive' });
+      return;
+    }
+    createMeeting.mutate({ data: { bankId, topic, date, summary: (editing.summary || '').trim() } }, {
       onSuccess: () => {
         analytics.meetingCreated({ bank_id: bankId, topic: editing.topic ?? '', date: editing.date ?? '' });
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
@@ -867,7 +925,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
             </div>
             <div className="flex items-start gap-1 shrink-0">
               <EntityAttachmentsButton entityType="meeting" entityId={m.id} label={m.topic} />
-              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={(e) => { e.stopPropagation(); deleteMeeting.mutate({ id: m.id }, {
+              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={(e) => { e.stopPropagation(); if (!confirm('هل أنت متأكد من حذف هذا الاجتماع؟')) return; deleteMeeting.mutate({ id: m.id }, {
                 onSuccess: () => { analytics.meetingDeleted({ bank_id: bankId, meeting_id: m.id, topic: m.topic }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Meeting archived' }); },
                 onError: (err: any) => toast({ title: 'Failed to delete meeting', description: err?.message, variant: 'destructive' }),
               }); }}>
@@ -1079,7 +1137,7 @@ function DocumentsTab({ bankId, documents }: { bankId: string, documents: any[] 
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Documents & Links</h3>
         <div className="flex gap-2">
-          <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+          <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv" />
           <Button variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
             <UploadCloud className="w-4 h-4" /> Upload File
           </Button>

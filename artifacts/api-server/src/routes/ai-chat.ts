@@ -1352,6 +1352,20 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
     const lastMsg = (messages[messages.length - 1]?.content ?? "").toLowerCase();
     const isAggregateRequest = /تقرير|أسبوعي|weekly|report|ملخص.{0,6}تنفيذي|executive.{0,6}summary/i.test(lastMsg);
 
+    // If the user is asking about a specific bank, narrow the context to that bank only.
+    // This prevents token-limit errors when many banks with rich data are loaded.
+    const singleBankContext = (() => {
+      if (isAggregateRequest || rawContext.length <= 1) return null;
+      const matches = rawContext.filter((b) => {
+        const nameAr = (b.name_ar ?? "").toLowerCase();
+        const nameEn = (b.name_en ?? "").toLowerCase();
+        return (nameAr && lastMsg.includes(nameAr)) ||
+               (nameEn && lastMsg.includes(nameEn)) ||
+               (b.id && lastMsg.includes(b.id.toLowerCase()));
+      });
+      return matches.length === 1 ? matches : null;
+    })();
+
     let contextBlock: string;
     if (isAggregateRequest) {
       // Minimal metadata only — tool will supply all detail
@@ -1365,8 +1379,11 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
         `summary: avg_completion=${avgPct}%, statuses=${JSON.stringify(byStatus)}\n` +
         `Use generate_weekly_report or get_dashboard_summary tool for full detail.\n</live_bank_data>`;
     } else {
-      // Normal queries — inject trimmed bank JSON
-      const [bankContext, trimPass] = trimBankContext(rawContext, 40_000);
+      // Normal queries — inject trimmed bank JSON.
+      // If a single bank was identified in the message, use only that bank's data
+      // to stay well within the token budget.
+      const contextToTrim = singleBankContext ?? rawContext;
+      const [bankContext, trimPass] = trimBankContext(contextToTrim, 40_000);
       if (trimPass > 0) {
         req.log?.warn({ trimPass, banks: bankContext.length }, "[ai-chat] context trimmed to fit token budget");
       }

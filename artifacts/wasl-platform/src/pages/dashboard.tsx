@@ -47,6 +47,7 @@ export default function Dashboard() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [filterProductCode, setFilterProductCode] = useState<string | null>(null);
 
   // ── Analytics: Dashboard Loaded ─────────────────────────────────────────
   const dashboardLoadedRef = useRef(false);
@@ -117,6 +118,11 @@ export default function Dashboard() {
     if (arr && p.productCode && !arr.includes(p.productCode)) arr.push(p.productCode);
   }
 
+  // All distinct product codes across all banks (for filter chips)
+  const allProductCodes = Array.from(
+    new Set((products || []).map(p => p.productCode).filter(Boolean))
+  ).sort();
+
   // ── Implementation progress map & KPIs ─────────────────────────────────
   const implByBank = new Map<string, BankSummaryV2>();
   for (const s of implSummaries || []) implByBank.set(s.bankId, s);
@@ -127,6 +133,11 @@ export default function Dashboard() {
   const filteredBanks = [...banks]
     .filter(b => {
       if (isBankScopeRestricted && !assignedBankIds.includes(b.id)) return false;
+      // Product code filter
+      if (filterProductCode) {
+        const codes = productCodesByBank.get(b.id) ?? [];
+        if (!codes.includes(filterProductCode)) return false;
+      }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -222,6 +233,51 @@ export default function Dashboard() {
 
       </div>
 
+
+      {/* ── Product filter chips ─────────────────────────────────────────── */}
+      {allProductCodes.length > 0 && (
+        <div className="border-b border-foreground/[0.05] bg-background/60 backdrop-blur-sm">
+          <div className="flex items-center gap-2 px-4 sm:px-8 py-2 overflow-x-auto hide-scrollbar">
+            <span className="text-[10px] text-foreground/30 font-medium uppercase tracking-widest shrink-0 ml-1">منتج</span>
+            {/* All chip */}
+            <button
+              onClick={() => setFilterProductCode(null)}
+              className={cn(
+                "shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all",
+                filterProductCode === null
+                  ? "bg-primary/20 border-primary/50 text-primary shadow-[0_0_8px_rgba(99,102,241,0.35)]"
+                  : "bg-foreground/[0.04] border-foreground/[0.1] text-foreground/40 hover:text-foreground/70 hover:border-foreground/20"
+              )}
+            >
+              الكل
+            </button>
+            {allProductCodes.map(code => {
+              const n = getProductNeon(code);
+              const active = filterProductCode === code;
+              return (
+                <button
+                  key={code}
+                  onClick={() => setFilterProductCode(active ? null : code)}
+                  className={cn(
+                    "shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-black border tracking-widest transition-all",
+                    active
+                      ? cn(n.text, n.bg, n.border)
+                      : "bg-foreground/[0.04] border-foreground/[0.1] text-foreground/35 hover:text-foreground/70 hover:border-foreground/20"
+                  )}
+                  style={active ? { boxShadow: n.glow } : undefined}
+                >
+                  {code}
+                  {active && (
+                    <span className="ml-1.5 text-[9px] opacity-70">
+                      {filteredBanks.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 p-4 sm:p-8 md:p-10 max-w-[1920px] mx-auto w-full flex flex-col gap-5 sm:gap-8">
         

@@ -293,6 +293,9 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
             <Button variant="outline" size="sm" className="gap-2 w-full" onClick={() => fileInputRef.current?.click()}>
               <UploadCloud className="w-4 h-4" /> Upload File
             </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              الصيغ المقبولة: PDF, Word, Excel, PowerPoint, صور — الحد الأقصى 20 MB
+            </p>
             {uploadFile && (
               <div className="p-3 rounded-xl bg-foreground/5 border border-primary/30 space-y-2">
                 <span className="text-sm text-foreground/70">File: {uploadFile.name}</span>

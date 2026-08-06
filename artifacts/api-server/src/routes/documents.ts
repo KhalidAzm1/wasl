@@ -174,6 +174,13 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
     return;
   }
 
+  // Enforce maximum file size (20 MB).
+  const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
+  if (buffer.byteLength > MAX_FILE_BYTES) {
+    res.status(400).json({ error: `حجم الملف (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB) يتجاوز الحد المسموح (20 MB). يرجى ضغط الملف أو تقسيمه.` });
+    return;
+  }
+
   // Build a safe filename for OneDrive (keep original for display, sanitise for path).
   const rawName = parsed.data.fileName ?? "file";
   const ext = rawName.includes(".") ? rawName.slice(rawName.lastIndexOf(".")) : "";

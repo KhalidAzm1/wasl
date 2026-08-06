@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, formatDateTime, formatPercentage, getStatusColor, cn } from '@/lib/utils';
 import { analytics } from '@/lib/analytics';
@@ -238,12 +239,23 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
   const { data: files } = useListDocuments(params, { query: { enabled: isOpen, queryKey: getListDocumentsQueryKey(params) } });
   const uploadDoc = useUploadDocument();
   const deleteDoc = useDeleteDocument();
+  const [deleteDocTarget, setDeleteDocTarget] = useState<{ id: number } | null>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey(params) });
 
+  const MAX_FILE_MB = 20;
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      toast({
+        title: 'الملف كبير جداً',
+        description: `حجم الملف (${(file.size / 1024 / 1024).toFixed(1)} MB) يتجاوز الحد المسموح (${MAX_FILE_MB} MB). يرجى ضغط الملف أو تقسيمه.`,
+        variant: 'destructive',
+      });
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       setUploadFile({ name: file.name, title: file.name, docType: '', dataUrl: event.target?.result as string });
@@ -307,10 +319,7 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
                       {d.uploadedBy && <p className="text-xs text-foreground/30">Uploaded by {d.uploadedBy}</p>}
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50 shrink-0" onClick={() => { if (!confirm('هل أنت متأكد من حذف هذا المرفق؟')) return; deleteDoc.mutate({ id: d.id }, {
-                    onSuccess: () => { invalidate(); toast({ title: 'File archived' }); },
-                    onError: (err: any) => toast({ title: 'Failed to delete file', description: err?.message, variant: 'destructive' }),
-                  }); }}><Trash2 className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50 shrink-0" onClick={() => setDeleteDocTarget({ id: d.id })}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               ))}
               {docs.length === 0 && <div className="py-6 text-center text-foreground/30 text-sm">No files attached yet</div>}
@@ -765,6 +774,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const [deleteProductId, setDeleteProductId] = useState<number | null>(null);
 
   const handleSave = () => {
     if (createProduct.isPending || updateProduct.isPending) return;
@@ -824,14 +834,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                 <div className="flex gap-1">
                   <EntityAttachmentsButton entityType="product" entityId={p.id} label={p.productCode} />
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground/50" onClick={() => { analytics.productOpened({ bank_id: bankId, product_id: p.id, product_code: p.productCode, category_stage: p.categoryStage }); setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => {
-                    if (confirm('Confirm deletion?')) {
-                      deleteProduct.mutate({ id: p.id }, {
-                        onSuccess: () => { analytics.productDeleted({ bank_id: bankId, product_id: p.id, product_code: p.productCode }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }); toast({ title: 'Product archived' }); },
-                        onError: (e: any) => toast({ title: 'Failed to delete product', description: e?.message, variant: 'destructive' }),
-                      });
-                    }
-                  }}><Trash2 className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => setDeleteProductId(p.id)}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               </div>
               <h4 className="font-bold text-lg mb-1">{p.categoryStage}</h4>
@@ -875,6 +878,25 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
           <DialogFooter><Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteProductId} onOpenChange={(o) => { if (!o) setDeleteProductId(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف المنتج</AlertDialogTitle>
+            <AlertDialogDescription>هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={() => {
+              if (!deleteProductId) return;
+              deleteProduct.mutate({ id: deleteProductId }, {
+                onSuccess: () => { analytics.productDeleted({ bank_id: bankId, product_id: deleteProductId, product_code: '' }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }); toast({ title: 'تم حذف المنتج' }); setDeleteProductId(null); },
+                onError: (e: any) => toast({ title: 'فشل الحذف', description: e?.message, variant: 'destructive' }),
+              });
+            }}>حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -886,6 +908,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
   const { toast } = useToast();
   const createMeeting = useCreateMeeting();
   const deleteMeeting = useDeleteMeeting();
+  const [deleteMeetingId, setDeleteMeetingId] = useState<number | null>(null);
 
   const handleSave = () => {
     if (createMeeting.isPending) return;
@@ -925,10 +948,7 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
             </div>
             <div className="flex items-start gap-1 shrink-0">
               <EntityAttachmentsButton entityType="meeting" entityId={m.id} label={m.topic} />
-              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={(e) => { e.stopPropagation(); if (!confirm('هل أنت متأكد من حذف هذا الاجتماع؟')) return; deleteMeeting.mutate({ id: m.id }, {
-                onSuccess: () => { analytics.meetingDeleted({ bank_id: bankId, meeting_id: m.id, topic: m.topic }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'Meeting archived' }); },
-                onError: (err: any) => toast({ title: 'Failed to delete meeting', description: err?.message, variant: 'destructive' }),
-              }); }}>
+              <Button variant="ghost" size="icon" className="text-red-600 dark:text-red-400/50" onClick={(e) => { e.stopPropagation(); setDeleteMeetingId(m.id); }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -946,6 +966,25 @@ function MeetingsTab({ bankId, meetings }: { bankId: string, meetings: any[] }) 
           <DialogFooter><Button onClick={handleSave} disabled={createMeeting.isPending}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteMeetingId} onOpenChange={(o) => { if (!o) setDeleteMeetingId(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف الاجتماع</AlertDialogTitle>
+            <AlertDialogDescription>هل أنت متأكد من حذف هذا الاجتماع؟ لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={() => {
+              if (!deleteMeetingId) return;
+              deleteMeeting.mutate({ id: deleteMeetingId }, {
+                onSuccess: () => { analytics.meetingDeleted({ bank_id: bankId, meeting_id: deleteMeetingId, topic: '' }); queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) }); toast({ title: 'تم حذف الاجتماع' }); setDeleteMeetingId(null); },
+                onError: (err: any) => toast({ title: 'فشل الحذف', description: err?.message, variant: 'destructive' }),
+              });
+            }}>حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

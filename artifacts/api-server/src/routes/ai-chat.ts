@@ -1325,7 +1325,7 @@ function toArabicError(err: any): string {
   const status: number | undefined = err?.status ?? err?.response?.status;
 
   if (status === 402 || msg.includes("Prompt tokens limit") || msg.includes("tokens limit"))
-    return "عذراً، حجم البيانات أكبر من الحد المسموح حالياً. جرّب سؤالاً أضيق نطاقاً (مثل بنك واحد بدل كل البنوك).";
+    return "عذراً، حجم البيانات أكبر من الحد المسموح حالياً. جرّب سؤالاً أكثر تحديداً أو ابدأ محادثة جديدة.";
   if (status === 429 || msg.includes("rate limit") || msg.includes("Too Many Requests"))
     return "وصلاوي مشغولة الآن — يرجى الانتظار لحظة والمحاولة مجدداً.";
   if (status === 401 || msg.includes("Incorrect API key") || msg.includes("No auth"))

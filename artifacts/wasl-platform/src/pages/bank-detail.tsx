@@ -3,7 +3,7 @@ import { useParams, Link, useLocation } from 'wouter';
 import { BankLogo } from '@/components/BankLogo';
 import { NavControls } from '@/components/NavControls';
 import { 
-  useGetBank, useListBanks,
+  useGetBank, useListBanks, useUpdateBank,
   useCreateProduct, useUpdateProduct, useDeleteProduct,
   useCreateMeeting, useUpdateMeeting, useDeleteMeeting,
   useCreateRisk, useUpdateRisk, useDeleteRisk,
@@ -40,10 +40,137 @@ import {
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
   CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip,
   Maximize2, BarChart2, CheckCircle2, Circle, Ban, Clock, Flag, Loader2,
-  GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw, QrCode,
+  GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw, QrCode, Star,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/lib/authContext';
+
+// ── Contacts Card (star + drag-to-reorder) ────────────────────────────────────
+type ContactWithStar = {
+  name: string;
+  title?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  starred?: boolean;
+};
+
+function SortableContact({ id, contact, onStarToggle }: {
+  id: string;
+  contact: ContactWithStar;
+  onStarToggle: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 20 : 1,
+    position: 'relative',
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-start gap-2 p-3 rounded-xl bg-foreground/5 border border-foreground/10">
+      <button {...attributes} {...listeners} className="mt-0.5 text-foreground/25 hover:text-foreground/60 cursor-grab active:cursor-grabbing shrink-0 touch-none">
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm">{contact.name}</p>
+        {contact.title && <p className="text-xs text-foreground/50">{contact.title}</p>}
+        {contact.phone && (
+          <a href={`tel:${contact.phone}`} className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline" dir="ltr">
+            <Phone className="w-3 h-3" />{contact.phone}
+          </a>
+        )}
+        {contact.email && (
+          <a href={`mailto:${contact.email}`} className="text-xs text-primary flex items-center gap-1 mt-0.5 hover:underline" dir="ltr">
+            {contact.email}
+          </a>
+        )}
+      </div>
+      <button
+        onClick={onStarToggle}
+        title={contact.starred ? 'Remove star' : 'Star this contact'}
+        className={cn('shrink-0 mt-0.5 transition-colors', contact.starred ? 'text-yellow-400' : 'text-foreground/20 hover:text-yellow-400/70')}
+      >
+        <Star className={cn('w-4 h-4', contact.starred && 'fill-yellow-400')} />
+      </button>
+    </div>
+  );
+}
+
+function ContactsCard({ bank }: { bank: any }) {
+  const [contacts, setContacts] = useState<ContactWithStar[]>(() =>
+    [...(bank.contacts || [])].sort((a: ContactWithStar, b: ContactWithStar) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0))
+  );
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const updateBank = useUpdateBank();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const save = useCallback((next: ContactWithStar[]) => {
+    updateBank.mutate({
+      id: bank.id,
+      data: {
+        nameEn: bank.nameEn, nameAr: bank.nameAr,
+        category: bank.category, status: bank.status,
+        riskLevel: bank.riskLevel, priorityImpact: bank.priorityImpact,
+        contacts: next,
+      },
+    }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) }),
+      onError: () => toast({ title: 'Failed to save contacts', variant: 'destructive' }),
+    });
+  }, [bank, updateBank, queryClient, toast]);
+
+  const handleStar = (idx: number) => {
+    const next = contacts.map((c, i) => i === idx ? { ...c, starred: !c.starred } : c);
+    const sorted = [...next].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+    setContacts(sorted);
+    save(sorted);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = contacts.findIndex(c => c.name === active.id);
+    const newIdx = contacts.findIndex(c => c.name === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const next = arrayMove(contacts, oldIdx, newIdx);
+    setContacts(next);
+    save(next);
+  };
+
+  if (!contacts.length) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <User className="w-4 h-4 text-primary" />
+          Contacts
+          {updateBank.isPending && <Loader2 className="w-3 h-3 animate-spin text-foreground/40 ml-auto" />}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={contacts.map(c => c.name)} strategy={verticalListSortingStrategy}>
+            {contacts.map((contact, idx) => (
+              <SortableContact
+                key={contact.name}
+                id={contact.name}
+                contact={contact}
+                onStarToggle={() => handleStar(idx)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+        <p className="text-[10px] text-foreground/25 pt-1">Drag to reorder · ★ to pin to top</p>
+      </CardContent>
+    </Card>
+  );
+}
 
 // ── Product Stages Section ────────────────────────────────────────────────────
 function ProductStagesSection({ product, bankId }: { product: any; bankId: string }) {
@@ -747,33 +874,7 @@ export default function BankDetail() {
               </Card>
 
               {bank.contacts && bank.contacts.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="w-5 h-5 text-primary" />
-                      Contacts
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {bank.contacts.map((contact, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-foreground/5 border border-foreground/10">
-                        <p className="font-medium">{contact.name}</p>
-                        {contact.title && <p className="text-sm text-foreground/50">{contact.title}</p>}
-                        {contact.phone && (
-                          <a href={`tel:${contact.phone}`} className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline" dir="ltr">
-                            <Phone className="w-3 h-3" />
-                            {contact.phone}
-                          </a>
-                        )}
-                        {contact.email && (
-                          <a href={`mailto:${contact.email}`} className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline" dir="ltr">
-                            {contact.email}
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                <ContactsCard bank={bank} />
               )}
             </div>
           </div>

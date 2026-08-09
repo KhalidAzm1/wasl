@@ -7,6 +7,7 @@ export const bankContactSchema = z.object({
   title: z.string().nullish(),
   phone: z.string().nullish(),
   email: z.string().nullish(),
+  starred: z.boolean().optional(),
 });
 export type BankContact = z.infer<typeof bankContactSchema>;
 

@@ -33,7 +33,8 @@ export const ListBanksResponseItem = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -75,7 +76,8 @@ export const CreateBankBody = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string(),
   "priorityImpact": zod.string(),
@@ -106,7 +108,8 @@ export const CreateBankResponse = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -151,7 +154,8 @@ export const GetBankResponse = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -264,7 +268,8 @@ export const UpdateBankBody = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().optional(),
   "priorityImpact": zod.string().optional(),
@@ -295,7 +300,8 @@ export const UpdateBankResponse = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -350,7 +356,8 @@ export const RestoreBankResponse = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -399,7 +406,8 @@ export const SetBankLogoResponse = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -448,7 +456,8 @@ export const SetBankHeroImageResponse = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -1208,7 +1217,8 @@ export const GetArchiveResponse = zod.object({
   "name": zod.string(),
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),

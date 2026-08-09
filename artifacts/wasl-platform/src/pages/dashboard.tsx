@@ -240,18 +240,6 @@ export default function Dashboard() {
           <div className="flex items-center gap-0 px-4 sm:px-6 py-2 overflow-x-auto hide-scrollbar">
             {/* compact pill wrapping all chips */}
             <div className="flex items-center gap-0 border border-foreground/10 rounded-xl bg-foreground/[0.03] overflow-hidden divide-x divide-foreground/10">
-              {/* All chip first */}
-              <button
-                onClick={() => setFilterProductCode(null)}
-                className={cn(
-                  "shrink-0 inline-flex items-center px-3 py-1.5 text-[11px] font-bold transition-all",
-                  filterProductCode === null
-                    ? "bg-primary/15 text-primary"
-                    : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
-                )}
-              >
-                الكل
-              </button>
               {allProductCodes.map(code => {
                 const n = getProductNeon(code);
                 const active = filterProductCode === code;
@@ -275,6 +263,18 @@ export default function Dashboard() {
                   </button>
                 );
               })}
+              {/* All chip — at the end, next to last code */}
+              <button
+                onClick={() => setFilterProductCode(null)}
+                className={cn(
+                  "shrink-0 inline-flex items-center px-3 py-1.5 text-[11px] font-bold transition-all",
+                  filterProductCode === null
+                    ? "bg-primary/15 text-primary"
+                    : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                )}
+              >
+                الكل
+              </button>
             </div>
           </div>
         </div>

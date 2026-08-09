@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Edit, Plus, Save, UploadCloud, Archive, RotateCcw, Tag } from 'lucide-react';
+import { Trash2, Edit, Plus, Save, UploadCloud, Archive, RotateCcw, Tag, Star, Phone, User, X } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 import { useAuth } from '@/lib/authContext';
 import type { Bank } from '@workspace/api-client-react';
@@ -67,6 +67,119 @@ export default function Settings() {
           <ArchiveManager />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ── ContactsEditor ────────────────────────────────────────────────────────────
+type ContactEntry = { name: string; title?: string; phone?: string; email?: string; starred?: boolean };
+const EMPTY_CONTACT: ContactEntry = { name: '', title: '', phone: '', email: '', starred: false };
+
+function ContactsEditor({ contacts, onChange }: { contacts: ContactEntry[]; onChange: (c: ContactEntry[]) => void }) {
+  const [draft, setDraft] = useState<ContactEntry>(EMPTY_CONTACT);
+  const [adding, setAdding] = useState(false);
+
+  const toggleStar = (idx: number) => {
+    const next = contacts.map((c, i) => i === idx ? { ...c, starred: !c.starred } : c);
+    onChange(next);
+  };
+  const remove = (idx: number) => onChange(contacts.filter((_, i) => i !== idx));
+  const addContact = () => {
+    if (!draft.name.trim()) return;
+    onChange([...contacts, { ...draft, name: draft.name.trim() }]);
+    setDraft(EMPTY_CONTACT);
+    setAdding(false);
+  };
+
+  return (
+    <div className="space-y-3 border-t border-foreground/10 pt-4 mt-2">
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-foreground/70 flex items-center gap-2">
+          <User className="w-4 h-4" /> Contacts
+        </label>
+        {!adding && (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium"
+          >
+            <Plus className="w-3 h-3" /> Add contact
+          </button>
+        )}
+      </div>
+
+      {/* Existing contacts */}
+      {contacts.length > 0 && (
+        <div className="space-y-2">
+          {contacts.map((c, idx) => (
+            <div key={idx} className={`flex items-start gap-2 p-3 rounded-lg border text-sm ${c.starred ? 'border-yellow-400/50 bg-yellow-400/5' : 'border-foreground/10 bg-foreground/5'}`}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-medium">{c.name}</span>
+                  {c.starred && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-600 dark:text-yellow-300 border border-yellow-400/30">
+                      ★ Featured
+                    </span>
+                  )}
+                </div>
+                {c.title && <p className="text-xs text-foreground/50 mt-0.5">{c.title}</p>}
+                <div className="flex flex-wrap gap-3 mt-1">
+                  {c.phone && (
+                    <span className="text-xs text-primary flex items-center gap-1" dir="ltr">
+                      <Phone className="w-3 h-3" />{c.phone}
+                    </span>
+                  )}
+                  {c.email && <span className="text-xs text-primary">{c.email}</span>}
+                </div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button type="button" onClick={() => toggleStar(idx)} title={c.starred ? 'Remove Featured' : 'Mark as Featured'}
+                  className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${c.starred ? 'text-yellow-400' : 'text-foreground/25 hover:text-yellow-400/70'}`}>
+                  <Star className={`w-3.5 h-3.5 ${c.starred ? 'fill-yellow-400' : ''}`} />
+                </button>
+                <button type="button" onClick={() => remove(idx)}
+                  className="w-7 h-7 rounded-md flex items-center justify-center text-foreground/30 hover:text-red-500 transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new contact form */}
+      {adding && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+          <p className="text-xs font-medium text-foreground/60 mb-2">New Contact</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="Full name *" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
+              className="bg-background border-foreground/10 text-sm h-8" />
+            <Input placeholder="Title / Role" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })}
+              className="bg-background border-foreground/10 text-sm h-8" />
+            <Input placeholder="Phone number" value={draft.phone} onChange={e => setDraft({ ...draft, phone: e.target.value })}
+              className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+            <Input placeholder="Email address" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })}
+              className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <button type="button" onClick={() => setDraft({ ...draft, starred: !draft.starred })}
+              className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${draft.starred ? 'text-yellow-500' : 'text-foreground/40 hover:text-yellow-500'}`}>
+              <Star className={`w-3.5 h-3.5 ${draft.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+              Mark as Featured
+            </button>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setAdding(false); setDraft(EMPTY_CONTACT); }}>Cancel</Button>
+              <Button type="button" size="sm" className="h-7 text-xs gap-1" onClick={addContact} disabled={!draft.name.trim()}>
+                <Plus className="w-3 h-3" /> Add
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {contacts.length === 0 && !adding && (
+        <p className="text-xs text-foreground/30 italic">No contacts yet — click "Add contact" to add one.</p>
+      )}
     </div>
   );
 }
@@ -109,6 +222,7 @@ function BanksManager() {
       nextMeetingDate: editingBank.nextMeetingDate || undefined,
       nextMeetingTopic: editingBank.nextMeetingTopic || undefined,
       nextAction: editingBank.nextAction || undefined,
+      contacts: (editingBank as any).contacts || [],
     };
 
     if (editingBank.id) {
@@ -308,6 +422,12 @@ function BanksManager() {
                 )}
               </div>
             </div>
+
+            {/* ── Contacts ───────────────────────────────────────── */}
+            <ContactsEditor
+              contacts={(editingBank as any)?.contacts || []}
+              onChange={contacts => setEditingBank({ ...editingBank, contacts } as any)}
+            />
           </div>
           </div>
           <DialogFooter className="shrink-0 pt-4">

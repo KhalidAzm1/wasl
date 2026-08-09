@@ -237,46 +237,45 @@ export default function Dashboard() {
       {/* ── Product filter chips ─────────────────────────────────────────── */}
       {allProductCodes.length > 0 && (
         <div className="border-b border-foreground/[0.05] bg-background/60 backdrop-blur-sm">
-          <div className="flex items-center justify-end gap-1.5 px-4 sm:px-6 py-2 overflow-x-auto hide-scrollbar">
-            {allProductCodes.map(code => {
-              const n = getProductNeon(code);
-              const active = filterProductCode === code;
-              return (
-                <button
-                  key={code}
-                  onClick={() => setFilterProductCode(active ? null : code)}
-                  className={cn(
-                    "shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black border tracking-widest transition-all",
-                    active
-                      ? cn(n.text, n.bg, n.border)
-                      : "bg-foreground/[0.04] border-foreground/[0.1] text-foreground/35 hover:text-foreground/70 hover:border-foreground/20"
-                  )}
-                  style={active ? { boxShadow: n.glow } : undefined}
-                >
-                  {code}
-                  {active && (
-                    <span className={cn(
-                      "inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold leading-none",
-                      "bg-current/20 ring-1 ring-current/30"
-                    )}>
-                      {filteredBanks.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-            {/* All chip — at the far right end */}
-            <button
-              onClick={() => setFilterProductCode(null)}
-              className={cn(
-                "shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all",
-                filterProductCode === null
-                  ? "bg-primary/20 border-primary/50 text-primary shadow-[0_0_8px_rgba(99,102,241,0.35)]"
-                  : "bg-foreground/[0.04] border-foreground/[0.1] text-foreground/40 hover:text-foreground/70 hover:border-foreground/20"
-              )}
-            >
-              الكل
-            </button>
+          <div className="flex items-center gap-0 px-4 sm:px-6 py-2 overflow-x-auto hide-scrollbar">
+            {/* compact pill wrapping all chips */}
+            <div className="flex items-center gap-0 border border-foreground/10 rounded-xl bg-foreground/[0.03] overflow-hidden divide-x divide-foreground/10">
+              {/* All chip first */}
+              <button
+                onClick={() => setFilterProductCode(null)}
+                className={cn(
+                  "shrink-0 inline-flex items-center px-3 py-1.5 text-[11px] font-bold transition-all",
+                  filterProductCode === null
+                    ? "bg-primary/15 text-primary"
+                    : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                )}
+              >
+                الكل
+              </button>
+              {allProductCodes.map(code => {
+                const n = getProductNeon(code);
+                const active = filterProductCode === code;
+                return (
+                  <button
+                    key={code}
+                    onClick={() => setFilterProductCode(active ? null : code)}
+                    className={cn(
+                      "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-black tracking-widest transition-all",
+                      active
+                        ? cn(n.text, n.bg)
+                        : "text-foreground/35 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                    )}
+                  >
+                    {code}
+                    {active && (
+                      <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold leading-none bg-white/20 ring-1 ring-white/30">
+                        {filteredBanks.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { BankLogo } from '@/components/BankLogo';
 import { NavControls } from '@/components/NavControls';
 import { 
@@ -75,9 +75,25 @@ export default function Settings() {
 type ContactEntry = { name: string; title?: string; phone?: string; email?: string; starred?: boolean };
 const EMPTY_CONTACT: ContactEntry = { name: '', title: '', phone: '', email: '', starred: false };
 
-function ContactsEditor({ contacts, onChange }: { contacts: ContactEntry[]; onChange: (c: ContactEntry[]) => void }) {
+interface ContactsEditorHandle { flush: () => ContactEntry[] }
+interface ContactsEditorProps { contacts: ContactEntry[]; onChange: (c: ContactEntry[]) => void }
+
+const ContactsEditor = forwardRef<ContactsEditorHandle, ContactsEditorProps>(
+function ContactsEditor({ contacts, onChange }, ref) {
   const [draft, setDraft] = useState<ContactEntry>(EMPTY_CONTACT);
   const [adding, setAdding] = useState(false);
+
+  // Expose flush() so parent can auto-commit pending draft on Save
+  useImperativeHandle(ref, () => ({
+    flush: () => {
+      if (!draft.name.trim()) return contacts;
+      const merged = [...contacts, { ...draft, name: draft.name.trim() }];
+      onChange(merged);
+      setDraft(EMPTY_CONTACT);
+      setAdding(false);
+      return merged;
+    }
+  }), [draft, contacts, onChange]);
 
   const toggleStar = (idx: number) => {
     const next = contacts.map((c, i) => i === idx ? { ...c, starred: !c.starred } : c);
@@ -182,7 +198,7 @@ function ContactsEditor({ contacts, onChange }: { contacts: ContactEntry[]; onCh
       )}
     </div>
   );
-}
+});
 
 function BanksManager() {
   const { data: banks, isLoading } = useListBanks();
@@ -196,12 +212,16 @@ function BanksManager() {
   const createBank = useCreateBank();
   const updateBank = useUpdateBank();
   const deleteBank = useDeleteBank();
+  const contactsEditorRef = useRef<{ flush: () => ContactEntry[] }>(null);
 
   const handleSave = () => {
     if (!editingBank?.nameEn || !editingBank?.nameAr || !editingBank?.category || !editingBank?.status) {
       toast({ title: 'Validation Error', description: 'Please fill in the required fields (name, category, status)', variant: 'destructive' });
       return;
     }
+
+    // Auto-flush any pending draft in the contacts form before building payload
+    const flushedContacts = contactsEditorRef.current?.flush() ?? ((editingBank as any).contacts || []);
 
     const payload = {
       nameEn: editingBank.nameEn,
@@ -222,7 +242,7 @@ function BanksManager() {
       nextMeetingDate: editingBank.nextMeetingDate || undefined,
       nextMeetingTopic: editingBank.nextMeetingTopic || undefined,
       nextAction: editingBank.nextAction || undefined,
-      contacts: (editingBank as any).contacts || [],
+      contacts: flushedContacts,
     };
 
     if (editingBank.id) {
@@ -425,6 +445,7 @@ function BanksManager() {
 
             {/* ── Contacts ───────────────────────────────────────── */}
             <ContactsEditor
+              ref={contactsEditorRef}
               contacts={(editingBank as any)?.contacts || []}
               onChange={contacts => setEditingBank({ ...editingBank, contacts } as any)}
             />

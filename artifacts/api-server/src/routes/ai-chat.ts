@@ -732,6 +732,8 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
     today.setHours(0, 0, 0, 0);
     const in7Days = new Date(today);
     in7Days.setDate(today.getDate() + 7);
+    const ago7Days = new Date(today);
+    ago7Days.setDate(today.getDate() - 7);
     const ago30Days = new Date(today);
     ago30Days.setDate(today.getDate() - 30);
 
@@ -850,9 +852,11 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
       }));
 
     const reportDate = today.toISOString().split("T")[0];
+    const periodStart = ago7Days.toISOString().split("T")[0];
+    const periodEnd = reportDate;
     return {
       report_generated_at: reportDate,
-      report_week: `${reportDate} → ${in7Days.toISOString().split("T")[0]}`,
+      report_period: `${periodStart} → ${periodEnd}`,
       overview: {
         total_banks: total,
         avg_completion_pct: avgPct,
@@ -881,6 +885,7 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
         "For sections listing multiple banks with multiple attributes (name, status, progress, risk…) use a Markdown table. Example: | Bank | Status | Progress | Risk |\\n|---|---|---|---|\\n| Bank X | In Progress | 60% | High |",
         "For simple single-attribute lists (e.g. upcoming meetings: date + bank) use bullet points.",
         "## 💡 Recommendations is NON-NEGOTIABLE — write exactly 5 numbered actionable recommendations. Do NOT skip it.",
+        `In the ## 📊 Overview section, on the very first line write: **Report Period:** ${periodStart} → ${periodEnd}`,
         `End with EXACTLY: **Report generated on:** ${reportDate}`,
       ],
     };
@@ -1487,9 +1492,11 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
       if (calledReport) {
         // Extract the report date from the tool result so we can embed it
         let reportDate = new Date().toISOString().split("T")[0];
+        let reportPeriod = "";
         try {
           const parsed = JSON.parse(toolResults[0].content);
           if (parsed.report_generated_at) reportDate = parsed.report_generated_at;
+          if (parsed.report_period) reportPeriod = parsed.report_period;
         } catch { /* ignore */ }
 
         openaiMessages.push({
@@ -1506,6 +1513,9 @@ The report must contain EXACTLY these 8 sections in this order, using ## for eac
 ## 🐢 Lowest Progress
 ## 💤 Stalled Banks
 ## 💡 Recommendations
+
+IMPORTANT: In the ## 📊 Overview section, the VERY FIRST LINE must be:
+**Report Period:** ${reportPeriod || `(past 7 days up to ${reportDate})`}
 
 Under "## 💡 Recommendations" write exactly 5 numbered actionable recommendations based on the data.
 End with EXACTLY this line: **Report generated on:** ${reportDate}`,

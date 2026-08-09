@@ -238,11 +238,11 @@ const WaslHeader = ({ stage, cubeSize }: { stage: number, cubeSize: number }) =>
         <motion.img 
           src={waslLogo} 
           alt="" 
-          className="absolute w-full blur-[12px] filter brightness-150"
+          className="absolute w-full blur-[12px] filter brightness-0 invert opacity-80"
           animate={{ opacity: [0.3, 0.8, 0.3] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
-        <img src={waslLogo} alt="WASL AI Hub" className="relative w-full drop-shadow-[0_0_8px_rgba(108,76,255,0.8)]" />
+        <img src={waslLogo} alt="WASL AI Hub" className="relative w-full brightness-0 invert drop-shadow-[0_0_8px_rgba(167,139,250,0.9)]" />
       </div>
       
       <div className="text-white tracking-[0.35em] text-[9px] md:text-[11px] font-light mt-1 mb-2 opacity-80 uppercase text-center w-full">

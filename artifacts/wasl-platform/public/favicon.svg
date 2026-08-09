@@ -1,27 +1,10 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <rect width="512" height="512" rx="96" fill="#0C0C1E"/>
-  <!-- Light blue left arc / body -->
-  <ellipse cx="198" cy="256" rx="98" ry="130" fill="#8BA7F5"/>
-  <!-- Bite out of left arc (dark) -->
-  <ellipse cx="240" cy="220" rx="72" ry="90" fill="#0C0C1E"/>
-  <!-- Dark blue right pillar -->
-  <rect x="250" y="170" width="80" height="160" rx="8" fill="#2B3FBF"/>
-  <!-- Circuit lines (right side) -->
-  <g stroke="#5870E0" stroke-width="5" stroke-linecap="round">
-    <line x1="330" y1="190" x2="390" y2="190"/>
-    <line x1="390" y1="190" x2="410" y2="172"/>
-    <circle cx="416" cy="172" r="6" fill="#5870E0"/>
-    <line x1="330" y1="215" x2="395" y2="215"/>
-    <circle cx="401" cy="215" r="6" fill="#5870E0"/>
-    <line x1="330" y1="240" x2="380" y2="240"/>
-    <line x1="380" y1="240" x2="400" y2="222"/>
-    <circle cx="406" cy="222" r="6" fill="#5870E0"/>
-    <line x1="330" y1="265" x2="400" y2="265"/>
-    <circle cx="406" cy="265" r="6" fill="#5870E0"/>
-    <line x1="330" y1="290" x2="385" y2="290"/>
-    <line x1="385" y1="290" x2="405" y2="308"/>
-    <circle cx="411" cy="308" r="6" fill="#5870E0"/>
-    <line x1="330" y1="315" x2="395" y2="315"/>
-    <circle cx="401" cy="315" r="6" fill="#5870E0"/>
-  </g>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="96" fill="#F5F3FF"/>
+  <!-- Light lavender rounded square (left + bottom) -->
+  <rect x="96" y="140" width="220" height="240" rx="110" fill="#A78BFA"/>
+  <!-- Dark purple rounded rect (right column) -->
+  <rect x="260" y="140" width="156" height="240" rx="78" fill="#6D28D9"/>
+  <!-- Overlap blend: cut bottom-right of lavender shape to show purple -->
+  <rect x="260" y="260" width="156" height="120" rx="0" fill="#6D28D9"/>
+  <rect x="260" y="340" width="156" height="40" rx="20" fill="#6D28D9"/>
 </svg>

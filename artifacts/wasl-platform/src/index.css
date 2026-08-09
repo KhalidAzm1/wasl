@@ -53,59 +53,62 @@
 }
 
 @layer utilities {
-  /* The Wasl logo artwork is baked onto a near-black canvas, so it needs a
-     fixed dark "stage" to stay legible and on-brand in both themes. */
-  .logo-plate {
-    background: linear-gradient(155deg, #0a0f24 0%, #050816 100%);
-    border: 1px solid rgba(164, 140, 242, 0.18);
-    box-shadow: 0 12px 30px -8px rgba(79, 50, 214, 0.35);
+  /* On dark backgrounds the new Wasl logo (gray text) needs a brightness boost
+     so the wordmark stays legible. Applied automatically by WaslLogo. */
+  .dark .wasl-logo-img {
+    filter: brightness(0) invert(1);
+    opacity: 0.88;
+  }
+  /* Light theme — no filter needed, logo is naturally gray on white */
+  .wasl-logo-img {
+    transition: filter 0.2s ease, opacity 0.2s ease;
   }
 }
 
 :root {
   color-scheme: light;
-  --button-outline: rgba(47, 107, 255, 0.1);
-  --badge-outline: rgba(47, 107, 255, 0.05);
+  --button-outline: rgba(124, 58, 237, 0.12);
+  --badge-outline: rgba(124, 58, 237, 0.06);
 
   --elevate-1: 0 8px 30px rgba(15, 23, 42, 0.08);
-  --elevate-2: 0 0 30px rgba(47, 107, 255, 0.08);
+  --elevate-2: 0 0 30px rgba(124, 58, 237, 0.10);
 
-  --background: 216 33% 97%; /* #EEF2F7 - base behind the gradient */
-  --foreground: 222 47% 11%; /* #0F172A */
+  --background: 250 30% 98%; /* warm off-white */
+  --foreground: 262 30% 10%; /* near-black with purple tint */
 
-  --border: 211 100% 70%; /* #63B3FF at ~20% opacity used for borders */
+  --border: 262 60% 80%; /* soft lavender border */
 
-  --card: 0 0% 100%; /* base white, opacity handled in utilities */
-  --card-foreground: 222 47% 11%; /* #0F172A */
-  --card-border: 211 100% 70%; /* #63B3FF at ~20% opacity */
+  --card: 0 0% 100%;
+  --card-foreground: 262 30% 10%;
+  --card-border: 262 60% 85%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 211 100% 70%;
+  --popover-foreground: 262 30% 10%;
+  --popover-border: 262 60% 85%;
 
-  --primary: 223 100% 59%; /* Accent #2F6BFF mapped to primary */
+  --primary: 262 83% 58%; /* #7C3AED — Wasl logo dark violet */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 215 19% 35%; /* Secondary #475569 */
+  --secondary: 262 40% 45%; /* medium purple */
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 214 32% 91%; /* #E2E8F0 */
-  --muted-foreground: 215 19% 35%; /* Secondary #475569 */
+  --muted: 260 20% 92%; /* light lavender-grey */
+  --muted-foreground: 262 20% 40%;
 
-  --accent: 223 100% 59%; /* Accent #2F6BFF */
+  --accent: 262 83% 58%; /* same as primary */
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 84% 60%; /* Danger #EF4444 */
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
-  --input: 214 32% 91%;
-  --ring: 223 100% 59%; /* Accent #2F6BFF */
+  --input: 260 20% 92%;
+  --ring: 262 83% 58%;
 
-  --chart-1: 223 100% 59%; /* Accent #2F6BFF */
+  --chart-1: 262 83% 58%; /* #7C3AED */
   --chart-2: 142 71% 45%; /* Success #22C55E */
-  --chart-3: 48 96% 53%; /* Warning #FACC15 */
-  --chart-4: 0 84% 60%; /* Danger #EF4444 */
-  --chart-5: 222 47% 11%; /* Primary #0F172A */
+  --chart-3: 48 96% 53%;  /* Warning #FACC15 */
+  --chart-4: 0 84% 60%;   /* Danger #EF4444 */
+  --chart-5: 263 87% 76%; /* #A78BFA lavender */
 
   --app-font-sans: 'Outfit', sans-serif;
   --app-font-serif: Georgia, serif;

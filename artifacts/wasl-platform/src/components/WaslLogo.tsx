@@ -21,7 +21,7 @@ export function WaslLogo({ height = 90, className = '', imgClassName = 'w-auto m
       src={logoUrl}
       alt="Wasl"
       style={imgStyle ?? { height }}
-      className={`no-mirror ${imgClassName} ${className}`}
+      className={`no-mirror wasl-logo-img ${imgClassName} ${className}`}
     />
   );
 }

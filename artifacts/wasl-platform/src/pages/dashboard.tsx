@@ -172,49 +172,47 @@ export default function Dashboard() {
         {/* Header: 3 balanced sections with logo centered */}
         <div className="relative flex items-center px-4 sm:px-5 py-2" style={{ minHeight: 52 }}>
 
-          {/* ── LEFT: empty — logo centered ── */}
-          <div className="flex-1" />
+          {/* ── LEFT: Search ── */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Search desktop */}
+            <div className="relative hidden sm:block w-36 md:w-48">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30" />
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="بحث..."
+                aria-label="Search banks"
+                dir="rtl"
+                className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-1.5 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 focus:bg-foreground/[0.06] transition-all"
+              />
+            </div>
+            {/* Search mobile icon */}
+            <button className="sm:hidden p-1.5 rounded-lg border border-foreground/10 text-foreground/50 hover:text-foreground transition-colors" aria-label="Search" onClick={() => setMobileSearchOpen(v => !v)}>
+              <Search className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           {/* ── CENTER: Logo absolutely centered ── */}
           <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
             <WaslLogo height={40} imgClassName="w-auto" />
           </div>
 
-          {/* ── RIGHT: all controls compact in one pill ── */}
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* ── RIGHT: views + theme + settings compact pill ── */}
           <div className="flex items-center shrink-0">
-            {/* Single compact pill: search | divider | views | divider | theme | settings */}
             <div className="flex items-center gap-0 border border-foreground/10 rounded-xl bg-foreground/[0.03] overflow-hidden divide-x divide-foreground/10">
-
-              {/* Search — desktop */}
-              <div className="relative hidden sm:flex items-center">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-foreground/30 pointer-events-none" />
-                <input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="بحث..."
-                  aria-label="Search banks"
-                  dir="rtl"
-                  className="w-28 md:w-36 bg-transparent pl-8 pr-3 py-1.5 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:bg-foreground/[0.04] transition-all"
-                />
-              </div>
-
-              {/* Search — mobile icon */}
-              <button className="sm:hidden p-1.5 text-foreground/40 hover:text-foreground transition-colors" aria-label="Search" onClick={() => setMobileSearchOpen(v => !v)}>
-                <Search className="w-3.5 h-3.5" />
-              </button>
-
               {/* View toggle */}
               <div className="flex items-center">
                 <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/15 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
                 <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/15 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
                 <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/15 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
               </div>
-
-              {/* Theme toggle — desktop */}
+              {/* Theme toggle */}
               <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="hidden sm:flex p-1.5 text-foreground/40 hover:text-foreground hover:bg-foreground/[0.06] transition-all">
                 {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
-
               {/* Settings */}
               <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="hidden sm:flex p-1.5 text-foreground/40 hover:text-foreground hover:bg-foreground/[0.06] transition-all">
                 <Settings className="w-3.5 h-3.5" />
@@ -239,9 +237,35 @@ export default function Dashboard() {
       {/* ── Product filter chips ─────────────────────────────────────────── */}
       {allProductCodes.length > 0 && (
         <div className="border-b border-foreground/[0.05] bg-background/60 backdrop-blur-sm">
-          <div className="flex items-center gap-2 px-4 sm:px-8 py-2 overflow-x-auto hide-scrollbar">
-            <span className="text-[10px] text-foreground/30 font-medium uppercase tracking-widest shrink-0 ml-1">منتج</span>
-            {/* All chip */}
+          <div className="flex items-center justify-end gap-1.5 px-4 sm:px-6 py-2 overflow-x-auto hide-scrollbar">
+            {allProductCodes.map(code => {
+              const n = getProductNeon(code);
+              const active = filterProductCode === code;
+              return (
+                <button
+                  key={code}
+                  onClick={() => setFilterProductCode(active ? null : code)}
+                  className={cn(
+                    "shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black border tracking-widest transition-all",
+                    active
+                      ? cn(n.text, n.bg, n.border)
+                      : "bg-foreground/[0.04] border-foreground/[0.1] text-foreground/35 hover:text-foreground/70 hover:border-foreground/20"
+                  )}
+                  style={active ? { boxShadow: n.glow } : undefined}
+                >
+                  {code}
+                  {active && (
+                    <span className={cn(
+                      "inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold leading-none",
+                      "bg-current/20 ring-1 ring-current/30"
+                    )}>
+                      {filteredBanks.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {/* All chip — at the far right end */}
             <button
               onClick={() => setFilterProductCode(null)}
               className={cn(
@@ -253,30 +277,6 @@ export default function Dashboard() {
             >
               الكل
             </button>
-            {allProductCodes.map(code => {
-              const n = getProductNeon(code);
-              const active = filterProductCode === code;
-              return (
-                <button
-                  key={code}
-                  onClick={() => setFilterProductCode(active ? null : code)}
-                  className={cn(
-                    "shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-black border tracking-widest transition-all",
-                    active
-                      ? cn(n.text, n.bg, n.border)
-                      : "bg-foreground/[0.04] border-foreground/[0.1] text-foreground/35 hover:text-foreground/70 hover:border-foreground/20"
-                  )}
-                  style={active ? { boxShadow: n.glow } : undefined}
-                >
-                  {code}
-                  {active && (
-                    <span className="ml-1.5 text-[9px] opacity-70">
-                      {filteredBanks.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
       )}

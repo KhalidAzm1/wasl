@@ -172,35 +172,7 @@ export default function Dashboard() {
         {/* Header: 3 balanced sections with logo centered */}
         <div className="relative flex items-center px-4 sm:px-5 py-2" style={{ minHeight: 52 }}>
 
-          {/* ── LEFT section: View toggle + Theme/Settings ── */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* View toggle */}
-            <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
-              <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
-            </div>
-
-            {/* Theme + Settings */}
-            <div className="hidden sm:flex items-center gap-1">
-              <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
-                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              </button>
-              <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* ── CENTER: Logo absolutely centered ── */}
-          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
-            <WaslLogo height={40} imgClassName="w-auto" />
-          </div>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* ── RIGHT section: Search ── */}
+          {/* ── LEFT section: Search ── */}
           <div className="flex items-center gap-1.5 shrink-0">
             {/* Search desktop */}
             <div className="relative hidden sm:block w-36 md:w-44">
@@ -218,6 +190,34 @@ export default function Dashboard() {
             <button className="sm:hidden p-1.5 rounded-lg border border-foreground/10 text-foreground/50 hover:text-foreground transition-colors" aria-label="Search" onClick={() => setMobileSearchOpen(v => !v)}>
               <Search className="w-3.5 h-3.5" />
             </button>
+          </div>
+
+          {/* ── CENTER: Logo absolutely centered ── */}
+          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
+            <WaslLogo height={40} imgClassName="w-auto" />
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* ── RIGHT section: View toggle + Theme/Settings ── */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Theme + Settings */}
+            <div className="hidden sm:flex items-center gap-1">
+              <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+              <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
+              <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
+            </div>
           </div>
         </div>
 
@@ -847,13 +847,26 @@ function CompactBankCard({
           <div className="absolute inset-0 z-10 rounded-2xl pointer-events-none group-hover:shadow-[inset_0_0_0_1px_rgba(79,50,214,0.4),0_0_20px_-5px_rgba(79,50,214,0.15)] transition-all duration-500" />
           
           <div className="relative z-20 flex justify-between items-start gap-2">
-            <div className="w-10 h-10 rounded-xl bg-foreground/5 border border-foreground/10 p-1.5 shrink-0 shadow-inner">
+            <motion.div
+              className="w-10 h-10 rounded-xl bg-foreground/5 border border-foreground/10 p-1.5 shrink-0 shadow-inner"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25 }}
+            >
                <BankLogo src={displayBank.logoUrl} alt={displayBank.nameEn} fallbackText={displayBank.nameAr.substring(0, 2)} />
-            </div>
+            </motion.div>
             {implProgress !== undefined && (
-              <span className="text-sm font-mono font-bold text-foreground/70">
-                {Math.round(implProgress.completionPercentage)}%
-              </span>
+              <motion.div
+                className="flex flex-col items-end"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.35 }}
+              >
+                <span className="text-sm font-mono font-bold text-foreground/70 leading-none">
+                  {Math.round(implProgress.completionPercentage)}%
+                </span>
+                <span className="text-[8px] text-foreground/30 uppercase tracking-widest mt-0.5">impl</span>
+              </motion.div>
             )}
           </div>
           

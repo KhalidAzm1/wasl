@@ -39,6 +39,7 @@ export default function Dashboard() {
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
   const { data: banks, isLoading: isLoadingBanks } = useListBanks();
   const { data: products, isLoading: isLoadingProducts } = useListProducts();
+  const { data: productTypes } = useListProductTypes();
   const { data: implSummaries } = useGetImplSummaryV2();
   
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -110,17 +111,32 @@ export default function Dashboard() {
     progressByBank.set(bank.id, entry && entry.count ? entry.sum / entry.count : 0);
   }
 
-  // Build distinct product-code badge list per bank — single pass, zero N+1
+  // Build productType id→name (code) lookup — e.g. 1 → "E1"
+  const ptCodeById = new Map<number, string>();
+  for (const pt of productTypes || []) ptCodeById.set(pt.id, pt.name);
+
+  // Build distinct product-code badge list per bank — merging BOTH sources:
+  // 1. Actual products table entries  2. bankProductTypeIds from the Edit Bank dialog
   const productCodesByBank = new Map<string, string[]>();
-  for (const bank of banks) productCodesByBank.set(bank.id, []);
-  for (const p of products || []) {
-    const arr = productCodesByBank.get(p.bankId);
-    if (arr && p.productCode && !arr.includes(p.productCode)) arr.push(p.productCode);
+  for (const bank of banks) {
+    const codes: string[] = [];
+    // Source 1: product rows
+    for (const p of products || []) {
+      if (p.bankId === bank.id && p.productCode && !codes.includes(p.productCode)) {
+        codes.push(p.productCode);
+      }
+    }
+    // Source 2: product type assignments (Edit Bank dialog)
+    for (const ptId of (bank as any).productTypeIds ?? []) {
+      const code = ptCodeById.get(ptId);
+      if (code && !codes.includes(code)) codes.push(code);
+    }
+    productCodesByBank.set(bank.id, codes);
   }
 
   // All distinct product codes across all banks (for filter chips)
   const allProductCodes = Array.from(
-    new Set((products || []).map(p => p.productCode).filter(Boolean))
+    new Set(Array.from(productCodesByBank.values()).flat())
   ).sort();
 
   // ── Implementation progress map & KPIs ─────────────────────────────────

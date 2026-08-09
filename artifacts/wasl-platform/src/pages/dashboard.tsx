@@ -172,51 +172,53 @@ export default function Dashboard() {
         {/* Header: 3 balanced sections with logo centered */}
         <div className="relative flex items-center px-4 sm:px-5 py-2" style={{ minHeight: 52 }}>
 
-          {/* ── LEFT section: Search ── */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Search desktop */}
-            <div className="relative hidden sm:block w-36 md:w-44">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30" />
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="بحث..."
-                aria-label="Search banks"
-                dir="rtl"
-                className="w-full bg-foreground/[0.04] border border-foreground/[0.08] rounded-xl pr-9 pl-3 py-1.5 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:border-primary/40 focus:bg-foreground/[0.06] transition-all"
-              />
-            </div>
-            {/* Search mobile icon */}
-            <button className="sm:hidden p-1.5 rounded-lg border border-foreground/10 text-foreground/50 hover:text-foreground transition-colors" aria-label="Search" onClick={() => setMobileSearchOpen(v => !v)}>
-              <Search className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {/* ── LEFT: empty — logo centered ── */}
+          <div className="flex-1" />
 
           {/* ── CENTER: Logo absolutely centered ── */}
           <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
             <WaslLogo height={40} imgClassName="w-auto" />
           </div>
 
-          {/* Spacer */}
-          <div className="flex-1" />
+          {/* ── RIGHT: all controls compact in one pill ── */}
+          <div className="flex items-center shrink-0">
+            {/* Single compact pill: search | divider | views | divider | theme | settings */}
+            <div className="flex items-center gap-0 border border-foreground/10 rounded-xl bg-foreground/[0.03] overflow-hidden divide-x divide-foreground/10">
 
-          {/* ── RIGHT section: View toggle + Theme/Settings ── */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Theme + Settings */}
-            <div className="hidden sm:flex items-center gap-1">
-              <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+              {/* Search — desktop */}
+              <div className="relative hidden sm:flex items-center">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-foreground/30 pointer-events-none" />
+                <input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="بحث..."
+                  aria-label="Search banks"
+                  dir="rtl"
+                  className="w-28 md:w-36 bg-transparent pl-8 pr-3 py-1.5 text-xs text-foreground/70 placeholder:text-foreground/30 outline-none focus:bg-foreground/[0.04] transition-all"
+                />
+              </div>
+
+              {/* Search — mobile icon */}
+              <button className="sm:hidden p-1.5 text-foreground/40 hover:text-foreground transition-colors" aria-label="Search" onClick={() => setMobileSearchOpen(v => !v)}>
+                <Search className="w-3.5 h-3.5" />
+              </button>
+
+              {/* View toggle */}
+              <div className="flex items-center">
+                <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/15 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/15 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/15 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
+              </div>
+
+              {/* Theme toggle — desktop */}
+              <button type="button" aria-label="Toggle theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="hidden sm:flex p-1.5 text-foreground/40 hover:text-foreground hover:bg-foreground/[0.06] transition-all">
                 {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
-              <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="p-1.5 rounded-xl bg-foreground/[0.04] border border-foreground/[0.08] text-foreground/50 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
+
+              {/* Settings */}
+              <button type="button" aria-label="Open settings panel" onClick={() => window.dispatchEvent(new CustomEvent('wasl:open-settings'))} className="hidden sm:flex p-1.5 text-foreground/40 hover:text-foreground hover:bg-foreground/[0.06] transition-all">
                 <Settings className="w-3.5 h-3.5" />
               </button>
-            </div>
-
-            {/* View toggle */}
-            <div className="flex items-center gap-0.5 border border-foreground/10 rounded-xl p-1 shrink-0">
-              <button onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'grid' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><LayoutGrid className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none", viewMode === 'list' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><List className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setViewMode('kanban')} aria-label="Kanban view" aria-pressed={viewMode === 'kanban'} className={cn("p-1.5 rounded-lg transition-colors focus:outline-none hidden sm:block", viewMode === 'kanban' ? "bg-primary/20 text-primary" : "text-foreground/30 hover:text-foreground/60")}><Columns3 className="w-3.5 h-3.5" /></button>
             </div>
           </div>
         </div>

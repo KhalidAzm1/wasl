@@ -876,12 +876,12 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
       },
       // READ THIS LAST — MANDATORY FORMATTING RULES:
       _MUST_follow: [
-        "Write the full report in Arabic.",
-        "Use EXACTLY these 8 section headers (## level) in this order: 📊 نظرة عامة | 🚨 بنوك تحتاج تدخل عاجل | 📅 اجتماعات هذا الأسبوع | ⏰ إجراءات متأخرة | 🏆 الأكثر تقدماً | 🐢 الأقل تقدماً | 💤 بنوك متوقفة | 💡 توصيات",
-        "For sections listing multiple banks with multiple attributes (name, status, progress, risk…) use a Markdown table. Example: | البنك | الحالة | التقدم | المخاطر |\\n|---|---|---|---|\\n| بنك X | In Progress | 60% | منخفض |",
+        "Write the full report in English only. Do NOT use Arabic anywhere in the report body.",
+        "Use EXACTLY these 8 section headers (## level) in this order: 📊 Overview | 🚨 Critical Banks | 📅 This Week's Meetings | ⏰ Overdue Actions | 🏆 Top Performers | 🐢 Lowest Progress | 💤 Stalled Banks | 💡 Recommendations",
+        "For sections listing multiple banks with multiple attributes (name, status, progress, risk…) use a Markdown table. Example: | Bank | Status | Progress | Risk |\\n|---|---|---|---|\\n| Bank X | In Progress | 60% | High |",
         "For simple single-attribute lists (e.g. upcoming meetings: date + bank) use bullet points.",
-        "## 💡 توصيات is NON-NEGOTIABLE — write exactly 5 numbered actionable recommendations. Do NOT skip it.",
-        `End with EXACTLY: **تاريخ إنشاء التقرير:** ${reportDate}`,
+        "## 💡 Recommendations is NON-NEGOTIABLE — write exactly 5 numbered actionable recommendations. Do NOT skip it.",
+        `End with EXACTLY: **Report generated on:** ${reportDate}`,
       ],
     };
   }
@@ -1494,23 +1494,21 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
         openaiMessages.push({
           role: "user",
-          content: `اكتب الآن التقرير الأسبوعي كاملاً — باللغتين العربية والإنجليزية معاً.
-قاعدة العناوين: كل عنوان قسم يُكتب بالعربية ثم | ثم الإنجليزية (مثال: ## 📊 نظرة عامة | Overview).
-قاعدة المحتوى: اكتب محتوى كل قسم بالعربية، وعند ذكر مصطلحات تقنية أو أسماء حقول اذكرها بالإنجليزية بين قوسين.
+          content: `Write the full weekly report now — entirely in English. Do NOT use Arabic anywhere.
 
-يجب أن يحتوي بالضبط على هذه الأقسام الثمانية بهذا الترتيب — استخدم ## لكل قسم:
+The report must contain EXACTLY these 8 sections in this order, using ## for each:
 
-## 📊 نظرة عامة | Overview
-## 🚨 بنوك تحتاج تدخل عاجل | Critical Banks
-## 📅 اجتماعات هذا الأسبوع | This Week's Meetings
-## ⏰ إجراءات متأخرة | Overdue Actions
-## 🏆 الأكثر تقدماً | Top Performers
-## 🐢 الأقل تقدماً | Lowest Progress
-## 💤 بنوك متوقفة | Stalled Banks
-## 💡 توصيات | Recommendations
+## 📊 Overview
+## 🚨 Critical Banks
+## 📅 This Week's Meetings
+## ⏰ Overdue Actions
+## 🏆 Top Performers
+## 🐢 Lowest Progress
+## 💤 Stalled Banks
+## 💡 Recommendations
 
-تحت "## 💡 توصيات | Recommendations" اكتب 5 توصيات مرقمة وقابلة للتنفيذ بناءً على البيانات.
-أختم التقرير بهذا السطر بالضبط: **تاريخ إنشاء التقرير:** ${reportDate}`,
+Under "## 💡 Recommendations" write exactly 5 numbered actionable recommendations based on the data.
+End with EXACTLY this line: **Report generated on:** ${reportDate}`,
         });
       }
 

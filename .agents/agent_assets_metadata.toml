@@ -13,3 +13,10 @@ uri = "file://wasl_banking_data.sql"
 type = "unspecified"
 title = "wasl_banking_data.sql"
 description = "Complete PostgreSQL data export — 582 records across all 12 banking tables. Import this into the new Replit after running migrations."
+
+[[outputs]]
+id = "C4ErA175DFTddWv9fujIR"
+uri = "file://meeting-notes-system-overview.md"
+type = "text"
+title = "نوت اجتماع — منصة وصل"
+description = "ملخص كامل لإمكانيات النظام مرتّب للعرض في الاجتماع"

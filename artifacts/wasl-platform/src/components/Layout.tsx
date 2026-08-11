@@ -250,7 +250,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       {/* Wasl AI Chat Widget — super_admin only */}
-      {role === 'super_admin' && <WaslAIChat />}
+      {(role === 'super_admin' || role === 'admin') && <WaslAIChat />}
     </div>
   );
 }

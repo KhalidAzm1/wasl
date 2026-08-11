@@ -21,7 +21,7 @@ import {
   auditLogsTable,
 } from "@workspace/db";
 import { getSupabaseAdmin } from "@workspace/supabase";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import {
   uploadToStorage,
   deleteFromStorage,
@@ -1111,7 +1111,7 @@ router.get("/system/health", async (_req, res): Promise<void> => {
 });
 
 /** POST /api/system/tests/run */
-router.post("/system/tests/run", async (req, res): Promise<void> => {
+router.post("/system/tests/run", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const suite = (req.body?.suite ?? "all") as string;
   const start = ms();
   const logs: string[] = [];
@@ -1254,8 +1254,8 @@ router.get("/system/reports/:id/download", (req, res): void => {
 });
 
 /** DELETE /api/system/reports/:id */
-router.delete("/system/reports/:id", (req, res): void => {
-  const deleted = deleteReportFile(req.params.id);
+router.delete("/system/reports/:id", requireRole("super_admin", "admin"), (req, res): void => {
+  const deleted = deleteReportFile(req.params.id as string);
   if (!deleted) {
     res.status(404).json({ error: "Report not found" });
     return;

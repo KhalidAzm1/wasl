@@ -19,7 +19,11 @@ import { eventBus } from "../lib/event-bus";
 const router: IRouter = Router();
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
-const SECRET = process.env.SESSION_SECRET ?? "wasl-qu-fallback-secret";
+const SECRET = (() => {
+  const s = process.env.SESSION_SECRET;
+  if (!s) throw new Error("SESSION_SECRET is not configured; cannot sign quick-update tokens");
+  return s;
+})();
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days — long enough for a printed QR
 
 function makeToken(bankId: string, expiresAt: number): string {

@@ -701,7 +701,7 @@ function ArchiveManager() {
                 </div>
                 <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={() => {
                   restoreMeeting.mutate({ id: m.id }, {
-                    onSuccess: () => { analytics.meetingUpdated({ bank_id: '', meeting_id: m.id }); invalidate(); toast({ title: 'Meeting Restored', description: 'The meeting has been restored successfully.' }); },
+                    onSuccess: () => { analytics.meetingUpdated({ bank_id: m.bankId ?? '', meeting_id: m.id }); invalidate(); toast({ title: 'Meeting Restored', description: 'The meeting has been restored successfully.' }); },
                     onError: (e: any) => toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' }),
                   });
                 }}>

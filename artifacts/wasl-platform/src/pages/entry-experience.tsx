@@ -276,11 +276,23 @@ export default function EntryExperience() {
   const [cubeSize, setCubeSize] = useState(260);
   const [isHovered, setIsHovered] = useState(false);
   const [bgFailed, setBgFailed] = useState(false);
+  const [showFallbackBtn, setShowFallbackBtn] = useState(false);
 
   useEffect(() => {
     const img = new Image();
     img.onerror = () => setBgFailed(true);
     img.src = bgImage;
+  }, []);
+
+  // Show fallback button after 3s (for users whose cube is invisible due to GPU issues)
+  // Auto-navigate after 12s if no interaction
+  useEffect(() => {
+    const showTimer = window.setTimeout(() => setShowFallbackBtn(true), 3000);
+    const autoTimer = window.setTimeout(() => {
+      if (entryStage === 0) handleEnter();
+    }, 12000);
+    return () => { window.clearTimeout(showTimer); window.clearTimeout(autoTimer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const clearStageTimeouts = () => {
@@ -476,6 +488,25 @@ export default function EntryExperience() {
 
       {/* Onboarding Guide — rendered below flash overlays so the flash hides it during entry */}
       {entryStage === 0 && <WaslOnboardingGuide onStartExploring={handleEnter} />}
+
+      {/* Fallback Enter button — always visible after 3s for devices where the 3D cube is not rendered */}
+      {entryStage === 0 && showFallbackBtn && (
+        <motion.button
+          type="button"
+          onClick={handleEnter}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium text-white/70 hover:text-white transition-all"
+          style={{
+            background: 'rgba(108,76,255,0.15)',
+            border: '1px solid rgba(108,76,255,0.35)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          Enter Platform →
+        </motion.button>
+      )}
 
       {/* Cinematic Flash / Fade transition mask */}
       <motion.div

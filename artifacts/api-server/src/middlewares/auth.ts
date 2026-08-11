@@ -122,9 +122,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         cbSuccess(); // clear failure count on successful profile load
 
         const role = profile.role as UserRole;
+        const storedPermissions =
+          profile.permissions && typeof profile.permissions === "object"
+            ? (profile.permissions as Partial<UserPermissions>)
+            : {};
         const permissions: UserPermissions = {
           ...DEFAULT_PERMISSIONS[role],
-          ...(profile.permissions && typeof profile.permissions === "object" ? profile.permissions : {}),
+          ...storedPermissions,
+          // dashboard_access is a basic right tied to the role — it must never
+          // be stripped by a stored override. All defined roles have it set to
+          // true and an admin can't revoke it from the granular-permissions UI.
+          dashboard_access: DEFAULT_PERMISSIONS[role].dashboard_access,
         };
 
         // Non-critical: assigned_bank_ids — PostgREST cache may lag; default to []

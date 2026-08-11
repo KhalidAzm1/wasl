@@ -96,15 +96,57 @@ export default function Dashboard() {
     );
   }
 
-  // API error — show a clear message instead of a blank screen
+  // Detect the specific error type so we can show a helpful message
+  const firstError = isErrorSummary
+    ? (summary as unknown as { status?: number } | undefined)
+    : isErrorBanks
+    ? (banks as unknown as { status?: number } | undefined)
+    : undefined;
+  // React Query surfaces the thrown ApiError as the `error` field; grab status from it
+  const errorStatus =
+    (firstError as { status?: number } | undefined)?.status ??
+    (isErrorSummary || isErrorBanks || isErrorProducts ? 0 : undefined);
+
   if (isErrorSummary || isErrorBanks || isErrorProducts) {
+    const is403 = errorStatus === 403;
+    const is401 = errorStatus === 401;
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-6">
-        <div className="text-5xl">⚠️</div>
-        <div className="text-foreground/80 text-lg font-medium">تعذّر تحميل البيانات</div>
-        <div className="text-foreground/40 text-sm max-w-xs">
-          تحقق من اتصالك بالإنترنت ثم حاول مجدداً.
+        <div className="text-5xl">{is403 ? '🔒' : '⚠️'}</div>
+        <div className="text-foreground/80 text-lg font-medium">
+          {is403 ? 'ليس لديك صلاحية لعرض لوحة التحكم' : 'تعذّر تحميل البيانات'}
         </div>
+        <div className="text-foreground/40 text-sm max-w-sm">
+          {is403
+            ? 'تواصل مع مسؤول النظام لمراجعة صلاحياتك.'
+            : is401
+            ? 'انتهت صلاحية الجلسة — يرجى تسجيل الدخول مجدداً.'
+            : 'تحقق من اتصالك بالإنترنت ثم حاول مجدداً.'}
+        </div>
+        {!is403 && (
+          <button
+            onClick={() => { refetchSummary(); refetchBanks(); refetchProducts(); }}
+            className="mt-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            إعادة المحاولة
+          </button>
+        )}
+        {is401 && (
+          <a href="/login" className="text-sm text-primary underline underline-offset-4">
+            تسجيل الدخول
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  // summary/banks came back null despite no error (unexpected empty response) — show retry
+  if (!summary || !banks) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-6">
+        <div className="text-5xl">🔄</div>
+        <div className="text-foreground/80 text-lg font-medium">لم يتم تحميل البيانات</div>
+        <div className="text-foreground/40 text-sm max-w-xs">استغرق التحميل وقتاً أطول من المعتاد.</div>
         <button
           onClick={() => { refetchSummary(); refetchBanks(); refetchProducts(); }}
           className="mt-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -114,8 +156,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  if (!summary || !banks) return null;
 
   const progressTotals = new Map<string, { sum: number; count: number }>();
   for (const p of products || []) {

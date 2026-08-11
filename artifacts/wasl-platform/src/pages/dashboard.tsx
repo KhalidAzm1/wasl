@@ -36,9 +36,9 @@ const itemVariants: Variants = {
 export default function Dashboard() {
   const { theme, setTheme } = useTheme();
   const { role: userRole, assignedBankIds } = useAuth();
-  const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
-  const { data: banks, isLoading: isLoadingBanks } = useListBanks();
-  const { data: products, isLoading: isLoadingProducts } = useListProducts();
+  const { data: summary, isLoading: isLoadingSummary, isError: isErrorSummary, refetch: refetchSummary } = useGetDashboardSummary();
+  const { data: banks, isLoading: isLoadingBanks, isError: isErrorBanks, refetch: refetchBanks } = useListBanks();
+  const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts, refetch: refetchProducts } = useListProducts();
   const { data: productTypes } = useListProductTypes();
   const { data: implSummaries } = useGetImplSummaryV2();
   
@@ -92,6 +92,25 @@ export default function Dashboard() {
       <div className="flex flex-col items-center justify-center h-full space-y-6">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_-3px_rgba(79,50,214,0.5)]"></div>
         <div className="text-foreground/50 text-xl font-light tracking-widest uppercase">Initializing...</div>
+      </div>
+    );
+  }
+
+  // API error — show a clear message instead of a blank screen
+  if (isErrorSummary || isErrorBanks || isErrorProducts) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-6">
+        <div className="text-5xl">⚠️</div>
+        <div className="text-foreground/80 text-lg font-medium">تعذّر تحميل البيانات</div>
+        <div className="text-foreground/40 text-sm max-w-xs">
+          تحقق من اتصالك بالإنترنت ثم حاول مجدداً.
+        </div>
+        <button
+          onClick={() => { refetchSummary(); refetchBanks(); refetchProducts(); }}
+          className="mt-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          إعادة المحاولة
+        </button>
       </div>
     );
   }

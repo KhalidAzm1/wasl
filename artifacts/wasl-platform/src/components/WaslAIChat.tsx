@@ -355,171 +355,6 @@ async function exportReportAsPdf(markdown: string) {
   }
 }
 
-/* ─── DOCX export ────────────────────────────────────────────────────────── */
-function stripBold(s: string): string { return s.replace(/\*\*(.+?)\*\*/g, '$1'); }
-
-function makeBoldRuns(s: string, baseOpts: Record<string, unknown> = {}): unknown[] {
-  // Returns an array of TextRun-compatible option objects (bold toggled)
-  const parts = s.split(/\*\*(.+?)\*\*/g);
-  return parts.map((p, i) => ({ ...baseOpts, text: p, bold: i % 2 === 1 }));
-}
-
-async function exportReportAsDocx(markdown: string) {
-  const docx = await import('docx');
-  const {
-    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    HeadingLevel, AlignmentType, WidthType, BorderStyle, ShadingType,
-  } = docx;
-
-  const today = new Date().toISOString().slice(0, 10);
-
-  type DocChild = typeof Paragraph.prototype | typeof Table.prototype;
-  const children: DocChild[] = [];
-
-  // ── Header paragraph (title) ──
-  children.push(new Paragraph({
-    heading: HeadingLevel.TITLE,
-    alignment: AlignmentType.RIGHT,
-    bidirectional: true,
-    children: [new TextRun({ text: 'وصل — منصة متابعة تنفيذ المنتجات البنكية', bold: true, size: 36, color: '1e3a8a' })],
-  }));
-  children.push(new Paragraph({
-    alignment: AlignmentType.RIGHT,
-    bidirectional: true,
-    children: [new TextRun({ text: `التقرير الأسبوعي · ${today}`, size: 20, color: '6b7280' })],
-  }));
-  children.push(new Paragraph({ children: [] })); // spacer
-
-  // ── Parse markdown ──
-  const lines = markdown.split('\n');
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    const tr = line.trim();
-
-    // Table block
-    if (tr.startsWith('|') && tr.includes('|', 1)) {
-      const tl: string[] = [];
-      while (i < lines.length && lines[i].trim().startsWith('|')) { tl.push(lines[i]); i++; }
-      const rows = tl
-        .filter(l => !/^\|\s*[-:]+[\s|:-]*$/.test(l.trim()))
-        .map(l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
-      if (rows.length >= 2) {
-        const [hdr, ...body] = rows;
-        const colCount = hdr.length;
-        const colW = Math.floor(9000 / colCount);
-        const tableRows = [
-          new TableRow({
-            tableHeader: true,
-            children: hdr.map(c => new TableCell({
-              width: { size: colW, type: WidthType.DXA },
-              shading: { type: ShadingType.SOLID, color: 'eef2ff', fill: 'eef2ff' },
-              children: [new Paragraph({
-                alignment: AlignmentType.RIGHT, bidirectional: true,
-                children: [new TextRun({ text: stripBold(c), bold: true, color: '1e3a8a', size: 20 })],
-              })],
-            })),
-          }),
-          ...body.map((row, ri) => new TableRow({
-            children: row.map(c => new TableCell({
-              width: { size: colW, type: WidthType.DXA },
-              shading: ri % 2 === 0
-                ? { type: ShadingType.SOLID, color: 'f9fafb', fill: 'f9fafb' }
-                : { type: ShadingType.CLEAR, color: 'ffffff', fill: 'ffffff' },
-              children: [new Paragraph({
-                alignment: AlignmentType.RIGHT, bidirectional: true,
-                children: makeBoldRuns(c, { size: 20, color: '374151' }) as InstanceType<typeof TextRun>[],
-              })],
-            })),
-          })),
-        ];
-        children.push(new Table({
-          width: { size: 9000, type: WidthType.DXA },
-          rows: tableRows,
-          borders: {
-            top:    { style: BorderStyle.SINGLE, size: 4, color: 'e5e7eb' },
-            bottom: { style: BorderStyle.SINGLE, size: 4, color: 'e5e7eb' },
-            left:   { style: BorderStyle.SINGLE, size: 4, color: 'e5e7eb' },
-            right:  { style: BorderStyle.SINGLE, size: 4, color: 'e5e7eb' },
-            insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: 'e5e7eb' },
-            insideVertical:   { style: BorderStyle.SINGLE, size: 4, color: 'e5e7eb' },
-          },
-        }));
-        children.push(new Paragraph({ children: [] })); // spacer after table
-      }
-      continue;
-    }
-
-    if (/^###\s/.test(line)) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_3,
-        alignment: AlignmentType.RIGHT, bidirectional: true,
-        children: [new TextRun({ text: stripBold(line.replace(/^###\s/, '')), bold: true, color: '374151', size: 22 })],
-      }));
-    } else if (/^##\s/.test(line)) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_2,
-        alignment: AlignmentType.RIGHT, bidirectional: true,
-        children: [new TextRun({ text: stripBold(line.replace(/^##\s/, '')), bold: true, color: '4f46e5', size: 24 })],
-      }));
-    } else if (/^#\s/.test(line)) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        alignment: AlignmentType.RIGHT, bidirectional: true,
-        children: [new TextRun({ text: stripBold(line.replace(/^#\s/, '')), bold: true, color: '1e3a8a', size: 28 })],
-      }));
-    } else if (/^[•\-\*]\s/.test(tr)) {
-      children.push(new Paragraph({
-        alignment: AlignmentType.RIGHT, bidirectional: true,
-        bullet: { level: 0 },
-        children: makeBoldRuns(tr.replace(/^[•\-\*]\s/, ''), { size: 22, color: '374151' }) as InstanceType<typeof TextRun>[],
-      }));
-    } else if (/^\d+\.\s/.test(tr)) {
-      children.push(new Paragraph({
-        alignment: AlignmentType.RIGHT, bidirectional: true,
-        numbering: { reference: 'numbered-list', level: 0 },
-        children: makeBoldRuns(tr.replace(/^\d+\.\s/, ''), { size: 22, color: '374151' }) as InstanceType<typeof TextRun>[],
-      }));
-    } else if (!tr) {
-      children.push(new Paragraph({ children: [] }));
-    } else {
-      children.push(new Paragraph({
-        alignment: AlignmentType.RIGHT, bidirectional: true,
-        children: makeBoldRuns(line, { size: 22, color: '374151' }) as InstanceType<typeof TextRun>[],
-      }));
-    }
-    i++;
-  }
-
-  // ── Footer ──
-  children.push(new Paragraph({ children: [] }));
-  children.push(new Paragraph({
-    alignment: AlignmentType.CENTER, bidirectional: true,
-    children: [new TextRun({ text: `Generated by Wasalawi — Wasl Platform Smart Assistant · ${today}`, size: 16, color: '9ca3af' })],
-  }));
-
-  const doc = new Document({
-    numbering: {
-      config: [{
-        reference: 'numbered-list',
-        levels: [{ level: 0, format: 'decimal', text: '%1.', alignment: AlignmentType.RIGHT }],
-      }],
-    },
-    sections: [{
-      properties: {},
-      children,
-    }],
-  });
-
-  const blob = await Packer.toBlob(doc);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `wasl-report-${today}.docx`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
 /* ─── speech ─────────────────────────────────────────────────────────────── */
 const SpeechAPI = typeof window !== 'undefined' ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : null;
 
@@ -600,8 +435,7 @@ function UserBubble({ text }: { text: string }) {
 function AiBubble({ msg }: { msg: Message }) {
   const hasTable = msg.content.includes('|');
   const showExport = isWeeklyReport(msg.content);
-  const [exportingPdf,  setExportingPdf]  = React.useState(false);
-  const [exportingDocx, setExportingDocx] = React.useState(false);
+  const [exportingPdf, setExportingPdf] = React.useState(false);
 
   async function handlePdf() {
     if (exportingPdf) return;
@@ -611,15 +445,7 @@ function AiBubble({ msg }: { msg: Message }) {
     finally { setExportingPdf(false); }
   }
 
-  async function handleDocx() {
-    if (exportingDocx) return;
-    setExportingDocx(true);
-    try { await exportReportAsDocx(msg.content); }
-    catch (e) { console.error('DOCX export failed', e); }
-    finally { setExportingDocx(false); }
-  }
-
-  const busy = exportingPdf || exportingDocx;
+  const busy = exportingPdf;
 
   return (
     <div className="wa-in" style={{ display: 'flex', gap: 9, alignItems: 'flex-start', justifyContent: 'flex-end' }}>
@@ -655,27 +481,6 @@ function AiBubble({ msg }: { msg: Message }) {
                 ? <Loader2 style={{ width: 11, height: 11, animation: 'wa-spin .9s linear infinite' }} />
                 : <Download style={{ width: 11, height: 11 }} />}
               {exportingPdf ? 'Loading…' : 'PDF'}
-            </button>
-
-            {/* Word */}
-            <button
-              onClick={handleDocx}
-              disabled={busy}
-              title="Export report as Word"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                fontSize: 11.5, fontWeight: 600, fontFamily: 'Tajawal,sans-serif',
-                padding: '5px 11px', borderRadius: 8,
-                background: exportingDocx ? 'rgba(16,185,129,.07)' : 'rgba(16,185,129,.1)',
-                border: '1px solid rgba(16,185,129,.28)',
-                color: busy ? 'rgba(110,231,183,.35)' : 'rgba(110,231,183,.85)',
-                cursor: busy ? 'default' : 'pointer', transition: 'all .15s',
-              }}
-            >
-              {exportingDocx
-                ? <Loader2 style={{ width: 11, height: 11, animation: 'wa-spin .9s linear infinite' }} />
-                : <Download style={{ width: 11, height: 11 }} />}
-              {exportingDocx ? 'Loading…' : 'Word'}
             </button>
           </div>
         )}

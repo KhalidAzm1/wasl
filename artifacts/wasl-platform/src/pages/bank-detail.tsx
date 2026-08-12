@@ -56,10 +56,55 @@ type ContactWithStar = {
   starred?: boolean;
 };
 
-function SortableContact({ id, contact, onStarToggle }: {
+const EMPTY_CONTACT_DETAIL: ContactWithStar = { name: '', title: '', phone: '', email: '', department: '', manager: '', starred: false };
+
+function ContactForm({ value, onChange, onSave, onCancel, saving }: {
+  value: ContactWithStar;
+  onChange: (v: ContactWithStar) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <Input placeholder="Full name *" value={value.name ?? ''} onChange={e => onChange({ ...value, name: e.target.value })}
+          className="bg-background border-foreground/10 text-sm h-8 col-span-2" autoFocus />
+        <Input placeholder="Title / Role" value={value.title ?? ''} onChange={e => onChange({ ...value, title: e.target.value })}
+          className="bg-background border-foreground/10 text-sm h-8" />
+        <Input placeholder="Department (القسم)" value={value.department ?? ''} onChange={e => onChange({ ...value, department: e.target.value })}
+          className="bg-background border-foreground/10 text-sm h-8" />
+        <Input placeholder="Manager (المدير)" value={value.manager ?? ''} onChange={e => onChange({ ...value, manager: e.target.value })}
+          className="bg-background border-foreground/10 text-sm h-8" />
+        <Input placeholder="Phone number" value={value.phone ?? ''} onChange={e => onChange({ ...value, phone: e.target.value })}
+          className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+        <Input placeholder="Email address" value={value.email ?? ''} onChange={e => onChange({ ...value, email: e.target.value })}
+          className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+      </div>
+      <div className="flex items-center justify-between pt-1">
+        <button type="button" onClick={() => onChange({ ...value, starred: !value.starred })}
+          className={cn('flex items-center gap-1.5 text-xs font-medium transition-colors', value.starred ? 'text-yellow-500' : 'text-foreground/40 hover:text-yellow-500')}>
+          <Star className={cn('w-3.5 h-3.5', value.starred ? 'fill-yellow-400 text-yellow-400' : '')} />
+          Pin to top
+        </button>
+        <div className="flex gap-2">
+          <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
+          <Button type="button" size="sm" className="h-7 text-xs gap-1" onClick={onSave} disabled={!value.name?.trim() || saving}>
+            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+            Save
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SortableContact({ id, contact, onStarToggle, onEdit, onDelete }: {
   id: string;
   contact: ContactWithStar;
   onStarToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style: React.CSSProperties = {
@@ -70,7 +115,7 @@ function SortableContact({ id, contact, onStarToggle }: {
     position: 'relative',
   };
   return (
-    <div ref={setNodeRef} style={style} className="flex items-start gap-2 p-3 rounded-xl bg-foreground/5 border border-foreground/10">
+    <div ref={setNodeRef} style={style} className="flex items-start gap-2 p-3 rounded-xl bg-foreground/5 border border-foreground/10 group">
       <button {...attributes} {...listeners} className="mt-0.5 text-foreground/25 hover:text-foreground/60 cursor-grab active:cursor-grabbing shrink-0 touch-none">
         <GripVertical className="w-4 h-4" />
       </button>
@@ -79,12 +124,8 @@ function SortableContact({ id, contact, onStarToggle }: {
         {contact.title && <p className="text-xs text-foreground/50">{contact.title}</p>}
         {(contact.department || contact.manager) && (
           <div className="flex flex-wrap gap-x-3 mt-0.5">
-            {contact.department && (
-              <span className="text-xs text-foreground/40">🏢 {contact.department}</span>
-            )}
-            {contact.manager && (
-              <span className="text-xs text-foreground/40">👤 {contact.manager}</span>
-            )}
+            {contact.department && <span className="text-xs text-foreground/40">🏢 {contact.department}</span>}
+            {contact.manager && <span className="text-xs text-foreground/40">👤 {contact.manager}</span>}
           </div>
         )}
         {contact.phone && (
@@ -98,13 +139,20 @@ function SortableContact({ id, contact, onStarToggle }: {
           </a>
         )}
       </div>
-      <button
-        onClick={onStarToggle}
-        title={contact.starred ? 'Remove star' : 'Star this contact'}
-        className={cn('shrink-0 mt-0.5 transition-colors', contact.starred ? 'text-yellow-400' : 'text-foreground/20 hover:text-yellow-400/70')}
-      >
-        <Star className={cn('w-4 h-4', contact.starred && 'fill-yellow-400')} />
-      </button>
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button onClick={onEdit} title="Edit contact"
+          className="w-6 h-6 rounded flex items-center justify-center text-foreground/25 hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100">
+          <Pencil className="w-3 h-3" />
+        </button>
+        <button onClick={onDelete} title="Delete contact"
+          className="w-6 h-6 rounded flex items-center justify-center text-foreground/25 hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100">
+          <Trash2 className="w-3 h-3" />
+        </button>
+        <button onClick={onStarToggle} title={contact.starred ? 'Remove star' : 'Star this contact'}
+          className={cn('w-6 h-6 rounded flex items-center justify-center transition-colors', contact.starred ? 'text-yellow-400' : 'text-foreground/20 hover:text-yellow-400/70')}>
+          <Star className={cn('w-4 h-4', contact.starred && 'fill-yellow-400')} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -113,6 +161,11 @@ function ContactsCard({ bank }: { bank: any }) {
   const [contacts, setContacts] = useState<ContactWithStar[]>(() =>
     [...(bank.contacts || [])].sort((a: ContactWithStar, b: ContactWithStar) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0))
   );
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<ContactWithStar>(EMPTY_CONTACT_DETAIL);
+  const [adding, setAdding] = useState(false);
+  const [addDraft, setAddDraft] = useState<ContactWithStar>(EMPTY_CONTACT_DETAIL);
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updateBank = useUpdateBank();
@@ -121,7 +174,7 @@ function ContactsCard({ bank }: { bank: any }) {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  const save = useCallback((next: ContactWithStar[]) => {
+  const save = useCallback((next: ContactWithStar[], opts?: { onSuccess?: () => void }) => {
     updateBank.mutate({
       id: bank.id,
       data: {
@@ -131,7 +184,7 @@ function ContactsCard({ bank }: { bank: any }) {
         contacts: next,
       },
     }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) }),
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) }); opts?.onSuccess?.(); },
       onError: () => toast({ title: 'Failed to save contacts', variant: 'destructive' }),
     });
   }, [bank, updateBank, queryClient, toast]);
@@ -154,7 +207,31 @@ function ContactsCard({ bank }: { bank: any }) {
     save(next);
   };
 
-  if (!contacts.length) return null;
+  const handleAdd = () => {
+    if (!addDraft.name?.trim()) return;
+    const next = [...contacts, { ...addDraft, name: addDraft.name.trim() }];
+    setContacts(next);
+    save(next, { onSuccess: () => { setAdding(false); setAddDraft(EMPTY_CONTACT_DETAIL); } });
+  };
+
+  const handleEditSave = () => {
+    if (editingIdx === null || !editDraft.name?.trim()) return;
+    const next = contacts.map((c, i) => i === editingIdx ? { ...editDraft, name: editDraft.name!.trim() } : c);
+    setContacts(next);
+    save(next, { onSuccess: () => { setEditingIdx(null); setEditDraft(EMPTY_CONTACT_DETAIL); } });
+  };
+
+  const handleDelete = (idx: number) => {
+    const next = contacts.filter((_, i) => i !== idx);
+    setContacts(next);
+    save(next);
+  };
+
+  const startEdit = (idx: number) => {
+    setAdding(false);
+    setEditingIdx(idx);
+    setEditDraft({ ...contacts[idx] });
+  };
 
   return (
     <Card>
@@ -162,23 +239,56 @@ function ContactsCard({ bank }: { bank: any }) {
         <CardTitle className="flex items-center gap-2 text-base">
           <User className="w-4 h-4 text-primary" />
           Contacts
-          {updateBank.isPending && <Loader2 className="w-3 h-3 animate-spin text-foreground/40 ml-auto" />}
+          {updateBank.isPending && <Loader2 className="w-3 h-3 animate-spin text-foreground/40" />}
+          <button
+            onClick={() => { setAdding(true); setEditingIdx(null); setAddDraft(EMPTY_CONTACT_DETAIL); }}
+            className="ml-auto flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium"
+          >
+            <Plus className="w-3 h-3" /> Add
+          </button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
+        {adding && (
+          <ContactForm
+            value={addDraft}
+            onChange={setAddDraft}
+            onSave={handleAdd}
+            onCancel={() => { setAdding(false); setAddDraft(EMPTY_CONTACT_DETAIL); }}
+            saving={updateBank.isPending}
+          />
+        )}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={contacts.map(c => c.name)} strategy={verticalListSortingStrategy}>
             {contacts.map((contact, idx) => (
-              <SortableContact
-                key={contact.name}
-                id={contact.name}
-                contact={contact}
-                onStarToggle={() => handleStar(idx)}
-              />
+              editingIdx === idx ? (
+                <ContactForm
+                  key={`edit-${idx}`}
+                  value={editDraft}
+                  onChange={setEditDraft}
+                  onSave={handleEditSave}
+                  onCancel={() => { setEditingIdx(null); setEditDraft(EMPTY_CONTACT_DETAIL); }}
+                  saving={updateBank.isPending}
+                />
+              ) : (
+                <SortableContact
+                  key={contact.name}
+                  id={contact.name}
+                  contact={contact}
+                  onStarToggle={() => handleStar(idx)}
+                  onEdit={() => startEdit(idx)}
+                  onDelete={() => handleDelete(idx)}
+                />
+              )
             ))}
           </SortableContext>
         </DndContext>
-        <p className="text-[10px] text-foreground/25 pt-1">Drag to reorder · ★ to pin to top</p>
+        {contacts.length > 0 && editingIdx === null && !adding && (
+          <p className="text-[10px] text-foreground/25 pt-1">Drag to reorder · ★ to pin to top</p>
+        )}
+        {contacts.length === 0 && !adding && (
+          <p className="text-xs text-foreground/30 italic text-center py-2">No contacts yet — click Add to get started</p>
+        )}
       </CardContent>
     </Card>
   );

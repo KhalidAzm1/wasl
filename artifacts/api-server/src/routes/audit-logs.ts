@@ -6,9 +6,9 @@ import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 
 const router: IRouter = Router();
-router.use(requireAuth, requirePermission("security"));
+router.use(requireAuth);
 
-router.get("/audit-logs", async (req, res): Promise<void> => {
+router.get("/audit-logs", requirePermission("security"), async (req, res): Promise<void> => {
   const query = ListAuditLogsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });

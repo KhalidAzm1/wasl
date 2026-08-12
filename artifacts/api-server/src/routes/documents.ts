@@ -22,7 +22,7 @@ import { getSignedUrl, parseDataUrl } from "../lib/supabase-storage";
 import { uploadToOneDrive } from "../lib/onedrive-storage";
 
 const router: IRouter = Router();
-router.use(requireAuth, requirePermission("documents"));
+router.use(requireAuth);
 
 // entityType -> the DB table/column used to verify the parent record exists
 // before writing a files row. No longer maps to OneDrive folders.
@@ -97,7 +97,7 @@ async function toWire(row: typeof filesTable.$inferSelect) {
 
 // ─── List ─────────────────────────────────────────────────────────────────────
 
-router.get("/documents", async (req, res): Promise<void> => {
+router.get("/documents", requirePermission("documents"), async (req, res): Promise<void> => {
   const query = ListDocumentsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -118,7 +118,7 @@ router.get("/documents", async (req, res): Promise<void> => {
 
 // ─── Create link-only record ──────────────────────────────────────────────────
 
-router.post("/documents", async (req, res): Promise<void> => {
+router.post("/documents", requirePermission("documents"), async (req, res): Promise<void> => {
   const parsed = CreateDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -152,7 +152,7 @@ router.post("/documents", async (req, res): Promise<void> => {
 
 // ─── Upload file to Supabase Storage ─────────────────────────────────────────
 
-router.post("/documents/upload", async (req, res): Promise<void> => {
+router.post("/documents/upload", requirePermission("documents"), async (req, res): Promise<void> => {
   const parsed = UploadDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -233,7 +233,7 @@ router.post("/documents/upload", async (req, res): Promise<void> => {
 
 // ─── Update metadata ──────────────────────────────────────────────────────────
 
-router.patch("/documents/:id", async (req, res): Promise<void> => {
+router.patch("/documents/:id", requirePermission("documents"), async (req, res): Promise<void> => {
   const params = UpdateDocumentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -265,7 +265,7 @@ router.patch("/documents/:id", async (req, res): Promise<void> => {
 
 // ─── Archive (soft delete) ────────────────────────────────────────────────────
 
-router.delete("/documents/:id", async (req, res): Promise<void> => {
+router.delete("/documents/:id", requirePermission("documents"), async (req, res): Promise<void> => {
   const params = DeleteDocumentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -294,7 +294,7 @@ router.delete("/documents/:id", async (req, res): Promise<void> => {
 
 // ─── Restore ──────────────────────────────────────────────────────────────────
 
-router.post("/documents/:id/restore", async (req, res): Promise<void> => {
+router.post("/documents/:id/restore", requirePermission("documents"), async (req, res): Promise<void> => {
   const params = RestoreDocumentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

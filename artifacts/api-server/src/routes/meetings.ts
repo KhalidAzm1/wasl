@@ -19,9 +19,9 @@ import { logAudit } from "../lib/audit";
 import { invalidateActivityCache } from "./banks";
 
 const router: IRouter = Router();
-router.use(requireAuth, requirePermission("meetings"));
+router.use(requireAuth);
 
-router.get("/meetings", async (req, res): Promise<void> => {
+router.get("/meetings", requirePermission("meetings"), async (req, res): Promise<void> => {
   const query = ListMeetingsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -59,7 +59,7 @@ router.get("/meetings", async (req, res): Promise<void> => {
   res.json(ListMeetingsResponse.parse(toPlain(rows)));
 });
 
-router.post("/meetings", async (req, res): Promise<void> => {
+router.post("/meetings", requirePermission("meetings"), async (req, res): Promise<void> => {
   const parsed = CreateMeetingBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -79,7 +79,7 @@ router.post("/meetings", async (req, res): Promise<void> => {
   res.status(201).json(CreateMeetingResponse.parse(toPlain(row)));
 });
 
-router.patch("/meetings/:id", async (req, res): Promise<void> => {
+router.patch("/meetings/:id", requirePermission("meetings"), async (req, res): Promise<void> => {
   const params = UpdateMeetingParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -110,7 +110,7 @@ router.patch("/meetings/:id", async (req, res): Promise<void> => {
   res.json(UpdateMeetingResponse.parse(toPlain(row)));
 });
 
-router.delete("/meetings/:id", async (req, res): Promise<void> => {
+router.delete("/meetings/:id", requirePermission("meetings"), async (req, res): Promise<void> => {
   const params = DeleteMeetingParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -134,7 +134,7 @@ router.delete("/meetings/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.post("/meetings/:id/restore", async (req, res): Promise<void> => {
+router.post("/meetings/:id/restore", requirePermission("meetings"), async (req, res): Promise<void> => {
   const params = RestoreMeetingParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

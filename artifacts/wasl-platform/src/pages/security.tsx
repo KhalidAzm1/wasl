@@ -4,6 +4,7 @@ import { useListAuditLogs } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTime } from '@/lib/utils';
 import { ShieldCheck, ChevronDown, Lock } from 'lucide-react';
+import { useAuth } from '@/lib/authContext';
 
 const FIELD_LABELS: Record<string, string> = {
   nameEn: 'Name (English)',
@@ -52,8 +53,22 @@ function formatDetailValue(value: unknown): string {
 }
 
 export default function Security() {
-  const { data, isLoading } = useListAuditLogs({ limit: 100 });
+  const { role } = useAuth();
+  const canAccess = role === 'admin' || role === 'super_admin';
+  const { data, isLoading, isError } = useListAuditLogs({ limit: 100 }, { query: { enabled: canAccess } });
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  if (!canAccess || isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-6">
+        <div className="text-5xl">🔒</div>
+        <div className="text-foreground/80 text-lg font-medium">تعذّر تحميل البيانات</div>
+        <div className="text-foreground/40 text-sm max-w-sm">
+          ليس لديك صلاحية لعرض سجل النشاط. تواصل مع مسؤول النظام.
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

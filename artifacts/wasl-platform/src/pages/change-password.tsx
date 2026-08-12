@@ -5,22 +5,43 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { WaslLogo } from '@/components/WaslLogo';
+import { Check, X } from 'lucide-react';
+
+/* ── Password rules ─────────────────────────────────────────────────────── */
+const RULES = [
+  { id: 'len',     label: '٨ أحرف على الأقل',                test: (p: string) => p.length >= 8 },
+  { id: 'upper',   label: 'حرف كبير (A-Z)',                  test: (p: string) => /[A-Z]/.test(p) },
+  { id: 'special', label: 'رمز خاص (!@#$%^&*…)',             test: (p: string) => /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?`~]/.test(p) },
+];
+
+function RuleRow({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {ok
+        ? <Check size={13} style={{ color: '#34d399', flexShrink: 0 }} />
+        : <X     size={13} style={{ color: '#6b7280', flexShrink: 0 }} />}
+      <span style={{ fontSize: 12, color: ok ? '#34d399' : '#9ca3af', fontFamily: 'Tajawal, sans-serif' }}>
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export default function ChangePassword() {
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [, navigate] = useLocation();
-  const { toast } = useToast();
+  const [confirm, setConfirm]   = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [, navigate]            = useLocation();
+  const { toast }               = useToast();
+
+  const ruleResults = RULES.map(r => ({ ...r, ok: r.test(password) }));
+  const allPassed   = ruleResults.every(r => r.ok);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      toast({ title: 'كلمة المرور قصيرة', description: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل', variant: 'destructive' });
-      return;
-    }
-    if (!/[a-zA-Z\u0600-\u06FF!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) {
-      toast({ title: 'كلمة المرور ضعيفة', description: 'يجب أن تحتوي كلمة المرور على حرف أو رمز واحد على الأقل (لا أرقام فقط)', variant: 'destructive' });
+
+    if (!allPassed) {
+      toast({ title: 'كلمة المرور لا تستوفي المتطلبات', description: 'يرجى استيفاء جميع الشروط الموضحة أدناه', variant: 'destructive' });
       return;
     }
     if (password !== confirm) {
@@ -30,18 +51,10 @@ export default function ChangePassword() {
 
     setLoading(true);
 
-    // The session in memory can be stale (expired/rotated refresh token,
-    // long idle tab, etc.) by the time the form is submitted. Re-check with
-    // Supabase first so we can send the user back to /login with a clear
-    // message instead of surfacing a raw "Auth session missing!" error.
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
       setLoading(false);
-      toast({
-        title: 'Session expired',
-        description: 'Your session has expired, please sign in again to set your password.',
-        variant: 'destructive',
-      });
+      toast({ title: 'انتهت صلاحية الجلسة', description: 'يرجى تسجيل الدخول مجدداً لتعيين كلمة المرور', variant: 'destructive' });
       navigate('/login');
       return;
     }
@@ -55,41 +68,66 @@ export default function ChangePassword() {
     if (error) {
       const sessionExpired = /session/i.test(error.message);
       toast({
-        title: 'Error',
+        title: 'خطأ',
         description: sessionExpired
-          ? 'Your session has expired, please sign in again to set your password.'
+          ? 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً'
           : error.message,
         variant: 'destructive',
       });
-      if (sessionExpired) {
-        navigate('/login');
-      }
+      if (sessionExpired) navigate('/login');
       return;
     }
 
-    toast({ title: 'Success', description: 'Password updated successfully' });
+    toast({ title: 'تم بنجاح', description: 'تم تحديث كلمة المرور' });
     navigate('/portfolio');
   }
 
   return (
-    <div dir="ltr" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-6">
+    <div dir="rtl" className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-sm glass-panel rounded-3xl p-8 space-y-5">
         <div className="flex justify-center">
           <WaslLogo imgClassName="w-60 h-auto" imgStyle={{}} />
         </div>
-        <h1 className="text-2xl font-bold text-foreground text-center">Set a New Password</h1>
-        <p className="text-sm text-foreground/50 text-center">This is your first sign-in. Please set a new password before continuing.</p>
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-bold text-foreground">تعيين كلمة مرور جديدة</h1>
+          <p className="text-sm text-foreground/50">هذا أول دخول لك — يرجى تعيين كلمة مرور قبل المتابعة</p>
+        </div>
+
         <div className="space-y-2">
           <label className="text-sm text-foreground/60">كلمة المرور الجديدة</label>
-          <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
-          <p className="text-xs text-foreground/40">8 أحرف على الأقل، وتحتوي على حرف أو رمز (ليست أرقاماً فقط)</p>
+          <Input
+            type="password"
+            required
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            dir="ltr"
+            autoComplete="new-password"
+          />
+          {/* Live rules checklist */}
+          {password.length > 0 && (
+            <div className="space-y-1 pt-1">
+              {ruleResults.map(r => <RuleRow key={r.id} ok={r.ok} label={r.label} />)}
+            </div>
+          )}
         </div>
+
         <div className="space-y-2">
           <label className="text-sm text-foreground/60">تأكيد كلمة المرور</label>
-          <Input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} dir="ltr" />
+          <Input
+            type="password"
+            required
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            dir="ltr"
+            autoComplete="new-password"
+          />
+          {confirm.length > 0 && password !== confirm && (
+            <p className="text-xs" style={{ color: '#f87171' }}>كلمتا المرور غير متطابقتين</p>
+          )}
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Saving...' : 'Save and Continue'}
+
+        <Button type="submit" className="w-full" disabled={loading || !allPassed || password !== confirm}>
+          {loading ? 'جارٍ الحفظ…' : 'حفظ ومتابعة'}
         </Button>
       </form>
     </div>

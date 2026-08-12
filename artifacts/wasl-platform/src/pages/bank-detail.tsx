@@ -51,6 +51,8 @@ type ContactWithStar = {
   title?: string | null;
   phone?: string | null;
   email?: string | null;
+  department?: string | null;
+  manager?: string | null;
   starred?: boolean;
 };
 
@@ -75,6 +77,16 @@ function SortableContact({ id, contact, onStarToggle }: {
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm">{contact.name}</p>
         {contact.title && <p className="text-xs text-foreground/50">{contact.title}</p>}
+        {(contact.department || contact.manager) && (
+          <div className="flex flex-wrap gap-x-3 mt-0.5">
+            {contact.department && (
+              <span className="text-xs text-foreground/40">🏢 {contact.department}</span>
+            )}
+            {contact.manager && (
+              <span className="text-xs text-foreground/40">👤 {contact.manager}</span>
+            )}
+          </div>
+        )}
         {contact.phone && (
           <a href={`tel:${contact.phone}`} className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline" dir="ltr">
             <Phone className="w-3 h-3" />{contact.phone}

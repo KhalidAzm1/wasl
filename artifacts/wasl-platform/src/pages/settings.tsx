@@ -72,8 +72,8 @@ export default function Settings() {
 }
 
 // ── ContactsEditor ────────────────────────────────────────────────────────────
-type ContactEntry = { name: string; title?: string; phone?: string; email?: string; starred?: boolean };
-const EMPTY_CONTACT: ContactEntry = { name: '', title: '', phone: '', email: '', starred: false };
+type ContactEntry = { name: string; title?: string; phone?: string; email?: string; department?: string; manager?: string; starred?: boolean };
+const EMPTY_CONTACT: ContactEntry = { name: '', title: '', phone: '', email: '', department: '', manager: '', starred: false };
 
 interface ContactsEditorHandle { flush: () => ContactEntry[] }
 interface ContactsEditorProps { contacts: ContactEntry[]; onChange: (c: ContactEntry[]) => void }
@@ -139,6 +139,12 @@ function ContactsEditor({ contacts, onChange }, ref) {
                   )}
                 </div>
                 {c.title && <p className="text-xs text-foreground/50 mt-0.5">{c.title}</p>}
+                {(c.department || c.manager) && (
+                  <div className="flex flex-wrap gap-x-3 mt-0.5">
+                    {c.department && <span className="text-xs text-foreground/40">🏢 {c.department}</span>}
+                    {c.manager && <span className="text-xs text-foreground/40">👤 {c.manager}</span>}
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-3 mt-1">
                   {c.phone && (
                     <span className="text-xs text-primary flex items-center gap-1" dir="ltr">
@@ -171,6 +177,10 @@ function ContactsEditor({ contacts, onChange }, ref) {
             <Input placeholder="Full name *" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
             <Input placeholder="Title / Role" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })}
+              className="bg-background border-foreground/10 text-sm h-8" />
+            <Input placeholder="Department (القسم)" value={draft.department} onChange={e => setDraft({ ...draft, department: e.target.value })}
+              className="bg-background border-foreground/10 text-sm h-8" />
+            <Input placeholder="Manager (المدير)" value={draft.manager} onChange={e => setDraft({ ...draft, manager: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
             <Input placeholder="Phone number" value={draft.phone} onChange={e => setDraft({ ...draft, phone: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />

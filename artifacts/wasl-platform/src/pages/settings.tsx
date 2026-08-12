@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Edit, Plus, Save, UploadCloud, Archive, RotateCcw, Tag, Star, Phone, User, X } from 'lucide-react';
+import { Trash2, Edit, Plus, Save, UploadCloud, Archive, RotateCcw, Tag, Star, Phone, User, X, Pencil } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 import { useAuth } from '@/lib/authContext';
 import type { Bank } from '@workspace/api-client-react';
@@ -82,6 +82,8 @@ const ContactsEditor = forwardRef<ContactsEditorHandle, ContactsEditorProps>(
 function ContactsEditor({ contacts, onChange }, ref) {
   const [draft, setDraft] = useState<ContactEntry>(EMPTY_CONTACT);
   const [adding, setAdding] = useState(false);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<ContactEntry>(EMPTY_CONTACT);
 
   // Expose flush() so parent can auto-commit pending draft on Save
   useImperativeHandle(ref, () => ({
@@ -99,12 +101,19 @@ function ContactsEditor({ contacts, onChange }, ref) {
     const next = contacts.map((c, i) => i === idx ? { ...c, starred: !c.starred } : c);
     onChange(next);
   };
-  const remove = (idx: number) => onChange(contacts.filter((_, i) => i !== idx));
+  const remove = (idx: number) => { setEditingIdx(null); onChange(contacts.filter((_, i) => i !== idx)); };
   const addContact = () => {
     if (!draft.name.trim()) return;
     onChange([...contacts, { ...draft, name: draft.name.trim() }]);
     setDraft(EMPTY_CONTACT);
     setAdding(false);
+  };
+  const startEdit = (idx: number) => { setAdding(false); setEditingIdx(idx); setEditDraft({ ...contacts[idx] }); };
+  const saveEdit = () => {
+    if (editingIdx === null || !editDraft.name.trim()) return;
+    onChange(contacts.map((c, i) => i === editingIdx ? { ...editDraft, name: editDraft.name.trim() } : c));
+    setEditingIdx(null);
+    setEditDraft(EMPTY_CONTACT);
   };
 
   return (
@@ -128,50 +137,96 @@ function ContactsEditor({ contacts, onChange }, ref) {
       {contacts.length > 0 && (
         <div className="space-y-2">
           {contacts.map((c, idx) => (
-            <div key={idx} className={`flex items-start gap-2 p-3 rounded-lg border text-sm ${c.starred ? 'border-yellow-400/50 bg-yellow-400/5' : 'border-foreground/10 bg-foreground/5'}`}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-medium">{c.name}</span>
-                  {c.starred && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-600 dark:text-yellow-300 border border-yellow-400/30">
-                      ★ Featured
-                    </span>
-                  )}
+            editingIdx === idx ? (
+              /* ── Inline edit form ── */
+              <div key={idx} className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                <p className="text-xs font-medium text-foreground/60 mb-2">Edit Contact</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Full name *" value={editDraft.name} onChange={e => setEditDraft({ ...editDraft, name: e.target.value })}
+                    className="bg-background border-foreground/10 text-sm h-8" autoFocus />
+                  <Input placeholder="Title / Role" value={editDraft.title} onChange={e => setEditDraft({ ...editDraft, title: e.target.value })}
+                    className="bg-background border-foreground/10 text-sm h-8" />
+                  <Input placeholder="Department" value={editDraft.department} onChange={e => setEditDraft({ ...editDraft, department: e.target.value })}
+                    className="bg-background border-foreground/10 text-sm h-8" />
+                  <Input placeholder="Direct Phone" value={editDraft.phone} onChange={e => setEditDraft({ ...editDraft, phone: e.target.value })}
+                    className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+                  <Input placeholder="Email" value={editDraft.email} onChange={e => setEditDraft({ ...editDraft, email: e.target.value })}
+                    className="bg-background border-foreground/10 text-sm h-8 col-span-2" dir="ltr" />
                 </div>
-                {c.title && <p className="text-xs text-foreground/50 mt-0.5">{c.title}</p>}
-                {(c.department || c.manager) && (
-                  <div className="flex flex-wrap gap-x-3 mt-0.5">
-                    {c.department && <span className="text-xs text-foreground/40">🏢 {c.department}</span>}
-                    {c.manager && (
-                      <span className="text-xs text-foreground/40">
-                        👤 {c.manager}
-                        {c.managerPhone && (
-                          <a href={`tel:${c.managerPhone}`} className="text-primary hover:underline ml-1" dir="ltr">{c.managerPhone}</a>
-                        )}
+                <div className="border-t border-foreground/10 pt-2 mt-1">
+                  <p className="text-[10px] font-semibold text-foreground/40 uppercase tracking-wider mb-2">Report To</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="Name" value={editDraft.manager} onChange={e => setEditDraft({ ...editDraft, manager: e.target.value })}
+                      className="bg-background border-foreground/10 text-sm h-8" />
+                    <Input placeholder="Phone" value={editDraft.managerPhone} onChange={e => setEditDraft({ ...editDraft, managerPhone: e.target.value })}
+                      className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <button type="button" onClick={() => setEditDraft({ ...editDraft, starred: !editDraft.starred })}
+                    className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${editDraft.starred ? 'text-yellow-500' : 'text-foreground/40 hover:text-yellow-500'}`}>
+                    <Star className={`w-3.5 h-3.5 ${editDraft.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                    Mark as Featured
+                  </button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setEditingIdx(null); setEditDraft(EMPTY_CONTACT); }}>Cancel</Button>
+                    <Button type="button" size="sm" className="h-7 text-xs gap-1" onClick={saveEdit} disabled={!editDraft.name.trim()}>
+                      <Save className="w-3 h-3" /> Save
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ── View card ── */
+              <div key={idx} className={`flex items-start gap-2 p-3 rounded-lg border text-sm group ${c.starred ? 'border-yellow-400/50 bg-yellow-400/5' : 'border-foreground/10 bg-foreground/5'}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium">{c.name}</span>
+                    {c.starred && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-600 dark:text-yellow-300 border border-yellow-400/30">
+                        ★ Featured
                       </span>
                     )}
                   </div>
-                )}
-                <div className="flex flex-wrap gap-3 mt-1">
-                  {c.phone && (
-                    <span className="text-xs text-primary flex items-center gap-1" dir="ltr">
-                      <Phone className="w-3 h-3" />{c.phone}
-                    </span>
+                  {c.title && <p className="text-xs text-foreground/50 mt-0.5">{c.title}</p>}
+                  {(c.department || c.manager) && (
+                    <div className="flex flex-wrap gap-x-3 mt-0.5">
+                      {c.department && <span className="text-xs text-foreground/40">🏢 {c.department}</span>}
+                      {c.manager && (
+                        <span className="text-xs text-foreground/40">
+                          👤 {c.manager}
+                          {c.managerPhone && (
+                            <a href={`tel:${c.managerPhone}`} className="text-primary hover:underline ml-1" dir="ltr">{c.managerPhone}</a>
+                          )}
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {c.email && <span className="text-xs text-primary">{c.email}</span>}
+                  <div className="flex flex-wrap gap-3 mt-1">
+                    {c.phone && (
+                      <span className="text-xs text-primary flex items-center gap-1" dir="ltr">
+                        <Phone className="w-3 h-3" />{c.phone}
+                      </span>
+                    )}
+                    {c.email && <span className="text-xs text-primary">{c.email}</span>}
+                  </div>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button type="button" onClick={() => startEdit(idx)} title="Edit"
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-foreground/25 hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button type="button" onClick={() => toggleStar(idx)} title={c.starred ? 'Remove Featured' : 'Mark as Featured'}
+                    className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${c.starred ? 'text-yellow-400' : 'text-foreground/25 hover:text-yellow-400/70'}`}>
+                    <Star className={`w-3.5 h-3.5 ${c.starred ? 'fill-yellow-400' : ''}`} />
+                  </button>
+                  <button type="button" onClick={() => remove(idx)}
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-foreground/30 hover:text-red-500 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-1 shrink-0">
-                <button type="button" onClick={() => toggleStar(idx)} title={c.starred ? 'Remove Featured' : 'Mark as Featured'}
-                  className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${c.starred ? 'text-yellow-400' : 'text-foreground/25 hover:text-yellow-400/70'}`}>
-                  <Star className={`w-3.5 h-3.5 ${c.starred ? 'fill-yellow-400' : ''}`} />
-                </button>
-                <button type="button" onClick={() => remove(idx)}
-                  className="w-7 h-7 rounded-md flex items-center justify-center text-foreground/30 hover:text-red-500 transition-colors">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+            )
           ))}
         </div>
       )}

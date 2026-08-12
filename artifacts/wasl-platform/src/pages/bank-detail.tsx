@@ -53,10 +53,11 @@ type ContactWithStar = {
   email?: string | null;
   department?: string | null;
   manager?: string | null;
+  managerPhone?: string | null;
   starred?: boolean;
 };
 
-const EMPTY_CONTACT_DETAIL: ContactWithStar = { name: '', title: '', phone: '', email: '', department: '', manager: '', starred: false };
+const EMPTY_CONTACT_DETAIL: ContactWithStar = { name: '', title: '', phone: '', email: '', department: '', manager: '', managerPhone: '', starred: false };
 
 function ContactForm({ value, onChange, onSave, onCancel, saving }: {
   value: ContactWithStar;
@@ -76,6 +77,8 @@ function ContactForm({ value, onChange, onSave, onCancel, saving }: {
           className="bg-background border-foreground/10 text-sm h-8" />
         <Input placeholder="Manager (المدير)" value={value.manager ?? ''} onChange={e => onChange({ ...value, manager: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" />
+        <Input placeholder="Manager phone" value={value.managerPhone ?? ''} onChange={e => onChange({ ...value, managerPhone: e.target.value })}
+          className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
         <Input placeholder="Phone number" value={value.phone ?? ''} onChange={e => onChange({ ...value, phone: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
         <Input placeholder="Email address" value={value.email ?? ''} onChange={e => onChange({ ...value, email: e.target.value })}
@@ -125,7 +128,14 @@ function SortableContact({ id, contact, onStarToggle, onEdit, onDelete }: {
         {(contact.department || contact.manager) && (
           <div className="flex flex-wrap gap-x-3 mt-0.5">
             {contact.department && <span className="text-xs text-foreground/40">🏢 {contact.department}</span>}
-            {contact.manager && <span className="text-xs text-foreground/40">👤 {contact.manager}</span>}
+            {contact.manager && (
+              <span className="text-xs text-foreground/40">
+                👤 {contact.manager}
+                {contact.managerPhone && (
+                  <a href={`tel:${contact.managerPhone}`} className="text-primary hover:underline ml-1" dir="ltr">{contact.managerPhone}</a>
+                )}
+              </span>
+            )}
           </div>
         )}
         {contact.phone && (

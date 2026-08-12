@@ -72,8 +72,8 @@ export default function Settings() {
 }
 
 // ── ContactsEditor ────────────────────────────────────────────────────────────
-type ContactEntry = { name: string; title?: string; phone?: string; email?: string; department?: string; manager?: string; starred?: boolean };
-const EMPTY_CONTACT: ContactEntry = { name: '', title: '', phone: '', email: '', department: '', manager: '', starred: false };
+type ContactEntry = { name: string; title?: string; phone?: string; email?: string; department?: string; manager?: string; managerPhone?: string; starred?: boolean };
+const EMPTY_CONTACT: ContactEntry = { name: '', title: '', phone: '', email: '', department: '', manager: '', managerPhone: '', starred: false };
 
 interface ContactsEditorHandle { flush: () => ContactEntry[] }
 interface ContactsEditorProps { contacts: ContactEntry[]; onChange: (c: ContactEntry[]) => void }
@@ -142,7 +142,14 @@ function ContactsEditor({ contacts, onChange }, ref) {
                 {(c.department || c.manager) && (
                   <div className="flex flex-wrap gap-x-3 mt-0.5">
                     {c.department && <span className="text-xs text-foreground/40">🏢 {c.department}</span>}
-                    {c.manager && <span className="text-xs text-foreground/40">👤 {c.manager}</span>}
+                    {c.manager && (
+                      <span className="text-xs text-foreground/40">
+                        👤 {c.manager}
+                        {c.managerPhone && (
+                          <a href={`tel:${c.managerPhone}`} className="text-primary hover:underline ml-1" dir="ltr">{c.managerPhone}</a>
+                        )}
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="flex flex-wrap gap-3 mt-1">
@@ -182,6 +189,8 @@ function ContactsEditor({ contacts, onChange }, ref) {
               className="bg-background border-foreground/10 text-sm h-8" />
             <Input placeholder="Manager (المدير)" value={draft.manager} onChange={e => setDraft({ ...draft, manager: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
+            <Input placeholder="Manager phone" value={draft.managerPhone} onChange={e => setDraft({ ...draft, managerPhone: e.target.value })}
+              className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
             <Input placeholder="Phone number" value={draft.phone} onChange={e => setDraft({ ...draft, phone: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
             <Input placeholder="Email address" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })}

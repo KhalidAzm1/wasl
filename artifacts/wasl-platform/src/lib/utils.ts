@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(dateString: string | null | undefined, locale = 'en-US') {
   if (!dateString) return 'Not specified';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',
@@ -18,6 +19,7 @@ export function formatDate(dateString: string | null | undefined, locale = 'en-U
 export function formatDateTime(dateString: string | null | undefined, locale = 'en-US') {
   if (!dateString) return 'Not specified';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'short',

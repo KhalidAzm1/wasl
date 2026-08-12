@@ -180,6 +180,7 @@ function ContactsEditor({ contacts, onChange }, ref) {
       {adding && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
           <p className="text-xs font-medium text-foreground/60 mb-2">New Contact</p>
+          {/* ── Contact info ── */}
           <div className="grid grid-cols-2 gap-2">
             <Input placeholder="Full name *" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
@@ -187,14 +188,20 @@ function ContactsEditor({ contacts, onChange }, ref) {
               className="bg-background border-foreground/10 text-sm h-8" />
             <Input placeholder="Department" value={draft.department} onChange={e => setDraft({ ...draft, department: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
-            <Input placeholder="Report To" value={draft.manager} onChange={e => setDraft({ ...draft, manager: e.target.value })}
-              className="bg-background border-foreground/10 text-sm h-8" />
-            <Input placeholder="Report To — Phone" value={draft.managerPhone} onChange={e => setDraft({ ...draft, managerPhone: e.target.value })}
-              className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
             <Input placeholder="Direct Phone" value={draft.phone} onChange={e => setDraft({ ...draft, phone: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
             <Input placeholder="Email" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })}
-              className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+              className="bg-background border-foreground/10 text-sm h-8 col-span-2" dir="ltr" />
+          </div>
+          {/* ── Report To ── */}
+          <div className="border-t border-foreground/10 pt-2 mt-1">
+            <p className="text-[10px] font-semibold text-foreground/40 uppercase tracking-wider mb-2">Report To</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Name" value={draft.manager} onChange={e => setDraft({ ...draft, manager: e.target.value })}
+                className="bg-background border-foreground/10 text-sm h-8" />
+              <Input placeholder="Phone" value={draft.managerPhone} onChange={e => setDraft({ ...draft, managerPhone: e.target.value })}
+                className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+            </div>
           </div>
           <div className="flex items-center justify-between pt-1">
             <button type="button" onClick={() => setDraft({ ...draft, starred: !draft.starred })}

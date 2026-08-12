@@ -68,6 +68,7 @@ function ContactForm({ value, onChange, onSave, onCancel, saving }: {
 }) {
   return (
     <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+      {/* ── Contact info ── */}
       <div className="grid grid-cols-2 gap-2">
         <Input placeholder="Full name *" value={value.name ?? ''} onChange={e => onChange({ ...value, name: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8 col-span-2" autoFocus />
@@ -75,14 +76,20 @@ function ContactForm({ value, onChange, onSave, onCancel, saving }: {
           className="bg-background border-foreground/10 text-sm h-8" />
         <Input placeholder="Department" value={value.department ?? ''} onChange={e => onChange({ ...value, department: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" />
-        <Input placeholder="Report To" value={value.manager ?? ''} onChange={e => onChange({ ...value, manager: e.target.value })}
-          className="bg-background border-foreground/10 text-sm h-8" />
-        <Input placeholder="Report To — Phone" value={value.managerPhone ?? ''} onChange={e => onChange({ ...value, managerPhone: e.target.value })}
-          className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
         <Input placeholder="Direct Phone" value={value.phone ?? ''} onChange={e => onChange({ ...value, phone: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
         <Input placeholder="Email" value={value.email ?? ''} onChange={e => onChange({ ...value, email: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+      </div>
+      {/* ── Report To ── */}
+      <div className="border-t border-foreground/10 pt-2 mt-1">
+        <p className="text-[10px] font-semibold text-foreground/40 uppercase tracking-wider mb-2">Report To</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Input placeholder="Name" value={value.manager ?? ''} onChange={e => onChange({ ...value, manager: e.target.value })}
+            className="bg-background border-foreground/10 text-sm h-8" />
+          <Input placeholder="Phone" value={value.managerPhone ?? ''} onChange={e => onChange({ ...value, managerPhone: e.target.value })}
+            className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
+        </div>
       </div>
       <div className="flex items-center justify-between pt-1">
         <button type="button" onClick={() => onChange({ ...value, starred: !value.starred })}

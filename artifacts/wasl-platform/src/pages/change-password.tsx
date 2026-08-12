@@ -16,11 +16,15 @@ export default function ChangePassword() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 8) {
-      toast({ title: 'Error', description: 'Password must be at least 8 characters', variant: 'destructive' });
+      toast({ title: 'كلمة المرور قصيرة', description: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل', variant: 'destructive' });
+      return;
+    }
+    if (!/[a-zA-Z\u0600-\u06FF!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) {
+      toast({ title: 'كلمة المرور ضعيفة', description: 'يجب أن تحتوي كلمة المرور على حرف أو رمز واحد على الأقل (لا أرقام فقط)', variant: 'destructive' });
       return;
     }
     if (password !== confirm) {
-      toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
+      toast({ title: 'كلمة المرور غير متطابقة', description: 'تأكد من تطابق كلمتَي المرور', variant: 'destructive' });
       return;
     }
 
@@ -76,11 +80,12 @@ export default function ChangePassword() {
         <h1 className="text-2xl font-bold text-foreground text-center">Set a New Password</h1>
         <p className="text-sm text-foreground/50 text-center">This is your first sign-in. Please set a new password before continuing.</p>
         <div className="space-y-2">
-          <label className="text-sm text-foreground/60">New Password</label>
+          <label className="text-sm text-foreground/60">كلمة المرور الجديدة</label>
           <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
+          <p className="text-xs text-foreground/40">8 أحرف على الأقل، وتحتوي على حرف أو رمز (ليست أرقاماً فقط)</p>
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-foreground/60">Confirm Password</label>
+          <label className="text-sm text-foreground/60">تأكيد كلمة المرور</label>
           <Input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} dir="ltr" />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>

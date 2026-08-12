@@ -41,11 +41,15 @@ export default function ResetPassword() {
     e.preventDefault();
 
     if (password.length < 8) {
-      toast({ title: 'Password too short', description: 'Must be at least 8 characters.', variant: 'destructive' });
+      toast({ title: 'كلمة المرور قصيرة', description: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل', variant: 'destructive' });
+      return;
+    }
+    if (!/[a-zA-Z\u0600-\u06FF!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) {
+      toast({ title: 'كلمة المرور ضعيفة', description: 'يجب أن تحتوي كلمة المرور على حرف أو رمز واحد على الأقل (لا أرقام فقط)', variant: 'destructive' });
       return;
     }
     if (password !== confirm) {
-      toast({ title: 'Passwords do not match', description: 'Make sure both passwords are identical.', variant: 'destructive' });
+      toast({ title: 'كلمة المرور غير متطابقة', description: 'تأكد من تطابق كلمتَي المرور', variant: 'destructive' });
       return;
     }
 

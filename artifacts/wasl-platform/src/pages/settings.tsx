@@ -185,15 +185,15 @@ function ContactsEditor({ contacts, onChange }, ref) {
               className="bg-background border-foreground/10 text-sm h-8" />
             <Input placeholder="Title / Role" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
-            <Input placeholder="Department (القسم)" value={draft.department} onChange={e => setDraft({ ...draft, department: e.target.value })}
+            <Input placeholder="Department" value={draft.department} onChange={e => setDraft({ ...draft, department: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
-            <Input placeholder="Manager (المدير)" value={draft.manager} onChange={e => setDraft({ ...draft, manager: e.target.value })}
+            <Input placeholder="Report To" value={draft.manager} onChange={e => setDraft({ ...draft, manager: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" />
-            <Input placeholder="Manager phone" value={draft.managerPhone} onChange={e => setDraft({ ...draft, managerPhone: e.target.value })}
+            <Input placeholder="Report To — Phone" value={draft.managerPhone} onChange={e => setDraft({ ...draft, managerPhone: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
-            <Input placeholder="Phone number" value={draft.phone} onChange={e => setDraft({ ...draft, phone: e.target.value })}
+            <Input placeholder="Direct Phone" value={draft.phone} onChange={e => setDraft({ ...draft, phone: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
-            <Input placeholder="Email address" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })}
+            <Input placeholder="Email" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })}
               className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
           </div>
           <div className="flex items-center justify-between pt-1">

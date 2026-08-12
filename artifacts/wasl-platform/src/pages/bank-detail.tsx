@@ -73,15 +73,15 @@ function ContactForm({ value, onChange, onSave, onCancel, saving }: {
           className="bg-background border-foreground/10 text-sm h-8 col-span-2" autoFocus />
         <Input placeholder="Title / Role" value={value.title ?? ''} onChange={e => onChange({ ...value, title: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" />
-        <Input placeholder="Department (القسم)" value={value.department ?? ''} onChange={e => onChange({ ...value, department: e.target.value })}
+        <Input placeholder="Department" value={value.department ?? ''} onChange={e => onChange({ ...value, department: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" />
-        <Input placeholder="Manager (المدير)" value={value.manager ?? ''} onChange={e => onChange({ ...value, manager: e.target.value })}
+        <Input placeholder="Report To" value={value.manager ?? ''} onChange={e => onChange({ ...value, manager: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" />
-        <Input placeholder="Manager phone" value={value.managerPhone ?? ''} onChange={e => onChange({ ...value, managerPhone: e.target.value })}
+        <Input placeholder="Report To — Phone" value={value.managerPhone ?? ''} onChange={e => onChange({ ...value, managerPhone: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
-        <Input placeholder="Phone number" value={value.phone ?? ''} onChange={e => onChange({ ...value, phone: e.target.value })}
+        <Input placeholder="Direct Phone" value={value.phone ?? ''} onChange={e => onChange({ ...value, phone: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
-        <Input placeholder="Email address" value={value.email ?? ''} onChange={e => onChange({ ...value, email: e.target.value })}
+        <Input placeholder="Email" value={value.email ?? ''} onChange={e => onChange({ ...value, email: e.target.value })}
           className="bg-background border-foreground/10 text-sm h-8" dir="ltr" />
       </div>
       <div className="flex items-center justify-between pt-1">

@@ -110,7 +110,7 @@ function ContactForm({ value, onChange, onSave, onCancel, saving }: {
 }
 
 function SortableContact({ id, contact, onStarToggle, onEdit, onDelete }: {
-  id: string;
+  id: number;
   contact: ContactWithStar;
   onStarToggle: () => void;
   onEdit: () => void;
@@ -216,9 +216,9 @@ function ContactsCard({ bank }: { bank: any }) {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIdx = contacts.findIndex(c => c.name === active.id);
-    const newIdx = contacts.findIndex(c => c.name === over.id);
-    if (oldIdx === -1 || newIdx === -1) return;
+    const oldIdx = Number(active.id);
+    const newIdx = Number(over.id);
+    if (oldIdx === newIdx || isNaN(oldIdx) || isNaN(newIdx)) return;
     const next = arrayMove(contacts, oldIdx, newIdx);
     setContacts(next);
     save(next);
@@ -276,7 +276,7 @@ function ContactsCard({ bank }: { bank: any }) {
           />
         )}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={contacts.map(c => c.name)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={contacts.map((_, i) => i)} strategy={verticalListSortingStrategy}>
             {contacts.map((contact, idx) => (
               editingIdx === idx ? (
                 <ContactForm
@@ -289,8 +289,8 @@ function ContactsCard({ bank }: { bank: any }) {
                 />
               ) : (
                 <SortableContact
-                  key={contact.name}
-                  id={contact.name}
+                  key={idx}
+                  id={idx}
                   contact={contact}
                   onStarToggle={() => handleStar(idx)}
                   onEdit={() => startEdit(idx)}

@@ -2473,7 +2473,7 @@ export const getUploadDocumentUrl = () => {
 }
 
 /**
- * @summary Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+ * @summary Upload a file to Supabase Storage and register the document. File bytes are stored in Supabase Storage; only metadata (name, type, size, path) is stored in the database.
  */
 export const uploadDocument = async (documentUpload: DocumentUpload, options?: RequestInit): Promise<Document> => {
 
@@ -2522,7 +2522,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UploadDocumentMutationError = ErrorType<unknown>
 
     /**
- * @summary Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+ * @summary Upload a file to Supabase Storage and register the document. File bytes are stored in Supabase Storage; only metadata (name, type, size, path) is stored in the database.
  */
 export const useUploadDocument = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<DocumentUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -2616,7 +2616,7 @@ export const getDeleteDocumentUrl = (id: number,) => {
 }
 
 /**
- * @summary Archive a document record (soft delete). The OneDrive file itself is left untouched.
+ * @summary Archive a document record (soft delete). The Supabase Storage object is preserved and can be restored.
  */
 export const deleteDocument = async (id: number, options?: RequestInit): Promise<void> => {
 
@@ -2665,7 +2665,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteDocumentMutationError = ErrorType<unknown>
 
     /**
- * @summary Archive a document record (soft delete). The OneDrive file itself is left untouched.
+ * @summary Archive a document record (soft delete). The Supabase Storage object is preserved and can be restored.
  */
 export const useDeleteDocument = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}

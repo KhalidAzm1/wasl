@@ -22,6 +22,13 @@ export interface BankContact {
   phone?: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  manager?: string | null;
+  /** @nullable */
+  managerPhone?: string | null;
+  starred?: boolean;
 }
 
 export interface Bank {
@@ -81,8 +88,6 @@ export interface Bank {
   updatedBy?: string | null;
   createdAt: string;
   updatedAt: string;
-  /** @nullable — MAX updated_at across all related tables */
-  lastActivityAt?: string | null;
 }
 
 export interface Product {
@@ -111,10 +116,6 @@ export interface Product {
 export interface Meeting {
   id: number;
   bankId: string;
-  /** @nullable — bank name at query time; populated via LEFT JOIN even for archived banks */
-  bankNameEn?: string | null;
-  /** @nullable */
-  bankNameAr?: string | null;
   date: string;
   topic: string;
   /** @nullable */
@@ -175,16 +176,19 @@ export interface Document {
   /** @nullable */
   docType?: string | null;
   /**
-   * Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.
-   * @nullable
-   */
+     * Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.
+     * @nullable
+     */
   fileUrl?: string | null;
   /**
      * Deprecated. Same value as fileUrl. Kept for backward compatibility.
      * @nullable
      */
   oneDriveWebUrl?: string | null;
-  /** @nullable */
+  /**
+     * Deprecated. Legacy OneDrive item ID. Null for new uploads.
+     * @nullable
+     */
   oneDriveItemId?: string | null;
   /**
      * Display name of the user who uploaded this file

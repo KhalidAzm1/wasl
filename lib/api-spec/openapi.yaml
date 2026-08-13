@@ -916,6 +916,10 @@ components:
         title: { type: ["string", "null"] }
         phone: { type: ["string", "null"] }
         email: { type: ["string", "null"] }
+        department: { type: ["string", "null"] }
+        manager: { type: ["string", "null"] }
+        managerPhone: { type: ["string", "null"] }
+        starred: { type: boolean }
 
     Product:
       type: object

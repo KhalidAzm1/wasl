@@ -22,16 +22,19 @@ export interface Document {
   /** @nullable */
   docType?: string | null;
   /**
-   * Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.
-   * @nullable
-   */
+     * Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.
+     * @nullable
+     */
   fileUrl?: string | null;
   /**
      * Deprecated. Same value as fileUrl. Kept for backward compatibility.
      * @nullable
      */
   oneDriveWebUrl?: string | null;
-  /** @nullable */
+  /**
+     * Deprecated. Legacy OneDrive item ID. Null for new uploads.
+     * @nullable
+     */
   oneDriveItemId?: string | null;
   /**
      * Display name of the user who uploaded this file

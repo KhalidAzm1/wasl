@@ -14,4 +14,11 @@ export interface BankContact {
   phone?: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  manager?: string | null;
+  /** @nullable */
+  managerPhone?: string | null;
+  starred?: boolean;
 }

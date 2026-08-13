@@ -34,6 +34,9 @@ export const ListBanksResponseItem = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -55,8 +58,7 @@ export const ListBanksResponseItem = zod.object({
   "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
   "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
-  "updatedAt": zod.string(),
-  "lastActivityAt": zod.string().nullish()
+  "updatedAt": zod.string()
 })
 export const ListBanksResponse = zod.array(ListBanksResponseItem)
 
@@ -77,6 +79,9 @@ export const CreateBankBody = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string(),
@@ -109,6 +114,9 @@ export const CreateBankResponse = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -155,6 +163,9 @@ export const GetBankResponse = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -234,9 +245,9 @@ export const GetBankResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
-  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Valid for 1 hour.'),
-  "oneDriveItemId": zod.string().nullish(),
+  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.'),
+  "oneDriveWebUrl": zod.string().nullish().describe('Deprecated. Same value as fileUrl. Kept for backward compatibility.'),
+  "oneDriveItemId": zod.string().nullish().describe('Deprecated. Legacy OneDrive item ID. Null for new uploads.'),
   "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
   "uploadedAt": zod.string().nullish(),
   "updatedBy": zod.string().nullish(),
@@ -269,6 +280,9 @@ export const UpdateBankBody = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().optional(),
@@ -301,6 +315,9 @@ export const UpdateBankResponse = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -357,6 +374,9 @@ export const RestoreBankResponse = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -407,6 +427,9 @@ export const SetBankLogoResponse = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -457,6 +480,9 @@ export const SetBankHeroImageResponse = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -665,8 +691,6 @@ export const ListMeetingsQueryParams = zod.object({
 export const ListMeetingsResponseItem = zod.object({
   "id": zod.number(),
   "bankId": zod.string(),
-  "bankNameEn": zod.string().nullish(),
-  "bankNameAr": zod.string().nullish(),
   "date": zod.string(),
   "topic": zod.string(),
   "summary": zod.string().nullish(),
@@ -941,9 +965,9 @@ export const ListDocumentsResponseItem = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
-  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Valid for 1 hour.'),
-  "oneDriveItemId": zod.string().nullish(),
+  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.'),
+  "oneDriveWebUrl": zod.string().nullish().describe('Deprecated. Same value as fileUrl. Kept for backward compatibility.'),
+  "oneDriveItemId": zod.string().nullish().describe('Deprecated. Legacy OneDrive item ID. Null for new uploads.'),
   "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
   "uploadedAt": zod.string().nullish(),
   "updatedBy": zod.string().nullish(),
@@ -976,9 +1000,9 @@ export const CreateDocumentResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
-  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Valid for 1 hour.'),
-  "oneDriveItemId": zod.string().nullish(),
+  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.'),
+  "oneDriveWebUrl": zod.string().nullish().describe('Deprecated. Same value as fileUrl. Kept for backward compatibility.'),
+  "oneDriveItemId": zod.string().nullish().describe('Deprecated. Legacy OneDrive item ID. Null for new uploads.'),
   "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
   "uploadedAt": zod.string().nullish(),
   "updatedBy": zod.string().nullish(),
@@ -991,7 +1015,7 @@ export const CreateDocumentResponse = zod.object({
 
 
 /**
- * @summary Upload a file to Microsoft OneDrive and register the document. Only the file name and OneDrive link are stored in the database, never the file bytes.
+ * @summary Upload a file to Supabase Storage and register the document. File bytes are stored in Supabase Storage; only metadata (name, type, size, path) is stored in the database.
  */
 export const UploadDocumentBody = zod.object({
   "bankId": zod.string().optional().describe('Deprecated -- use entityType=bank + entityId instead'),
@@ -1011,9 +1035,9 @@ export const UploadDocumentResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
-  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Valid for 1 hour.'),
-  "oneDriveItemId": zod.string().nullish(),
+  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.'),
+  "oneDriveWebUrl": zod.string().nullish().describe('Deprecated. Same value as fileUrl. Kept for backward compatibility.'),
+  "oneDriveItemId": zod.string().nullish().describe('Deprecated. Legacy OneDrive item ID. Null for new uploads.'),
   "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
   "uploadedAt": zod.string().nullish(),
   "updatedBy": zod.string().nullish(),
@@ -1046,9 +1070,9 @@ export const UpdateDocumentResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
-  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Valid for 1 hour.'),
-  "oneDriveItemId": zod.string().nullish(),
+  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.'),
+  "oneDriveWebUrl": zod.string().nullish().describe('Deprecated. Same value as fileUrl. Kept for backward compatibility.'),
+  "oneDriveItemId": zod.string().nullish().describe('Deprecated. Legacy OneDrive item ID. Null for new uploads.'),
   "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
   "uploadedAt": zod.string().nullish(),
   "updatedBy": zod.string().nullish(),
@@ -1061,7 +1085,7 @@ export const UpdateDocumentResponse = zod.object({
 
 
 /**
- * @summary Archive a document record (soft delete). The OneDrive file itself is left untouched.
+ * @summary Archive a document record (soft delete). The Supabase Storage object is preserved and can be restored.
  */
 export const DeleteDocumentParams = zod.object({
   "id": zod.coerce.number()
@@ -1085,9 +1109,9 @@ export const RestoreDocumentResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
-  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Valid for 1 hour.'),
-  "oneDriveItemId": zod.string().nullish(),
+  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.'),
+  "oneDriveWebUrl": zod.string().nullish().describe('Deprecated. Same value as fileUrl. Kept for backward compatibility.'),
+  "oneDriveItemId": zod.string().nullish().describe('Deprecated. Legacy OneDrive item ID. Null for new uploads.'),
   "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
   "uploadedAt": zod.string().nullish(),
   "updatedBy": zod.string().nullish(),
@@ -1218,6 +1242,9 @@ export const GetArchiveResponse = zod.object({
   "title": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
@@ -1249,9 +1276,9 @@ export const GetArchiveResponse = zod.object({
   "title": zod.string(),
   "link": zod.string().nullish(),
   "docType": zod.string().nullish(),
-  "oneDriveWebUrl": zod.string().nullish().describe('Link to open the file in OneDrive\/SharePoint'),
-  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Valid for 1 hour.'),
-  "oneDriveItemId": zod.string().nullish(),
+  "fileUrl": zod.string().nullish().describe('Signed URL to open or download the file. Generated fresh on every read; valid for 1 hour.'),
+  "oneDriveWebUrl": zod.string().nullish().describe('Deprecated. Same value as fileUrl. Kept for backward compatibility.'),
+  "oneDriveItemId": zod.string().nullish().describe('Deprecated. Legacy OneDrive item ID. Null for new uploads.'),
   "uploadedBy": zod.string().nullish().describe('Display name of the user who uploaded this file'),
   "uploadedAt": zod.string().nullish(),
   "updatedBy": zod.string().nullish(),

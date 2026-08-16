@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureStorageBucket } from "./lib/supabase-storage";
 import { fixLogoPaths } from "./lib/fix-logo-paths";
 import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
 
@@ -36,6 +37,11 @@ const server = app.listen(port, (err) => {
   fixLogoPaths().catch((err) => {
     logger.warn({ err }, "fixLogoPaths failed (non-fatal)");
   });
+
+  // Idempotent schema additions — safe to re-run on every startup.
+  db.execute(sql`ALTER TABLE banks ADD COLUMN IF NOT EXISTS responsible_person_photo text`)
+    .then(() => logger.info("responsible_person_photo column ensured"))
+    .catch((err) => logger.warn({ err }, "bootstrap schema alter failed (non-fatal)"));
 });
 
 // --- Graceful shutdown: drain in-flight requests then close DB pool ---

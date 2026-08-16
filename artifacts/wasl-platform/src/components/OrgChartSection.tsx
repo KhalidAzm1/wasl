@@ -895,11 +895,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
               </Button>
             </div>
           </CardTitle>
-          {editMode && (
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Drag to rearrange · ✏ Edit · ± Siblings · ＋ Reports · 🔒 when done
-            </p>
-          )}
         </CardHeader>
 
         <CardContent className="p-0">

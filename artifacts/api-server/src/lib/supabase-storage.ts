@@ -56,9 +56,18 @@ export async function uploadToStorage(
   contentType: string,
 ): Promise<string> {
   const supabase = getSupabaseAdmin();
+
+  // Remove any existing file at this path first so the upload never conflicts.
+  // Ignore errors — the file may not exist yet (first upload).
+  await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+
+  // Invalidate the signed-URL cache for this path so a fresh URL is generated
+  // after the new file is in place.
+  signedUrlCache.delete(path);
+
   const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
     contentType,
-    upsert: true,
+    upsert: false,
   });
   if (error) {
     throw new Error(`Storage upload failed: ${error.message}`);

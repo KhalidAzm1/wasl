@@ -200,6 +200,7 @@ function Avatar({
       {editMode && hasPhoto && onRemovePhoto && (
         <button
           type="button"
+          onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onRemovePhoto(); }}
           title="Remove photo"
           className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center shadow hover:bg-destructive/80 transition-colors z-10">

@@ -247,8 +247,8 @@ function InlineEditCard({
   };
 
   return (
-    <div style={{ width: 192 }} onPointerDown={e => e.stopPropagation()}>
-      <div style={{ ...base, width: 192 }}>
+    <div style={{ width: 158 }} onPointerDown={e => e.stopPropagation()}>
+      <div style={{ ...base, width: 158 }}>
         <div style={{ height: 4, background: `linear-gradient(90deg, ${accent}, ${accent}99)` }} />
         <div style={{ padding: '10px 10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <input
@@ -331,7 +331,7 @@ function CardFace({
     ...(depth === 0 ? lightCardRoot : lightCard),
     ...(isOver && !isDragging ? lightCardOver : {}),
     ...(isDragging ? { opacity: 0.55, transform: 'scale(0.95) rotate(1.5deg)', boxShadow: '0 12px 32px rgba(0,0,0,0.12)' } : {}),
-    width: 176,
+    width: 148,
     transition: isDragging ? 'none' : 'all 0.18s ease',
     cursor: editMode ? (isDragging ? 'grabbing' : 'grab') : 'default',
     userSelect: 'none',
@@ -359,7 +359,7 @@ function CardFace({
   );
 
   return (
-    <div className="relative flex flex-col items-center gap-1.5" style={{ width: 176 }}>
+    <div className="relative flex flex-col items-center gap-1.5" style={{ width: 148 }}>
       {editMode && onAddSibling && siblingBtn('left')}
       {editMode && onAddSibling && siblingBtn('right')}
 
@@ -396,7 +396,7 @@ function CardFace({
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: editMode ? 8 : 14, marginBottom: 10 }}>
           <Avatar
             node={node}
-            size={depth === 0 ? 60 : 48}
+            size={depth === 0 ? 46 : 36}
             editMode={editMode}
             onUploadPhoto={onUploadPhoto}
             onRemovePhoto={onRemovePhoto}
@@ -405,40 +405,40 @@ function CardFace({
         </div>
 
         {/* text content */}
-        <div style={{ padding: '0 12px 14px', textAlign: 'center' }}>
+        <div style={{ padding: '0 10px 11px', textAlign: 'center' }}>
           {empty ? (
             editMode ? (
               <button
                 onPointerDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onInlineEdit?.(node.id); }}
-                style={{ fontSize: 11, fontWeight: 500, border: '1px dashed var(--border)', borderRadius: 8, padding: '4px 12px', width: '100%', color: 'var(--muted-foreground)', background: 'var(--muted)', cursor: 'pointer', transition: 'all 0.15s' }}
+                style={{ fontSize: 10, fontWeight: 500, border: '1px dashed var(--border)', borderRadius: 8, padding: '3px 8px', width: '100%', color: 'var(--muted-foreground)', background: 'var(--muted)', cursor: 'pointer', transition: 'all 0.15s' }}
                 onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = accent; t.style.color = accent; }}
                 onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted-foreground)'; }}>
                 + Add name
               </button>
             ) : (
-              <p style={{ fontSize: 11, color: 'var(--muted-foreground)', opacity: 0.4 }}>—</p>
+              <p style={{ fontSize: 10, color: 'var(--muted-foreground)', opacity: 0.4 }}>—</p>
             )
           ) : (
             <>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--card-foreground)', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
-              {node.title && <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 4, lineHeight: 1.4 }}>{node.title}</p>}
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--card-foreground)', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
+              {node.title && <p style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 3, lineHeight: 1.4 }}>{node.title}</p>}
               {node.department && (
-                <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent, marginBottom: 4 }}>
+                <span style={{ display: 'inline-block', fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent, marginBottom: 3 }}>
                   {node.department}
                 </span>
               )}
               {(node.phone || node.email) && (
-                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+                <div style={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
                   {node.phone && (
-                    <span style={{ fontSize: 10, color: 'var(--muted-foreground)', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Phone style={{ width: 9, height: 9, flexShrink: 0 }} />
+                    <span style={{ fontSize: 9, color: 'var(--muted-foreground)', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Phone style={{ width: 8, height: 8, flexShrink: 0 }} />
                       {node.phone}
                     </span>
                   )}
                   {node.email && (
-                    <span style={{ fontSize: 9, color: 'var(--muted-foreground)', opacity: 0.7, direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3, maxWidth: '100%', overflow: 'hidden' }}>
-                      <Mail style={{ width: 9, height: 9, flexShrink: 0 }} />
+                    <span style={{ fontSize: 8, color: 'var(--muted-foreground)', opacity: 0.7, direction: 'ltr', display: 'flex', alignItems: 'center', gap: 2, maxWidth: '100%', overflow: 'hidden' }}>
+                      <Mail style={{ width: 8, height: 8, flexShrink: 0 }} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.email}</span>
                     </span>
                   )}

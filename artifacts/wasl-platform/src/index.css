@@ -297,8 +297,8 @@
   top: 0;
   left: 50%;
   height: 28px;
-  width: 2px;
-  background: hsl(var(--border));
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
   transform: translateX(-50%);
 }
 
@@ -306,7 +306,7 @@
 .org-children {
   display: flex;
   flex-direction: row;
-  padding-top: 28px;      /* room for the stub above */
+  padding-top: 28px;
 }
 
 /* each child column */
@@ -325,8 +325,8 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: #93C5FD;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* vertical drop from bracket down to child card */
@@ -336,8 +336,8 @@
   top: 0;
   left: 50%;
   height: 28px;
-  width: 2px;
-  background: #93C5FD;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
   transform: translateX(-50%);
 }
 

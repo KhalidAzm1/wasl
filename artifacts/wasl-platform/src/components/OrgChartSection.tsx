@@ -1,9 +1,5 @@
 /**
- * OrgChartSection — Lucidchart-style interactive org chart
- *
- * Modes:
- *   View mode  (default) — cards are read-only, clean look, tap photo to enlarge
- *   Edit mode  (pencil icon in header) — drag, edit, delete, add-child, add-sibling enabled
+ * OrgChartSection — glassmorphism-style interactive org chart
  */
 
 import React, {
@@ -73,13 +69,13 @@ function descendants(nodeId: string, nodes: OrgNode[]): Set<string> {
   return out;
 }
 
-/* ═══════════════════════════════════════════════════ photo lightbox ══ */
+/* ════════════════════════════════════════════════════ photo lightbox ════ */
 
 function PhotoLightbox({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, [onClose]);
 
   return (
@@ -92,25 +88,17 @@ function PhotoLightbox({ url, name, onClose }: { url: string; name: string; onCl
         <X className="w-5 h-5" />
       </button>
       <div className="flex flex-col items-center gap-3 max-w-sm w-full" onClick={e => e.stopPropagation()}>
-        <img
-          src={url}
-          alt={name}
-          className="w-64 h-64 rounded-2xl object-cover shadow-2xl border-4 border-white/20"
-        />
-        {name && (
-          <p className="text-white font-semibold text-lg text-center drop-shadow">{name}</p>
-        )}
+        <img src={url} alt={name}
+          className="w-64 h-64 rounded-2xl object-cover shadow-2xl border-4 border-white/20" />
+        {name && <p className="text-white font-semibold text-lg text-center drop-shadow">{name}</p>}
       </div>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════ avatar ═════ */
+/* ══════════════════════════════════════════════════════════ avatar ══════ */
 
-const PALETTE = [
-  '#6D28D9','#2563EB','#0891B2','#059669',
-  '#D97706','#DC2626','#7C3AED','#DB2777',
-];
+const PALETTE = ['#6D28D9','#2563EB','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777'];
 function pickColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
@@ -120,12 +108,8 @@ function pickColor(name: string) {
 function Avatar({
   node, size, editMode, onUploadPhoto, onRemovePhoto, onExpand,
 }: {
-  node: OrgNode;
-  size: number;
-  editMode?: boolean;
-  onUploadPhoto?: (f: File) => void;
-  onRemovePhoto?: () => void;
-  onExpand?: () => void;
+  node: OrgNode; size: number; editMode?: boolean;
+  onUploadPhoto?: (f: File) => void; onRemovePhoto?: () => void; onExpand?: () => void;
 }) {
   const photoRef = useRef<HTMLInputElement>(null);
   const empty    = !node.name.trim();
@@ -133,11 +117,8 @@ function Avatar({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (editMode && onUploadPhoto) {
-      photoRef.current?.click();
-    } else if (!editMode && hasPhoto && onExpand) {
-      onExpand();
-    }
+    if (editMode && onUploadPhoto) photoRef.current?.click();
+    else if (!editMode && hasPhoto && onExpand) onExpand();
   };
 
   const inner = (() => {
@@ -145,47 +126,55 @@ function Avatar({
       return (
         <img src={node.photoUrl!} alt={node.name}
           style={{ width: size, height: size }}
-          className="rounded-full object-cover border-2 border-border shadow"
+          className="rounded-full object-cover"
           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
       );
     }
     if (empty) {
       return (
-        <div style={{ width: size, height: size }}
-          className="rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
-          <Network className="text-muted-foreground/40" style={{ width: size * 0.4, height: size * 0.4 }} />
+        <div style={{ width: size, height: size, background: 'rgba(255,255,255,0.08)', border: '1.5px dashed rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Network style={{ width: size * 0.4, height: size * 0.4, color: 'rgba(255,255,255,0.25)' }} />
         </div>
       );
     }
     const initials = node.name.trim()
       .split(/\s+/).filter(Boolean).slice(0, 2)
       .map(w => w[0]?.toUpperCase() ?? '').join('');
+    const col = pickColor(node.name);
     return (
-      <div style={{ width: size, height: size, background: pickColor(node.name), fontSize: size * 0.34 }}
-        className="rounded-full flex items-center justify-center font-bold text-white shadow border-2 border-white/20 shrink-0">
+      <div style={{ width: size, height: size, background: col, fontSize: size * 0.34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'white', flexShrink: 0, boxShadow: `0 0 20px ${col}60` }}>
         {initials || '?'}
       </div>
     );
   })();
 
-  const canInteract = (editMode && onUploadPhoto) || (!editMode && hasPhoto && onExpand);
+  const canInteract = (editMode && !!onUploadPhoto) || (!editMode && hasPhoto && !!onExpand);
 
   return (
     <div className="relative inline-block">
       <button
         type="button"
         disabled={!canInteract}
-        className={cn('relative group/av rounded-full block', canInteract ? 'cursor-pointer' : 'cursor-default')}
+        style={{
+          borderRadius: '50%',
+          display: 'block',
+          border: hasPhoto ? '2px solid rgba(255,255,255,0.2)' : 'none',
+          boxShadow: hasPhoto ? '0 4px 16px rgba(0,0,0,0.4)' : 'none',
+          cursor: canInteract ? 'pointer' : 'default',
+        }}
+        className="relative group/av"
         onClick={handleClick}>
         {inner}
         {editMode && onUploadPhoto && (
-          <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover/av:opacity-100 transition-opacity"
+            style={{ background: 'rgba(0,0,0,0.5)' }}>
             <Camera className="w-3.5 h-3.5 text-white" />
           </div>
         )}
         {!editMode && hasPhoto && onExpand && (
-          <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
-            <ZoomIn className="text-white" style={{ width: size * 0.28, height: size * 0.28 }} />
+          <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover/av:opacity-100 transition-opacity"
+            style={{ background: 'rgba(0,0,0,0.4)' }}>
+            <ZoomIn style={{ width: size * 0.28, height: size * 0.28, color: 'white' }} />
           </div>
         )}
         {onUploadPhoto && (
@@ -195,52 +184,72 @@ function Avatar({
       </button>
 
       {editMode && hasPhoto && onRemovePhoto && (
-        <button
-          type="button"
+        <button type="button"
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onRemovePhoto(); }}
-          title="Remove photo"
-          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center shadow hover:bg-destructive/80 transition-colors z-10">
-          <X className="w-2.5 h-2.5" />
+          className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center shadow z-10 transition-colors"
+          style={{ background: '#ef4444' }}
+          title="Remove photo">
+          <X className="w-2.5 h-2.5 text-white" />
         </button>
       )}
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════ card face ══ */
+/* ════════════════════════════════════════════════════════ card face ═════ */
+
+// Shared glass card inline styles
+const glassCard = {
+  background: 'rgba(255,255,255,0.07)',
+  backdropFilter: 'blur(20px) saturate(150%)',
+  WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+  borderRadius: 20,
+};
+
+const glassCardRoot = {
+  background: 'rgba(109,40,217,0.18)',
+  backdropFilter: 'blur(24px) saturate(160%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+  border: '1px solid rgba(139,92,246,0.4)',
+  boxShadow: '0 0 48px rgba(109,40,217,0.25), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)',
+  borderRadius: 20,
+};
+
+const glassCardOver = {
+  border: '1.5px solid rgba(139,92,246,0.7)',
+  boxShadow: '0 0 32px rgba(139,92,246,0.4), 0 8px 32px rgba(0,0,0,0.4)',
+  transform: 'scale(1.04)',
+};
 
 function CardFace({
   node, depth, editMode = false, isDragging = false, isOver = false,
   onEdit, onDelete, onAddChild, onAddSibling,
   onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
-  node: OrgNode;
-  depth: number;
-  editMode?: boolean;
-  isDragging?: boolean;
-  isOver?: boolean;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onAddChild?: () => void;
-  onAddSibling?: () => void;
-  onUploadPhoto?: (f: File) => void;
-  onRemovePhoto?: () => void;
+  node: OrgNode; depth: number; editMode?: boolean;
+  isDragging?: boolean; isOver?: boolean;
+  onEdit?: () => void; onDelete?: () => void;
+  onAddChild?: () => void; onAddSibling?: () => void;
+  onUploadPhoto?: (f: File) => void; onRemovePhoto?: () => void;
   onExpandPhoto?: () => void;
 }) {
   const empty = !node.name.trim();
 
-  const cardCls = cn(
-    'relative w-full rounded-xl bg-card border border-border transition-all select-none',
-    depth === 0 && 'ring-2 ring-primary/30 shadow-md',
-    depth > 0  && 'shadow-sm',
-    isDragging  && 'opacity-0 pointer-events-none',
-    isOver && !isDragging && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.03]',
-    empty && 'border-dashed',
-    editMode && 'cursor-grab active:cursor-grabbing',
-  );
+  const baseStyle = depth === 0 ? glassCardRoot : glassCard;
+  const cardStyle = {
+    ...baseStyle,
+    ...(isOver && !isDragging ? glassCardOver : {}),
+    ...(isDragging ? { opacity: 0, pointerEvents: 'none' as const } : {}),
+    width: 164,
+    transition: 'all 0.2s ease',
+    cursor: editMode ? 'grab' : 'default',
+    userSelect: 'none' as const,
+  };
 
-  /* Sibling button — shared style */
+  /* Sibling button */
   const siblingBtn = (side: 'left' | 'right') => (
     <button
       type="button"
@@ -249,48 +258,75 @@ function CardFace({
       title={side === 'left' ? 'Add sibling to the left' : 'Add sibling to the right'}
       style={{
         position: 'absolute',
-        top: '38px',
-        ...(side === 'left'  ? { left:  '-22px' } : { right: '-22px' }),
+        top: 38,
+        ...(side === 'left' ? { left: -22 } : { right: -22 }),
         zIndex: 20,
+        width: 24, height: 24,
+        borderRadius: '50%',
+        background: 'rgba(255,255,255,0.06)',
+        backdropFilter: 'blur(8px)',
+        border: '1px dashed rgba(255,255,255,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'rgba(255,255,255,0.45)',
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
       }}
-      className="w-6 h-6 rounded-full border border-dashed border-foreground/20 bg-background flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-colors shadow-sm"
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.7)';
+        (e.currentTarget as HTMLElement).style.color = '#a78bfa';
+        (e.currentTarget as HTMLElement).style.background = 'rgba(109,40,217,0.15)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.25)';
+        (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)';
+        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)';
+      }}
     >
-      <Plus className="w-3 h-3" />
+      <Plus style={{ width: 11, height: 11 }} />
     </button>
   );
 
   return (
     <div className="relative flex flex-col items-center gap-1" style={{ width: 164 }}>
-      {/* Sibling add buttons — left & right, only in edit mode */}
+      {/* Sibling buttons */}
       {editMode && onAddSibling && siblingBtn('left')}
       {editMode && onAddSibling && siblingBtn('right')}
 
-      {/* ── card box ── */}
-      <div className={cardCls} style={{ width: 164 }}>
-        {/* root accent strip */}
+      {/* Card */}
+      <div style={cardStyle}>
+        {/* root gradient top strip */}
         {depth === 0 && (
-          <div className="absolute top-0 inset-x-0 h-1 bg-primary rounded-t-xl" />
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+            background: 'linear-gradient(90deg, #7c3aed, #818cf8, #7c3aed)',
+            borderRadius: '20px 20px 0 0',
+          }} />
         )}
 
-        {/* top-bar: grip + edit/delete (edit mode only) */}
+        {/* top-bar: grip + edit/delete */}
         {editMode && (
-          <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2 pt-2">
-            <div className="text-muted-foreground/30">
-              <GripVertical className="w-3.5 h-3.5" />
-            </div>
-            <div className="flex gap-1">
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 8px 0' }}>
+            <GripVertical style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.2)' }} />
+            <div style={{ display: 'flex', gap: 2 }}>
               {onEdit && (
-                <button onClick={e => { e.stopPropagation(); onEdit(); }}
+                <button
+                  onClick={e => { e.stopPropagation(); onEdit(); }}
                   title="Edit"
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
-                  <Pencil className="w-3 h-3" />
+                  style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#a78bfa'; (e.currentTarget as HTMLElement).style.background = 'rgba(109,40,217,0.25)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                  <Pencil style={{ width: 11, height: 11 }} />
                 </button>
               )}
               {onDelete && (
-                <button onClick={e => { e.stopPropagation(); onDelete(); }}
+                <button
+                  onClick={e => { e.stopPropagation(); onDelete(); }}
                   title="Delete"
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                  <Trash2 className="w-3 h-3" />
+                  style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f87171'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                  <Trash2 style={{ width: 11, height: 11 }} />
                 </button>
               )}
             </div>
@@ -298,7 +334,7 @@ function CardFace({
         )}
 
         {/* avatar */}
-        <div className={cn('flex justify-center mb-2', editMode ? 'mt-7' : depth === 0 ? 'mt-5' : 'mt-4')}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: editMode ? 28 : depth === 0 ? 18 : 14, marginBottom: 8 }}>
           <Avatar
             node={node}
             size={depth === 0 ? 64 : 52}
@@ -310,24 +346,38 @@ function CardFace({
         </div>
 
         {/* text */}
-        <div className="px-3 pb-3 text-center">
+        <div style={{ padding: '0 12px 14px', textAlign: 'center' }}>
           {empty ? (
             editMode ? (
-              <button onClick={e => { e.stopPropagation(); onEdit?.(); }}
-                className="text-[11px] font-medium border border-dashed border-foreground/20 rounded-lg px-3 py-1 w-full text-muted-foreground hover:text-primary transition-colors">
+              <button
+                onClick={e => { e.stopPropagation(); onEdit?.(); }}
+                style={{
+                  fontSize: 11, fontWeight: 500,
+                  border: '1px dashed rgba(255,255,255,0.2)',
+                  borderRadius: 8, padding: '4px 12px',
+                  width: '100%', color: 'rgba(255,255,255,0.35)',
+                  background: 'transparent', cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}>
                 + Add name
               </button>
             ) : (
-              <p className="text-[11px] text-foreground/25">—</p>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>—</p>
             )
           ) : (
             <>
-              <p className="text-[13px] font-bold leading-snug text-foreground">{node.name}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.92)', lineHeight: 1.3, marginBottom: 3 }}>{node.name}</p>
               {node.title && (
-                <p className="text-[11px] mt-0.5 text-muted-foreground">{node.title}</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{node.title}</p>
               )}
               {node.department && (
-                <span className="inline-block text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                <span style={{
+                  display: 'inline-block', fontSize: 10, fontWeight: 600,
+                  padding: '2px 8px', borderRadius: 99,
+                  background: 'rgba(109,40,217,0.25)',
+                  border: '1px solid rgba(139,92,246,0.3)',
+                  color: '#c4b5fd',
+                }}>
                   {node.department}
                 </span>
               )}
@@ -336,13 +386,22 @@ function CardFace({
         </div>
       </div>
 
-      {/* ── add-child button — below card (edit mode only) ── */}
+      {/* add-child button */}
       {editMode && onAddChild && (
         <button
           onClick={e => { e.stopPropagation(); onAddChild(); }}
           title="Add direct report"
-          className="flex items-center gap-1 text-[10px] font-medium rounded-full border border-dashed border-foreground/20 px-3 py-1 text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-colors">
-          <Plus className="w-2.5 h-2.5" />
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 10, fontWeight: 500,
+            border: '1px dashed rgba(255,255,255,0.15)',
+            borderRadius: 99, padding: '3px 12px',
+            color: 'rgba(255,255,255,0.35)',
+            background: 'rgba(255,255,255,0.04)',
+            backdropFilter: 'blur(8px)',
+            cursor: 'pointer', transition: 'all 0.15s',
+          }}>
+          <Plus style={{ width: 10, height: 10 }} />
           Add report
         </button>
       )}
@@ -350,25 +409,18 @@ function CardFace({
   );
 }
 
-/* ═══════════════════════════════════════════════════ draggable node ═════ */
+/* ══════════════════════════════════════════════ draggable node ══════════ */
 
 function DndNode({
   node, depth, allNodes, editMode, activeId, overId,
   onEdit, onDelete, onAddChild, onAddSibling,
   onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
-  node: OrgNode;
-  depth: number;
-  allNodes: OrgNode[];
-  editMode: boolean;
-  activeId: string | null;
-  overId: string | null;
-  onEdit: () => void;
-  onDelete: () => void;
-  onAddChild: () => void;
-  onAddSibling: () => void;
-  onUploadPhoto: (f: File) => void;
-  onRemovePhoto: () => void;
+  node: OrgNode; depth: number; allNodes: OrgNode[];
+  editMode: boolean; activeId: string | null; overId: string | null;
+  onEdit: () => void; onDelete: () => void;
+  onAddChild: () => void; onAddSibling: () => void;
+  onUploadPhoto: (f: File) => void; onRemovePhoto: () => void;
   onExpandPhoto: () => void;
 }) {
   const desc = useMemo(
@@ -376,14 +428,8 @@ function DndNode({
     [activeId, allNodes],
   );
 
-  const { attributes, listeners, setNodeRef: setDrag, isDragging } = useDraggable({
-    id: node.id,
-    disabled: !editMode,
-  });
-  const { setNodeRef: setDrop, isOver: rawIsOver } = useDroppable({
-    id: node.id,
-    disabled: !editMode,
-  });
+  const { attributes, listeners, setNodeRef: setDrag, isDragging } = useDraggable({ id: node.id, disabled: !editMode });
+  const { setNodeRef: setDrop, isOver: rawIsOver } = useDroppable({ id: node.id, disabled: !editMode });
 
   const isOver = rawIsOver && !desc.has(node.id) && node.id !== activeId;
   const ref = (el: HTMLElement | null) => { setDrag(el); setDrop(el); };
@@ -391,38 +437,27 @@ function DndNode({
   return (
     <div ref={ref} style={{ touchAction: editMode ? 'none' : 'auto' }} {...attributes} {...(editMode ? listeners : {})}>
       <CardFace
-        node={node}
-        depth={depth}
-        editMode={editMode}
-        isDragging={isDragging}
-        isOver={isOver}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onAddChild={onAddChild}
-        onAddSibling={onAddSibling}
-        onUploadPhoto={onUploadPhoto}
-        onRemovePhoto={onRemovePhoto}
+        node={node} depth={depth} editMode={editMode}
+        isDragging={isDragging} isOver={isOver}
+        onEdit={onEdit} onDelete={onDelete}
+        onAddChild={onAddChild} onAddSibling={onAddSibling}
+        onUploadPhoto={onUploadPhoto} onRemovePhoto={onRemovePhoto}
         onExpandPhoto={onExpandPhoto}
       />
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════ recursive tree ═════ */
+/* ══════════════════════════════════════════════ recursive tree ══════════ */
 
 function OrgTree({
   node, allNodes, depth, editMode, activeId, overId,
   onEdit, onDelete, onAddChild, onAddSibling,
   onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
-  node: OrgNode;
-  allNodes: OrgNode[];
-  depth: number;
-  editMode: boolean;
-  activeId: string | null;
-  overId: string | null;
-  onEdit: (n: OrgNode) => void;
-  onDelete: (n: OrgNode) => void;
+  node: OrgNode; allNodes: OrgNode[]; depth: number;
+  editMode: boolean; activeId: string | null; overId: string | null;
+  onEdit: (n: OrgNode) => void; onDelete: (n: OrgNode) => void;
   onAddChild: (parentId: string) => void;
   onAddSibling: (parentId: string | null) => void;
   onUploadPhoto: (node: OrgNode, f: File) => void;
@@ -434,14 +469,9 @@ function OrgTree({
   return (
     <div className="org-node">
       <DndNode
-        node={node}
-        depth={depth}
-        allNodes={allNodes}
-        editMode={editMode}
-        activeId={activeId}
-        overId={overId}
-        onEdit={() => onEdit(node)}
-        onDelete={() => onDelete(node)}
+        node={node} depth={depth} allNodes={allNodes}
+        editMode={editMode} activeId={activeId} overId={overId}
+        onEdit={() => onEdit(node)} onDelete={() => onDelete(node)}
         onAddChild={() => onAddChild(node.id)}
         onAddSibling={() => onAddSibling(node.parentId ?? null)}
         onUploadPhoto={f => onUploadPhoto(node, f)}
@@ -453,18 +483,11 @@ function OrgTree({
           {children.map(child => (
             <div key={child.id} className="org-child-col">
               <OrgTree
-                node={child}
-                allNodes={allNodes}
-                depth={depth + 1}
-                editMode={editMode}
-                activeId={activeId}
-                overId={overId}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onAddChild={onAddChild}
-                onAddSibling={onAddSibling}
-                onUploadPhoto={onUploadPhoto}
-                onRemovePhoto={onRemovePhoto}
+                node={child} allNodes={allNodes} depth={depth + 1}
+                editMode={editMode} activeId={activeId} overId={overId}
+                onEdit={onEdit} onDelete={onDelete}
+                onAddChild={onAddChild} onAddSibling={onAddSibling}
+                onUploadPhoto={onUploadPhoto} onRemovePhoto={onRemovePhoto}
                 onExpandPhoto={onExpandPhoto}
               />
             </div>
@@ -475,32 +498,33 @@ function OrgTree({
   );
 }
 
-/* ═══════════════════════════════════════════════════ root drop zone ═════ */
+/* ════════════════════════════════════════════ root drop zone ════════════ */
 
 function RootDropZone({ visible }: { visible: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: ROOT_DROP_ID });
   if (!visible) return null;
   return (
     <div ref={setNodeRef}
-      className={cn(
-        'flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-8 py-3 text-sm font-medium mb-6 transition-all',
-        isOver
-          ? 'border-primary bg-primary/10 text-primary'
-          : 'border-foreground/15 text-foreground/30',
-      )}>
-      <ArrowUpToLine className="w-4 h-4" />
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        borderRadius: 16, border: `2px dashed ${isOver ? 'rgba(139,92,246,0.8)' : 'rgba(255,255,255,0.15)'}`,
+        padding: '10px 32px', marginBottom: 24, fontSize: 13, fontWeight: 500,
+        background: isOver ? 'rgba(109,40,217,0.15)' : 'rgba(255,255,255,0.04)',
+        color: isOver ? '#a78bfa' : 'rgba(255,255,255,0.3)',
+        backdropFilter: 'blur(8px)', transition: 'all 0.2s',
+      }}>
+      <ArrowUpToLine style={{ width: 15, height: 15 }} />
       Drop here to make top level
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════ edit dialog ═════════ */
+/* ════════════════════════════════════════════ edit dialog ═══════════════ */
 
 function NodeDialog({
   open, onClose, initial, allNodes, onSave, saving,
 }: {
-  open: boolean;
-  onClose: () => void;
+  open: boolean; onClose: () => void;
   initial: Partial<OrgNode> & { id?: string };
   allNodes: OrgNode[];
   onSave: (data: Omit<OrgNode, 'id'> & { id?: string }) => void;
@@ -511,9 +535,7 @@ function NodeDialog({
 
   const field = (key: keyof OrgNode, label: string, placeholder?: string, dir?: 'ltr') => (
     <div className="space-y-1">
-      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-        {label}
-      </label>
+      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">{label}</label>
       <Input value={(form[key] as string) ?? ''} placeholder={placeholder} dir={dir}
         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
         className="h-9 text-sm" />
@@ -535,16 +557,14 @@ function NodeDialog({
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="grid grid-cols-2 gap-3">
-            {field('name',       'Full Name *',   'Ahmed Al-Omari')}
-            {field('title',      'Job Title',     'Executive Director')}
-            {field('department', 'Department',    'Operations')}
-            {field('phone',      'Mobile',        '+966 5x', 'ltr')}
+            {field('name', 'Full Name *', 'Ahmed Al-Omari')}
+            {field('title', 'Job Title', 'Executive Director')}
+            {field('department', 'Department', 'Operations')}
+            {field('phone', 'Mobile', '+966 5x', 'ltr')}
           </div>
           {field('email', 'Email', 'name@bank.com', 'ltr')}
           <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-              Reports To
-            </label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Reports To</label>
             <select value={form.parentId ?? ''}
               onChange={e => setForm(f => ({ ...f, parentId: e.target.value || null }))}
               className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 text-foreground outline-none focus:ring-2 focus:ring-primary/30">
@@ -570,7 +590,7 @@ function NodeDialog({
   );
 }
 
-/* ═══════════════════════════════════════════════════ main section ════════ */
+/* ════════════════════════════════════════════ main section ══════════════ */
 
 export function OrgChartSection({ bank }: { bank: any }) {
   const isFirst = (bank.orgChart ?? []).length === 0;
@@ -625,7 +645,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
     });
   }, [bank, updateBank, queryClient, toast]);
 
-  /* ── DnD ── */
   const handleDragStart = ({ active }: DragStartEvent) => setActiveId(String(active.id));
   const handleDragOver  = ({ over }: DragOverEvent)    => setOverId(over ? String(over.id) : null);
 
@@ -644,7 +663,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
     setNodes(next); save(next);
   };
 
-  /* ── dialog save ── */
   const handleDialogSave = (data: Omit<OrgNode, 'id'> & { id?: string }) => {
     let next: OrgNode[];
     if (data.id) {
@@ -657,7 +675,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
     save(next, { onSuccess: () => setDialog(null) });
   };
 
-  /* ── delete ── */
   const handleDelete = (node: OrgNode) => {
     const next = nodes
       .filter(n => n.id !== node.id)
@@ -665,13 +682,11 @@ export function OrgChartSection({ bank }: { bank: any }) {
     setNodes(next); save(next);
   };
 
-  /* ── remove photo ── */
   const handleRemovePhoto = (node: OrgNode) => {
     const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: null } : n);
     setNodes(next); save(next);
   };
 
-  /* ── photo ── */
   const handleUploadPhoto = (node: OrgNode, file: File) => {
     const reader = new FileReader();
     reader.onload = e => {
@@ -691,7 +706,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
     reader.readAsDataURL(file);
   };
 
-  /* ── add sibling: opens dialog pre-filled with same parentId ── */
   const handleAddSibling = (parentId: string | null) => {
     setDialog({ open: true, initial: { parentId } });
   };
@@ -728,7 +742,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
           </CardTitle>
           {editMode && (
             <p className="text-[11px] text-muted-foreground mt-1">
-              Drag cards to rearrange · ✏ edit · ± left/right to add sibling · ＋ below to add report · 🔒 when done
+              Drag to rearrange · ✏ edit · ± left/right for sibling · ＋ below for report · 🔒 when done
             </p>
           )}
         </CardHeader>
@@ -740,24 +754,26 @@ export function OrgChartSection({ bank }: { bank: any }) {
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
-            <div className="overflow-x-auto rounded-b-xl"
+            {/* ── dark glass background ── */}
+            <div
+              className="overflow-x-auto rounded-b-xl"
               style={{
-                background: 'hsl(var(--muted)/0.3)',
-                backgroundImage: 'radial-gradient(circle, hsl(var(--foreground)/0.06) 1px, transparent 1px)',
-                backgroundSize: '22px 22px',
+                backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(160deg, #0a0f2e 0%, #1a1040 45%, #0a1628 100%)',
+                backgroundSize: '22px 22px, cover',
               }}>
-              <div className="min-w-fit px-12 py-8">
+              {/* subtle top noise band */}
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.4,
+                background: 'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(109,40,217,0.3), transparent)',
+              }} />
+
+              <div className="min-w-fit px-12 py-8 relative">
                 <RootDropZone visible={editMode && !!activeId} />
                 <div className="flex gap-16 items-start justify-center">
                   {roots.map(root => (
                     <OrgTree
                       key={root.id}
-                      node={root}
-                      allNodes={nodes}
-                      depth={0}
-                      editMode={editMode}
-                      activeId={activeId}
-                      overId={overId}
+                      node={root} allNodes={nodes} depth={0}
+                      editMode={editMode} activeId={activeId} overId={overId}
                       onEdit={n => setDialog({ open: true, initial: { ...n } })}
                       onDelete={handleDelete}
                       onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
@@ -773,7 +789,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
 
             <DragOverlay dropAnimation={null}>
               {activeNode && (
-                <div className="rotate-1 opacity-90 drop-shadow-2xl pointer-events-none">
+                <div style={{ transform: 'rotate(2deg)', opacity: 0.9, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))' }}>
                   <CardFace node={activeNode} depth={1} editMode />
                 </div>
               )}
@@ -782,25 +798,16 @@ export function OrgChartSection({ bank }: { bank: any }) {
         </CardContent>
       </Card>
 
-      {/* Edit dialog */}
       {dialog && (
         <NodeDialog
-          open={dialog.open}
-          onClose={() => setDialog(null)}
-          initial={dialog.initial}
-          allNodes={nodes}
-          onSave={handleDialogSave}
-          saving={updateBank.isPending}
+          open={dialog.open} onClose={() => setDialog(null)}
+          initial={dialog.initial} allNodes={nodes}
+          onSave={handleDialogSave} saving={updateBank.isPending}
         />
       )}
 
-      {/* Photo lightbox */}
       {lightbox?.photoUrl && (
-        <PhotoLightbox
-          url={lightbox.photoUrl}
-          name={lightbox.name}
-          onClose={() => setLightbox(null)}
-        />
+        <PhotoLightbox url={lightbox.photoUrl} name={lightbox.name} onClose={() => setLightbox(null)} />
       )}
     </>
   );

@@ -603,16 +603,29 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
 
 // ── Responsible-Person Card ────────────────────────────────────────────────────
 function ResponsiblePersonCard({
-  bankId, name, photoUrl, canEdit,
-}: { bankId: string; name: string | null; photoUrl: string | null; canEdit: boolean }) {
+  bankId, name, photoUrl, canEdit, onSaveName,
+}: { bankId: string; name: string | null; photoUrl: string | null; canEdit: boolean; onSaveName?: (name: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(name ?? '');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setNameDraft(name ?? ''); }, [name]);
+  useEffect(() => { if (editingName) nameInputRef.current?.focus(); }, [editingName]);
 
   const initials = (name ?? '').trim()
     .split(/\s+/).filter(Boolean).slice(0, 2)
     .map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+
+  function commitName() {
+    const trimmed = nameDraft.trim();
+    setEditingName(false);
+    if (trimmed === (name ?? '')) return;
+    onSaveName?.(trimmed);
+  }
 
   async function handleFile(file: File) {
     setUploading(true);
@@ -679,10 +692,39 @@ function ResponsiblePersonCard({
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
         />
       </div>
-      {name && (
-        <div className="text-center">
-          <p className="text-xs text-foreground/40 uppercase tracking-wide leading-none mb-0.5">Responsible</p>
-          <p className="text-sm font-medium text-foreground leading-snug max-w-[100px] truncate">{name}</p>
+      {/* Name display / inline edit */}
+      {(name || canEdit) && (
+        <div className="text-center min-w-[90px]">
+          <p className="text-xs text-foreground/40 uppercase tracking-wide leading-none mb-1">Responsible</p>
+          {editingName ? (
+            <div className="flex items-center gap-1">
+              <input
+                ref={nameInputRef}
+                value={nameDraft}
+                onChange={e => setNameDraft(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') commitName();
+                  if (e.key === 'Escape') { setNameDraft(name ?? ''); setEditingName(false); }
+                }}
+                onBlur={commitName}
+                className="text-sm font-medium bg-foreground/10 border border-foreground/20 rounded px-1.5 py-0.5 w-24 text-center outline-none focus:border-primary"
+                placeholder="Full name"
+              />
+            </div>
+          ) : (
+            <div
+              className={cn('flex items-center justify-center gap-1 group/name', canEdit && 'cursor-pointer')}
+              onClick={() => { if (canEdit) { setNameDraft(name ?? ''); setEditingName(true); } }}
+              title={canEdit ? 'Click to edit name' : undefined}
+            >
+              <p className="text-sm font-medium text-foreground leading-snug max-w-[90px] truncate">
+                {name || <span className="text-foreground/30 italic text-xs">Add name…</span>}
+              </p>
+              {canEdit && (
+                <Pencil className="w-3 h-3 text-foreground/30 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -769,6 +811,9 @@ export default function BankDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { role } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const updateBank = useUpdateBank();
   const [qrOpen, setQrOpen] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const { data: bank, isLoading } = useGetBank(id!, { query: { enabled: !!id, queryKey: getGetBankQueryKey(id!) } });
@@ -996,6 +1041,15 @@ export default function BankDetail() {
             name={bank.responsiblePerson ?? null}
             photoUrl={(bank as any).responsiblePersonPhoto ?? null}
             canEdit={role === 'admin' || role === 'super_admin'}
+            onSaveName={(newName) => {
+              updateBank.mutate(
+                { id: bank.id, data: { responsiblePerson: newName || null } },
+                {
+                  onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) }),
+                  onError: () => toast({ title: 'Failed to save name', variant: 'destructive' }),
+                }
+              );
+            }}
           />
         )}
       </div>

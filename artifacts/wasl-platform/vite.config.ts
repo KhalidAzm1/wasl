@@ -63,6 +63,41 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Heavy PDF / document export libs — load only when used
+          if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('docx')) {
+            return 'vendor-export';
+          }
+          // Chart / visualisation
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
+            return 'vendor-charts';
+          }
+          // DnD kit
+          if (id.includes('@dnd-kit')) {
+            return 'vendor-dnd';
+          }
+          // PostHog analytics
+          if (id.includes('posthog')) {
+            return 'vendor-analytics';
+          }
+          // React core + router + query (small, keep together for fast initial render)
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/wouter') ||
+            id.includes('node_modules/@tanstack/react-query')
+          ) {
+            return 'vendor-react';
+          }
+          // All other node_modules → shared vendor chunk
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+      },
+    },
   },
   server: {
     port,

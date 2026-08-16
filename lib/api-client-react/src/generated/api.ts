@@ -57,7 +57,8 @@ import type {
   ProductUpdate,
   Risk,
   RiskInput,
-  RiskUpdate
+  RiskUpdate,
+  SetOrgChartNodePhoto200
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -674,6 +675,80 @@ export const useSetBankLogo = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSetBankLogoMutationOptions(options));
+    }
+
+export const getSetOrgChartNodePhotoUrl = (id: string,
+    nodeId: string,) => {
+
+
+
+
+  return `/api/banks/${id}/org-chart-photo/${nodeId}`
+}
+
+/**
+ * @summary Upload a profile photo for an org chart node
+ */
+export const setOrgChartNodePhoto = async (id: string,
+    nodeId: string,
+    imageUpload: ImageUpload, options?: RequestInit): Promise<SetOrgChartNodePhoto200> => {
+
+  return customFetch<SetOrgChartNodePhoto200>(getSetOrgChartNodePhotoUrl(id,nodeId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(imageUpload)
+  }
+);}
+
+
+
+
+
+export const getSetOrgChartNodePhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOrgChartNodePhoto>>, TError,{id: string;nodeId: string;data: BodyType<ImageUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setOrgChartNodePhoto>>, TError,{id: string;nodeId: string;data: BodyType<ImageUpload>}, TContext> => {
+
+const mutationKey = ['setOrgChartNodePhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setOrgChartNodePhoto>>, {id: string;nodeId: string;data: BodyType<ImageUpload>}> = (props) => {
+          const {id,nodeId,data} = props ?? {};
+
+          return  setOrgChartNodePhoto(id,nodeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetOrgChartNodePhotoMutationResult = NonNullable<Awaited<ReturnType<typeof setOrgChartNodePhoto>>>
+    export type SetOrgChartNodePhotoMutationBody = BodyType<ImageUpload>
+    export type SetOrgChartNodePhotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload a profile photo for an org chart node
+ */
+export const useSetOrgChartNodePhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOrgChartNodePhoto>>, TError,{id: string;nodeId: string;data: BodyType<ImageUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setOrgChartNodePhoto>>,
+        TError,
+        {id: string;nodeId: string;data: BodyType<ImageUpload>},
+        TContext
+      > => {
+      return useMutation(getSetOrgChartNodePhotoMutationOptions(options));
     }
 
 export const getSetBankHeroImageUrl = (id: string,) => {

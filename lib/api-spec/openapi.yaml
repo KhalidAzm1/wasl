@@ -161,6 +161,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/Bank"
 
+  /banks/{id}/org-chart-photo/{nodeId}:
+    put:
+      operationId: setOrgChartNodePhoto
+      tags: [banks]
+      summary: Upload a profile photo for an org chart node
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageUpload"
+      responses:
+        "200":
+          description: Photo URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [photoUrl]
+                properties:
+                  photoUrl: { type: string }
+
   /banks/{id}/hero:
     put:
       operationId: setBankHeroImage
@@ -802,6 +831,9 @@ components:
         contacts:
           type: array
           items: { $ref: "#/components/schemas/BankContact" }
+        orgChart:
+          type: array
+          items: { $ref: "#/components/schemas/OrgChartNode" }
         riskLevel: { type: string, description: "Low | Medium | High" }
         priorityImpact: { type: string, description: "HOT | Unclassified | etc" }
         responsiblePerson: { type: ["string", "null"] }
@@ -861,6 +893,9 @@ components:
         contacts:
           type: array
           items: { $ref: "#/components/schemas/BankContact" }
+        orgChart:
+          type: array
+          items: { $ref: "#/components/schemas/OrgChartNode" }
         riskLevel: { type: string }
         priorityImpact: { type: string }
         responsiblePerson: { type: ["string", "null"] }
@@ -891,6 +926,9 @@ components:
         contacts:
           type: array
           items: { $ref: "#/components/schemas/BankContact" }
+        orgChart:
+          type: array
+          items: { $ref: "#/components/schemas/OrgChartNode" }
         riskLevel: { type: string }
         priorityImpact: { type: string }
         responsiblePerson: { type: ["string", "null"] }
@@ -920,6 +958,19 @@ components:
         manager: { type: ["string", "null"] }
         managerPhone: { type: ["string", "null"] }
         starred: { type: boolean }
+
+    OrgChartNode:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        title: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        department: { type: ["string", "null"] }
+        parentId: { type: ["string", "null"] }
+        photoUrl: { type: ["string", "null"] }
 
     Product:
       type: object

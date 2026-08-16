@@ -39,6 +39,16 @@ export const ListBanksResponseItem = zod.object({
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
+})).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
@@ -84,6 +94,16 @@ export const CreateBankBody = zod.object({
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
+})).optional(),
   "riskLevel": zod.string(),
   "priorityImpact": zod.string(),
   "responsiblePerson": zod.string().nullish(),
@@ -118,6 +138,16 @@ export const CreateBankResponse = zod.object({
   "manager": zod.string().nullish(),
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
+})).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -167,6 +197,16 @@ export const GetBankResponse = zod.object({
   "manager": zod.string().nullish(),
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
+})).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -285,6 +325,16 @@ export const UpdateBankBody = zod.object({
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
+})).optional(),
   "riskLevel": zod.string().optional(),
   "priorityImpact": zod.string().optional(),
   "responsiblePerson": zod.string().nullish(),
@@ -319,6 +369,16 @@ export const UpdateBankResponse = zod.object({
   "manager": zod.string().nullish(),
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
+})).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -379,6 +439,16 @@ export const RestoreBankResponse = zod.object({
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
+})).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
@@ -432,6 +502,16 @@ export const SetBankLogoResponse = zod.object({
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
 })).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
+})).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
@@ -452,6 +532,23 @@ export const SetBankLogoResponse = zod.object({
   "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Upload a profile photo for an org chart node
+ */
+export const SetOrgChartNodePhotoParams = zod.object({
+  "id": zod.coerce.string(),
+  "nodeId": zod.coerce.string()
+})
+
+export const SetOrgChartNodePhotoBody = zod.object({
+  "dataUrl": zod.string().describe('Base64-encoded data URL of the uploaded image (e.g. data:image\/png;base64,...)')
+})
+
+export const SetOrgChartNodePhotoResponse = zod.object({
+  "photoUrl": zod.string()
 })
 
 
@@ -484,6 +581,16 @@ export const SetBankHeroImageResponse = zod.object({
   "manager": zod.string().nullish(),
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
+})).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
@@ -1246,6 +1353,16 @@ export const GetArchiveResponse = zod.object({
   "manager": zod.string().nullish(),
   "managerPhone": zod.string().nullish(),
   "starred": zod.boolean().optional()
+})).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),

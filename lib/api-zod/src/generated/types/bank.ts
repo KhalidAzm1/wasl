@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BankContact } from './bankContact';
+import type { OrgChartNode } from './orgChartNode';
 
 export interface Bank {
   id: string;
@@ -21,6 +22,7 @@ export interface Bank {
   /** @nullable */
   referenceLink?: string | null;
   contacts?: BankContact[];
+  orgChart?: OrgChartNode[];
   /** Low | Medium | High */
   riskLevel: string;
   /** HOT | Unclassified | etc */

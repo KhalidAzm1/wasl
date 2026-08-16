@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/lib/authContext';
+import { OrgChartSection } from '@/components/OrgChartSection';
 
 // ── Contacts Card (star + drag-to-reorder) ────────────────────────────────────
 type ContactWithStar = {
@@ -1015,6 +1016,8 @@ export default function BankDetail() {
               {bank.contacts && bank.contacts.length > 0 && (
                 <ContactsCard bank={bank} />
               )}
+
+              <OrgChartSection bank={bank} />
             </div>
           </div>
         </TabsContent>

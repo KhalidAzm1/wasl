@@ -31,6 +31,23 @@ export interface BankContact {
   starred?: boolean;
 }
 
+export interface OrgChartNode {
+  id: string;
+  name: string;
+  /** @nullable */
+  title?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  parentId?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
+}
+
 export interface Bank {
   id: string;
   nameEn: string;
@@ -45,6 +62,7 @@ export interface Bank {
   /** @nullable */
   referenceLink?: string | null;
   contacts?: BankContact[];
+  orgChart?: OrgChartNode[];
   /** Low | Medium | High */
   riskLevel: string;
   /** HOT | Unclassified | etc */
@@ -226,6 +244,7 @@ export interface BankInput {
   heroImageUrl?: string;
   referenceLink?: string;
   contacts?: BankContact[];
+  orgChart?: OrgChartNode[];
   riskLevel: string;
   priorityImpact: string;
   /** @nullable */
@@ -255,6 +274,7 @@ export interface BankUpdate {
   heroImageUrl?: string;
   referenceLink?: string;
   contacts?: BankContact[];
+  orgChart?: OrgChartNode[];
   riskLevel?: string;
   priorityImpact?: string;
   /** @nullable */
@@ -480,6 +500,10 @@ export interface ArchiveSummary {
   documents: Document[];
   meetings: Meeting[];
 }
+
+export type SetOrgChartNodePhoto200 = {
+  photoUrl: string;
+};
 
 export type ListProductsParams = {
 bankId?: string;

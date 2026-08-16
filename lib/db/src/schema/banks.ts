@@ -14,6 +14,18 @@ export const bankContactSchema = z.object({
 });
 export type BankContact = z.infer<typeof bankContactSchema>;
 
+export const orgChartNodeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  title: z.string().nullish(),
+  phone: z.string().nullish(),
+  email: z.string().nullish(),
+  department: z.string().nullish(),
+  parentId: z.string().nullish(),
+  photoUrl: z.string().nullish(),
+});
+export type OrgChartNode = z.infer<typeof orgChartNodeSchema>;
+
 export const banksTable = pgTable("banks", {
   id: text("id").primaryKey(),
   nameEn: text("name_en").notNull(),
@@ -24,6 +36,7 @@ export const banksTable = pgTable("banks", {
   heroImageUrl: text("hero_image_url"),
   referenceLink: text("reference_link"),
   contacts: jsonb("contacts").$type<BankContact[]>().notNull().default([]),
+  orgChart: jsonb("org_chart").$type<OrgChartNode[]>().notNull().default([]),
   riskLevel: text("risk_level").notNull(),
   priorityImpact: text("priority_impact").notNull(),
   responsiblePerson: text("responsible_person"),

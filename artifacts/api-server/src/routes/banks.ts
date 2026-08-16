@@ -510,6 +510,38 @@ router.put("/banks/:id/logo", requireRole("super_admin", "admin"), requireBankEd
   );
 });
 
+router.put("/banks/:id/org-chart-photo/:nodeId", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
+  const bankId = String(req.params.id);
+  const nodeId = String(req.params.nodeId);
+  if (!bankId || !nodeId) { res.status(400).json({ error: "Missing bankId or nodeId" }); return; }
+
+  const parsed = SetBankLogoBody.safeParse(req.body); // reuse same { dataUrl } shape
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const imageError = validateImageDataUrl(parsed.data.dataUrl);
+  if (imageError) { res.status(400).json({ error: imageError }); return; }
+
+  const [existingBank] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
+  if (!existingBank) { res.status(404).json({ error: "Bank not found" }); return; }
+
+  let parsed2: { contentType: string; buffer: Buffer };
+  try { parsed2 = parseDataUrl(parsed.data.dataUrl); } catch (e: any) { res.status(400).json({ error: e.message }); return; }
+
+  const { contentType, buffer } = parsed2;
+  const ext = contentType.replace("image/", "").replace("jpeg", "jpg").replace("svg+xml", "svg");
+  const storagePath = `org-chart/${bankId}/${nodeId}.${ext}`;
+  try {
+    await uploadToStorage(storagePath, buffer, contentType);
+  } catch (e: any) {
+    res.status(502).json({ error: "Failed to upload photo — please try again" }); return;
+  }
+
+  let photoUrl: string;
+  try { photoUrl = await getSignedUrl(storagePath); } catch { res.status(502).json({ error: "Uploaded but could not sign URL" }); return; }
+
+  res.json({ photoUrl });
+});
+
 router.put("/banks/:id/hero", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const params = SetBankHeroImageParams.safeParse(req.params);
   if (!params.success) {

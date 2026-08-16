@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +9,7 @@ import {
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import {
-  Plus, Pencil, Trash2, Loader2, Network, Phone, Mail,
-  UserPlus, UploadCloud, ChevronLeft, ChevronRight,
-} from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Network, UploadCloud } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +28,17 @@ const EMPTY_NODE: Omit<OrgNode, 'id'> = {
   name: '', title: '', phone: '', email: '', department: '', parentId: null, photoUrl: null,
 };
 
+// ── Default 6-node template ───────────────────────────────────────────────────
+
+const DEFAULT_NODES: OrgNode[] = [
+  { id: 'def-1', name: '', title: '', department: '', parentId: null },
+  { id: 'def-2', name: '', title: '', department: '', parentId: 'def-1' },
+  { id: 'def-3', name: '', title: '', department: '', parentId: 'def-1' },
+  { id: 'def-4', name: '', title: '', department: '', parentId: 'def-1' },
+  { id: 'def-5', name: '', title: '', department: '', parentId: 'def-2' },
+  { id: 'def-6', name: '', title: '', department: '', parentId: 'def-3' },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getDescendantIds(nodeId: string, nodes: OrgNode[]): Set<string> {
@@ -44,215 +52,151 @@ function getDescendantIds(nodeId: string, nodes: OrgNode[]): Set<string> {
   return result;
 }
 
-// ── Depth-based card colors ───────────────────────────────────────────────────
-// depth 0 = root: white card, blue border
-// depth 1 = blue card, white text
-// depth 2+ = light-blue card, dark text
-
-function getCardStyle(depth: number) {
-  if (depth === 0) return {
-    card: 'bg-white border-2 border-blue-200 shadow-lg',
-    name: 'text-slate-800',
-    title: 'text-slate-500',
-    dept: 'text-blue-500',
-    avatarRing: 'ring-2 ring-blue-200 ring-offset-2 ring-offset-white',
-  };
-  if (depth === 1) return {
-    card: 'bg-blue-500 border-0 shadow-md',
-    name: 'text-white',
-    title: 'text-blue-100',
-    dept: 'text-blue-200',
-    avatarRing: 'ring-2 ring-white ring-offset-2 ring-offset-blue-500',
-  };
-  return {
-    card: 'bg-blue-50 border border-blue-200 shadow-sm',
-    name: 'text-slate-700',
-    title: 'text-slate-500',
-    dept: 'text-blue-500',
-    avatarRing: 'ring-2 ring-blue-200 ring-offset-2 ring-offset-blue-50',
-  };
-}
-
 // ── Avatar ───────────────────────────────────────────────────────────────────
 
-const AVATAR_COLORS: [string, string][] = [
-  ['#2563EB', '#DBEAFE'], ['#7C3AED', '#EDE9FE'], ['#059669', '#D1FAE5'],
-  ['#D97706', '#FEF3C7'], ['#DC2626', '#FEE2E2'], ['#0891B2', '#CFFAFE'],
-  ['#4F46E5', '#E0E7FF'], ['#DB2777', '#FCE7F3'],
+const PALETTE: string[] = [
+  '#3B82F6','#8B5CF6','#10B981','#F59E0B','#EF4444','#06B6D4','#6366F1','#EC4899',
 ];
-function getAvatarColor(name: string): [string, string] {
+function pickColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+  return PALETTE[h % PALETTE.length];
 }
 
-function NodeAvatar({ node, size, ringClass }: { node: OrgNode; size: number; ringClass: string }) {
-  const initials = node.name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
-  const [fg, bg] = getAvatarColor(node.name);
+function NodeAvatar({ node, size }: { node: OrgNode; size: number }) {
+  const isEmpty = !node.name.trim();
+  const initials = node.name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
 
-  if (node.photoUrl) {
+  if (!isEmpty && node.photoUrl) {
     return (
-      <img
-        src={node.photoUrl}
-        alt={node.name}
+      <img src={node.photoUrl} alt={node.name}
         style={{ width: size, height: size }}
-        className={cn('rounded-full object-cover', ringClass)}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-      />
+        className="rounded-full object-cover border-2 border-white shadow-sm"
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
     );
   }
+
   return (
     <div
-      style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.36 }}
-      className={cn('rounded-full flex items-center justify-center font-bold shrink-0', ringClass)}
+      style={{
+        width: size, height: size,
+        background: isEmpty ? '#E5E7EB' : pickColor(node.name),
+        fontSize: size * 0.35,
+      }}
+      className="rounded-full flex items-center justify-center font-bold text-white border-2 border-white shadow-sm shrink-0"
     >
-      {initials || '?'}
+      {isEmpty ? (
+        <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+      ) : (initials || '?')}
     </div>
   );
 }
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 
-const CARD_WIDTH = 160;
-
 function OrgCard({
-  node, depth,
+  node, isRoot,
   onEdit, onDelete, onAddChild, onUploadPhoto,
-  canMoveLeft, canMoveRight, onMoveLeft, onMoveRight,
 }: {
   node: OrgNode;
-  depth: number;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onAddChild?: () => void;
-  onUploadPhoto?: (f: File) => void;
-  canMoveLeft?: boolean;
-  canMoveRight?: boolean;
-  onMoveLeft?: () => void;
-  onMoveRight?: () => void;
+  isRoot: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAddChild: () => void;
+  onUploadPhoto: (f: File) => void;
 }) {
   const photoRef = useRef<HTMLInputElement>(null);
-  const style = getCardStyle(depth);
-  const avatarSize = depth === 0 ? 72 : 60;
+  const isEmpty = !node.name.trim();
 
   return (
-    <div className="group relative flex flex-col items-center" style={{ width: CARD_WIDTH }}>
-      {/* Sibling reorder arrows — shown on hover */}
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ marginLeft: -28, marginRight: -28 }}>
-        <button
-          onClick={onMoveLeft}
-          disabled={!canMoveLeft}
-          className={cn(
-            'pointer-events-auto w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-all',
-            canMoveLeft
-              ? 'bg-white text-blue-500 hover:bg-blue-500 hover:text-white cursor-pointer'
-              : 'bg-white/40 text-slate-300 cursor-not-allowed',
-          )}
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={onMoveRight}
-          disabled={!canMoveRight}
-          className={cn(
-            'pointer-events-auto w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-all',
-            canMoveRight
-              ? 'bg-white text-blue-500 hover:bg-blue-500 hover:text-white cursor-pointer'
-              : 'bg-white/40 text-slate-300 cursor-not-allowed',
-          )}
-        >
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Card body */}
+    <div className="flex flex-col items-center">
+      {/* Card */}
       <div className={cn(
-        'relative w-full rounded-2xl flex flex-col items-center pt-5 pb-3 px-2 transition-all',
-        style.card,
-      )}>
-        {/* Avatar — upload on hover */}
+        'relative flex flex-col items-center rounded-2xl border-2 shadow-sm transition-shadow hover:shadow-md',
+        isRoot
+          ? 'border-blue-300 bg-blue-500'
+          : isEmpty
+            ? 'border-dashed border-gray-300 bg-white'
+            : 'border-gray-200 bg-white',
+      )} style={{ width: 156 }}>
+
+        {/* Edit & Delete buttons — always visible top-right */}
+        <div className="absolute top-2 right-2 flex gap-1">
+          <button
+            onClick={onEdit}
+            title="تعديل"
+            className={cn(
+              'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
+              isRoot
+                ? 'bg-white/20 hover:bg-white/40 text-white'
+                : 'bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-500',
+            )}
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+          <button
+            onClick={onDelete}
+            title="حذف"
+            className={cn(
+              'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
+              isRoot
+                ? 'bg-white/20 hover:bg-red-500/80 text-white'
+                : 'bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500',
+            )}
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* Avatar */}
         <button
-          className="relative mb-2 shrink-0"
-          title="Upload photo"
-          onClick={() => onUploadPhoto && photoRef.current?.click()}
+          className="mt-5 mb-2.5 relative group/av"
+          title="رفع صورة"
+          onClick={() => photoRef.current?.click()}
         >
-          <NodeAvatar node={node} size={avatarSize} ringClass={style.avatarRing} />
-          {onUploadPhoto && (
-            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <UploadCloud className="w-3.5 h-3.5 text-white" />
-            </div>
-          )}
+          <NodeAvatar node={node} size={56} />
+          <div className="absolute inset-0 rounded-full bg-black/35 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+            <UploadCloud className="w-3.5 h-3.5 text-white" />
+          </div>
         </button>
-        {onUploadPhoto && (
-          <input ref={photoRef} type="file" accept="image/*" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
-        )}
+        <input ref={photoRef} type="file" accept="image/*" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
 
-        {/* Text */}
-        <p className={cn('text-[13px] font-bold leading-tight text-center px-1', style.name)}>{node.name}</p>
-        {node.title && <p className={cn('text-[11px] mt-0.5 text-center leading-snug px-1', style.title)}>{node.title}</p>}
-        {node.department && <p className={cn('text-[10px] mt-0.5 font-semibold text-center', style.dept)}>{node.department}</p>}
-
-        {/* Contact */}
-        {(node.phone || node.email) && (
-          <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
-            {node.phone && (
-              <a href={`tel:${node.phone}`} dir="ltr" onClick={e => e.stopPropagation()}
-                className={cn('text-[10px] flex items-center gap-0.5 hover:underline', depth === 1 ? 'text-blue-100' : 'text-slate-400')}>
-                <Phone className="w-2.5 h-2.5 shrink-0" />
-                <span className="truncate max-w-[72px]">{node.phone}</span>
-              </a>
-            )}
-            {node.email && !node.phone && (
-              <a href={`mailto:${node.email}`} onClick={e => e.stopPropagation()}
-                className={cn('text-[10px] flex items-center gap-0.5 hover:underline', depth === 1 ? 'text-blue-100' : 'text-slate-400')}>
-                <Mail className="w-2.5 h-2.5 shrink-0" />
-                <span className="truncate max-w-[80px]">{node.email}</span>
-              </a>
-            )}
-          </div>
-        )}
-
-        {/* Action bar — shown on hover */}
-        {(onEdit || onDelete) && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-2">
-            {onEdit && (
-              <button title="Edit" onClick={onEdit}
-                className={cn(
-                  'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
-                  depth === 1
-                    ? 'text-blue-200 hover:text-white hover:bg-white/20'
-                    : 'text-foreground/30 hover:text-blue-500 hover:bg-blue-50',
-                )}>
-                <Pencil className="w-3 h-3" />
-              </button>
-            )}
-            {onDelete && (
-              <button title="Delete" onClick={onDelete}
-                className={cn(
-                  'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
-                  depth === 1
-                    ? 'text-blue-200 hover:text-white hover:bg-white/20'
-                    : 'text-foreground/30 hover:text-red-400 hover:bg-red-50',
-                )}>
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        )}
+        {/* Text content */}
+        <div className="px-3 pb-4 w-full text-center">
+          {isEmpty ? (
+            <button onClick={onEdit} className={cn('text-xs font-medium', isRoot ? 'text-blue-100' : 'text-gray-400')}>
+              اضغط للإضافة
+            </button>
+          ) : (
+            <>
+              <p className={cn('text-[13px] font-bold leading-snug', isRoot ? 'text-white' : 'text-gray-800')}>
+                {node.name}
+              </p>
+              {node.title && (
+                <p className={cn('text-[11px] mt-0.5', isRoot ? 'text-blue-100' : 'text-gray-500')}>
+                  {node.title}
+                </p>
+              )}
+              {node.department && (
+                <p className={cn('text-[10px] mt-0.5 font-semibold', isRoot ? 'text-blue-200' : 'text-blue-400')}>
+                  {node.department}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Add child button — centred below card */}
-      {onAddChild && (
-        <button
-          onClick={onAddChild}
-          title="Add direct report"
-          className="opacity-0 group-hover:opacity-100 transition-opacity mt-1 w-6 h-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center shadow-md z-10"
-        >
-          <UserPlus className="w-3 h-3" />
-        </button>
-      )}
+      {/* Add child — always visible, below card */}
+      <button
+        onClick={onAddChild}
+        className="mt-1.5 flex items-center gap-1 text-[11px] text-gray-400 hover:text-blue-500 transition-colors font-medium"
+      >
+        <Plus className="w-3 h-3" /> إضافة تابع
+      </button>
     </div>
   );
 }
@@ -261,8 +205,7 @@ function OrgCard({
 
 function OrgTree({
   node, allNodes, depth,
-  onEdit, onDelete, onAddChild, onUploadPhoto, onSwapSibling,
-  siblingIndex, siblingCount,
+  onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
   allNodes: OrgNode[];
@@ -271,9 +214,6 @@ function OrgTree({
   onDelete: (n: OrgNode) => void;
   onAddChild: (parentId: string) => void;
   onUploadPhoto: (node: OrgNode, f: File) => void;
-  onSwapSibling: (nodeId: string, direction: 'left' | 'right') => void;
-  siblingIndex: number;
-  siblingCount: number;
 }) {
   const children = allNodes.filter(n => n.parentId === node.id);
 
@@ -281,19 +221,15 @@ function OrgTree({
     <div className="org-node">
       <OrgCard
         node={node}
-        depth={depth}
+        isRoot={depth === 0}
         onEdit={() => onEdit(node)}
         onDelete={() => onDelete(node)}
         onAddChild={() => onAddChild(node.id)}
         onUploadPhoto={f => onUploadPhoto(node, f)}
-        canMoveLeft={siblingIndex > 0}
-        canMoveRight={siblingIndex < siblingCount - 1}
-        onMoveLeft={() => onSwapSibling(node.id, 'left')}
-        onMoveRight={() => onSwapSibling(node.id, 'right')}
       />
       {children.length > 0 && (
         <div className="org-children">
-          {children.map((child, idx) => (
+          {children.map(child => (
             <div key={child.id} className="org-child-col">
               <OrgTree
                 node={child}
@@ -303,9 +239,6 @@ function OrgTree({
                 onDelete={onDelete}
                 onAddChild={onAddChild}
                 onUploadPhoto={onUploadPhoto}
-                onSwapSibling={onSwapSibling}
-                siblingIndex={idx}
-                siblingCount={children.length}
               />
             </div>
           ))}
@@ -315,7 +248,7 @@ function OrgTree({
   );
 }
 
-// ── Node Edit Dialog ──────────────────────────────────────────────────────────
+// ── Edit Dialog ───────────────────────────────────────────────────────────────
 
 function NodeDialog({
   open, onClose, initial, allNodes, onSave, saving,
@@ -328,17 +261,17 @@ function NodeDialog({
   saving?: boolean;
 }) {
   const [form, setForm] = useState<Partial<OrgNode>>({ ...EMPTY_NODE, ...initial });
-  React.useEffect(() => { if (open) setForm({ ...EMPTY_NODE, ...initial }); }, [open, initial]);
+  useEffect(() => { if (open) setForm({ ...EMPTY_NODE, ...initial }); }, [open]);
 
   const field = (key: keyof OrgNode, label: string, placeholder?: string, dir?: 'ltr') => (
     <div className="space-y-1">
-      <label className="text-[10px] font-semibold text-foreground/40 uppercase tracking-wider block">{label}</label>
+      <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">{label}</label>
       <Input
         value={(form[key] as string) ?? ''}
         placeholder={placeholder}
         dir={dir}
         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-        className="bg-background border-foreground/10 text-sm h-8"
+        className="h-9 text-sm"
       />
     </div>
   );
@@ -351,44 +284,41 @@ function NodeDialog({
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Network className="w-4 h-4 text-primary" />
-            {initial.id ? 'Edit Person' : 'Add Person'}
-          </DialogTitle>
+          <DialogTitle>{initial.id ? 'تعديل الشخص' : 'إضافة شخص جديد'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="grid grid-cols-2 gap-3">
-            {field('name', 'Full Name *', 'e.g. Ahmed Al-Harbi')}
-            {field('title', 'Job Title', 'e.g. CEO')}
-            {field('department', 'Department', 'e.g. Operations')}
-            {field('phone', 'Phone', '+966 5x xxx xxxx', 'ltr')}
+            {field('name', 'الاسم *', 'أحمد العمري')}
+            {field('title', 'المسمى الوظيفي', 'مدير تنفيذي')}
+            {field('department', 'القسم / الإدارة', 'العمليات')}
+            {field('phone', 'الجوال', '+966 5x', 'ltr')}
           </div>
-          {field('email', 'Email', 'name@bank.com', 'ltr')}
+          {field('email', 'البريد الإلكتروني', 'name@bank.com', 'ltr')}
           <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-foreground/40 uppercase tracking-wider block">Reports To</label>
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">يتبع لـ</label>
             <select
               value={form.parentId ?? ''}
               onChange={e => setForm(f => ({ ...f, parentId: e.target.value || null }))}
-              className="w-full h-8 rounded-md border border-foreground/10 bg-background text-sm px-2 outline-none focus:border-primary/50"
+              className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 outline-none focus:ring-2 focus:ring-primary/30"
             >
-              <option value="">— Top level (no manager) —</option>
+              <option value="">— مستوى أعلى (بدون مدير) —</option>
               {parentOptions.map(n => (
                 <option key={n.id} value={n.id}>
-                  {n.name}{n.title ? ` · ${n.title}` : ''}
+                  {n.name || '(فارغ)'}{n.title ? ` · ${n.title}` : ''}
                 </option>
               ))}
             </select>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>إلغاء</Button>
           <Button
             size="sm"
-            disabled={!form.name?.trim() || saving}
+            disabled={saving}
             onClick={() => onSave({ ...form, id: initial.id } as any)}
           >
             {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-            {initial.id ? 'Save Changes' : 'Add Person'}
+            حفظ
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -399,13 +329,33 @@ function NodeDialog({
 // ── Main Section ──────────────────────────────────────────────────────────────
 
 export function OrgChartSection({ bank }: { bank: any }) {
-  const [nodes, setNodes] = useState<OrgNode[]>(() => bank.orgChart ?? []);
+  const isFirstLoad = (bank.orgChart ?? []).length === 0;
+  const [nodes, setNodes] = useState<OrgNode[]>(() =>
+    isFirstLoad ? DEFAULT_NODES : (bank.orgChart ?? []),
+  );
   const [dialog, setDialog] = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updateBank = useUpdateBank();
   const uploadPhoto = useSetOrgChartNodePhoto();
+
+  // Save the default template immediately so it persists on refresh
+  useEffect(() => {
+    if (isFirstLoad) {
+      updateBank.mutate({
+        id: bank.id,
+        data: {
+          nameEn: bank.nameEn, nameAr: bank.nameAr,
+          category: bank.category, status: bank.status,
+          riskLevel: bank.riskLevel, priorityImpact: bank.priorityImpact,
+          orgChart: DEFAULT_NODES,
+        },
+      });
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const save = useCallback((next: OrgNode[], opts?: { onSuccess?: () => void }) => {
     updateBank.mutate({
@@ -421,7 +371,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) });
         opts?.onSuccess?.();
       },
-      onError: () => toast({ title: 'Failed to save org chart', variant: 'destructive' }),
+      onError: () => toast({ title: 'فشل الحفظ، حاول مجدداً', variant: 'destructive' }),
     });
   }, [bank, updateBank, queryClient, toast]);
 
@@ -438,27 +388,9 @@ export function OrgChartSection({ bank }: { bank: any }) {
   };
 
   const handleDelete = (node: OrgNode) => {
-    // Re-parent children of deleted node up to its parent
     const next = nodes
       .filter(n => n.id !== node.id)
       .map(n => n.parentId === node.id ? { ...n, parentId: node.parentId ?? null } : n);
-    setNodes(next);
-    save(next);
-  };
-
-  const handleSwapSibling = (nodeId: string, direction: 'left' | 'right') => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
-    const siblings = nodes.filter(n => n.parentId === node.parentId);
-    const idx = siblings.findIndex(n => n.id === nodeId);
-    const swapIdx = direction === 'left' ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= siblings.length) return;
-
-    // Swap positions in the main array
-    const next = [...nodes];
-    const aIdx = next.findIndex(n => n.id === siblings[idx].id);
-    const bIdx = next.findIndex(n => n.id === siblings[swapIdx].id);
-    [next[aIdx], next[bIdx]] = [next[bIdx], next[aIdx]];
     setNodes(next);
     save(next);
   };
@@ -474,7 +406,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
           setNodes(next);
           save(next);
         },
-        onError: () => toast({ title: 'Failed to upload photo', variant: 'destructive' }),
+        onError: () => toast({ title: 'فشل رفع الصورة', variant: 'destructive' }),
       });
     };
     reader.readAsDataURL(file);
@@ -485,64 +417,42 @@ export function OrgChartSection({ bank }: { bank: any }) {
   return (
     <>
       <Card className="overflow-hidden">
-        <CardHeader className="pb-3 border-b border-foreground/5">
+        <CardHeader className="pb-3 border-b">
           <CardTitle className="flex items-center gap-2 text-base">
             <Network className="w-4 h-4 text-primary" />
-            Organizational Chart
+            الهيكل التنظيمي
             {(updateBank.isPending || uploadPhoto.isPending) && (
-              <Loader2 className="w-3 h-3 animate-spin text-foreground/40 ml-1" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400 ml-1" />
             )}
-            <button
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto h-7 text-xs gap-1"
               onClick={() => setDialog({ open: true, initial: { parentId: null } })}
-              className="ml-auto flex items-center gap-1.5 text-xs text-primary hover:text-primary/70 font-medium transition-colors bg-primary/8 hover:bg-primary/15 px-2.5 py-1 rounded-lg"
             >
-              <Plus className="w-3 h-3" /> Add Person
-            </button>
+              <Plus className="w-3 h-3" /> إضافة شخص
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {nodes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center">
-                <Network className="w-9 h-9 text-blue-200" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground/40">No org chart yet</p>
-                <p className="text-xs text-foreground/25 mt-1">
-                  Add the first person to start building the hierarchy
-                </p>
-              </div>
-              <Button
-                size="sm"
-                className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm"
-                onClick={() => setDialog({ open: true, initial: { parentId: null } })}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Root Person
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto bg-slate-50/50">
-              <div className="min-w-fit px-10 py-8">
-                <div className="flex gap-16 items-start justify-center">
-                  {roots.map((root, idx) => (
-                    <OrgTree
-                      key={root.id}
-                      node={root}
-                      allNodes={nodes}
-                      depth={0}
-                      onEdit={n => setDialog({ open: true, initial: { ...n } })}
-                      onDelete={handleDelete}
-                      onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
-                      onUploadPhoto={handleUploadPhoto}
-                      onSwapSibling={handleSwapSibling}
-                      siblingIndex={idx}
-                      siblingCount={roots.length}
-                    />
-                  ))}
-                </div>
+          <div className="overflow-x-auto bg-gray-50/60">
+            <div className="min-w-fit px-10 py-8">
+              <div className="flex gap-14 items-start justify-center">
+                {roots.map(root => (
+                  <OrgTree
+                    key={root.id}
+                    node={root}
+                    allNodes={nodes}
+                    depth={0}
+                    onEdit={n => setDialog({ open: true, initial: { ...n } })}
+                    onDelete={handleDelete}
+                    onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
+                    onUploadPhoto={handleUploadPhoto}
+                  />
+                ))}
               </div>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 

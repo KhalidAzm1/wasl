@@ -247,8 +247,8 @@ function InlineEditCard({
   };
 
   return (
-    <div style={{ width: 158 }} onPointerDown={e => e.stopPropagation()}>
-      <div style={{ ...base, width: 158 }}>
+    <div style={{ width: 142 }} onPointerDown={e => e.stopPropagation()}>
+      <div style={{ ...base, width: 142 }}>
         <div style={{ height: 4, background: `linear-gradient(90deg, ${accent}, ${accent}99)` }} />
         <div style={{ padding: '10px 10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <input
@@ -331,7 +331,7 @@ function CardFace({
     ...(depth === 0 ? lightCardRoot : lightCard),
     ...(isOver && !isDragging ? lightCardOver : {}),
     ...(isDragging ? { opacity: 0.55, transform: 'scale(0.95) rotate(1.5deg)', boxShadow: '0 12px 32px rgba(0,0,0,0.12)' } : {}),
-    width: 148,
+    width: 132,
     transition: isDragging ? 'none' : 'all 0.18s ease',
     cursor: editMode ? (isDragging ? 'grabbing' : 'grab') : 'default',
     userSelect: 'none',
@@ -359,7 +359,7 @@ function CardFace({
   );
 
   return (
-    <div className="relative flex flex-col items-center gap-1.5" style={{ width: 148 }}>
+    <div className="relative flex flex-col items-center gap-1.5" style={{ width: 132 }}>
       {editMode && onAddSibling && siblingBtn('left')}
       {editMode && onAddSibling && siblingBtn('right')}
 
@@ -396,7 +396,7 @@ function CardFace({
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: editMode ? 8 : 14, marginBottom: 10 }}>
           <Avatar
             node={node}
-            size={depth === 0 ? 46 : 36}
+            size={depth === 0 ? 40 : 32}
             editMode={editMode}
             onUploadPhoto={onUploadPhoto}
             onRemovePhoto={onRemovePhoto}
@@ -421,8 +421,8 @@ function CardFace({
             )
           ) : (
             <>
+              {node.title && <p style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 2, lineHeight: 1.4 }}>{node.title}</p>}
               <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--card-foreground)', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
-              {node.title && <p style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 3, lineHeight: 1.4 }}>{node.title}</p>}
               {node.department && (
                 <span style={{ display: 'inline-block', fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent, marginBottom: 3 }}>
                   {node.department}

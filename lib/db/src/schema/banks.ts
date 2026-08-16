@@ -2,6 +2,12 @@ import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+export const responsiblePersonDataSchema = z.object({
+  name: z.string(),
+  storagePath: z.string().nullish(),
+});
+export type ResponsiblePersonData = z.infer<typeof responsiblePersonDataSchema>;
+
 export const bankContactSchema = z.object({
   name: z.string(),
   title: z.string().nullish(),
@@ -41,6 +47,7 @@ export const banksTable = pgTable("banks", {
   priorityImpact: text("priority_impact").notNull(),
   responsiblePerson: text("responsible_person"),
   responsiblePersonPhoto: text("responsible_person_photo"),
+  responsiblePersons: jsonb("responsible_persons").$type<ResponsiblePersonData[]>(),
   relationshipManager: text("relationship_manager"),
   email: text("email"),
   website: text("website"),

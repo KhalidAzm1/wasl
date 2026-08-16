@@ -26,6 +26,24 @@ const migrationsFolder = path.resolve(process.cwd(), "../../lib/db/drizzle");
  */
 async function runBootstrapAlters(): Promise<void> {
   await db.execute(sql`ALTER TABLE banks ADD COLUMN IF NOT EXISTS responsible_person_photo text`);
+  await db.execute(sql`ALTER TABLE banks ADD COLUMN IF NOT EXISTS responsible_persons jsonb`);
+  // Migrate existing semicolon-separated names into the new JSONB array (first person inherits photo)
+  await db.execute(sql`
+    UPDATE banks
+    SET responsible_persons = (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'name', trim(val),
+          'storagePath', CASE WHEN ordinality = 1 THEN responsible_person_photo ELSE NULL END
+        )
+      )
+      FROM unnest(string_to_array(responsible_person, ';')) WITH ORDINALITY AS t(val, ordinality)
+      WHERE trim(val) != ''
+    )
+    WHERE responsible_person IS NOT NULL
+      AND responsible_person != ''
+      AND (responsible_persons IS NULL OR jsonb_array_length(responsible_persons) = 0)
+  `);
 }
 
 export async function runMigrations(): Promise<void> {

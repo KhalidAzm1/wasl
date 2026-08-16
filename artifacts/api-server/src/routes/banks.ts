@@ -113,15 +113,18 @@ async function getProductTypeIds(bankId: string): Promise<number[]> {
 }
 
 /** Replaces stored logo/hero/responsible-photo paths with fresh Supabase signed URLs. */
-async function withSignedImageUrls<T extends { logoUrl: string | null; heroImageUrl: string | null; responsiblePersonPhoto?: string | null }>(
+async function withSignedImageUrls<T extends { logoUrl: string | null; heroImageUrl: string | null; responsiblePersonPhoto?: string | null; responsiblePersons?: Array<{ name: string; storagePath?: string | null }> | null }>(
   bank: T,
-): Promise<T> {
+): Promise<T & { responsiblePersons: Array<{ name: string; storagePath: string | null; photoUrl: string | null }> }> {
   const [logoUrl, heroImageUrl, responsiblePersonPhoto] = await Promise.all([
     resolveStoredUrl(bank.logoUrl),
     resolveStoredUrl(bank.heroImageUrl),
     resolveStoredUrl(bank.responsiblePersonPhoto ?? null),
   ]);
-  return { ...bank, logoUrl, heroImageUrl, responsiblePersonPhoto };
+  const rawPersons = bank.responsiblePersons ?? [];
+  const resolvedPhotos = await Promise.all(rawPersons.map(p => resolveStoredUrl(p.storagePath ?? null)));
+  const responsiblePersons = rawPersons.map((p, i) => ({ name: p.name, storagePath: p.storagePath ?? null, photoUrl: resolvedPhotos[i] }));
+  return { ...bank, logoUrl, heroImageUrl, responsiblePersonPhoto, responsiblePersons };
 }
 
 async function syncProductTypes(bankId: string, productTypeIds: number[]): Promise<void> {
@@ -545,6 +548,79 @@ router.put("/banks/:id/responsible-person-photo", requireRole("super_admin", "ad
 
   const photoUrl = await getSignedUrl(storagePath).catch(() => null);
   res.json({ photoUrl });
+});
+
+/** PUT /banks/:id/responsible-persons — replace the ordered list of responsible persons (names only; photos handled separately) */
+router.put("/banks/:id/responsible-persons", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
+  const bankId = String(req.params.id);
+  const { persons } = req.body as { persons?: Array<{ name: string }> };
+  if (!Array.isArray(persons)) { res.status(400).json({ error: "persons must be an array" }); return; }
+
+  const [existing] = await db.select({ id: banksTable.id, responsiblePersons: (banksTable as any).responsiblePersons }).from(banksTable).where(eq(banksTable.id, bankId));
+  if (!existing) { res.status(404).json({ error: "Bank not found" }); return; }
+
+  const existingPersons: Array<{ name: string; storagePath: string | null }> = (existing.responsiblePersons as any) ?? [];
+  const existingMap = new Map(existingPersons.map(p => [p.name.trim().toLowerCase(), p.storagePath]));
+
+  const newPersons = persons.map(p => ({
+    name: p.name.trim(),
+    storagePath: existingMap.get(p.name.trim().toLowerCase()) ?? null,
+  }));
+
+  const [updated] = await db
+    .update(banksTable)
+    .set({ responsiblePerson: newPersons.map(p => p.name).join('; ') || null, updatedBy: req.authUser?.name ?? null } as any)
+    .where(eq(banksTable.id, bankId))
+    .returning();
+  // Also store structured data
+  await db.execute(sql`UPDATE banks SET responsible_persons = ${JSON.stringify(newPersons)}::jsonb WHERE id = ${bankId}`);
+
+  res.json({ ok: true, persons: newPersons });
+});
+
+/** PUT /banks/:id/responsible-person/:index/photo — upload / replace photo for one person */
+router.put("/banks/:id/responsible-person/:index/photo", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
+  const bankId = String(req.params.id);
+  const idx = parseInt(String(req.params.index), 10);
+  const parsed = SetBankLogoBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const imageError = validateImageDataUrl(parsed.data.dataUrl);
+  if (imageError) { res.status(400).json({ error: imageError }); return; }
+
+  const [existing] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
+  if (!existing) { res.status(404).json({ error: "Bank not found" }); return; }
+
+  let parsed2: { contentType: string; buffer: Buffer };
+  try { parsed2 = parseDataUrl(parsed.data.dataUrl); } catch (e: any) { res.status(400).json({ error: e.message }); return; }
+
+  const { contentType, buffer } = parsed2;
+  const ext = contentType.replace("image/", "").replace("jpeg", "jpg").replace("svg+xml", "svg");
+  const storagePath = `responsible-person/${bankId}/${idx}_photo_${Date.now()}.${ext}`;
+  try { await uploadToStorage(storagePath, buffer, contentType); } catch (e: any) {
+    res.status(502).json({ error: "Failed to upload photo", detail: e?.message }); return;
+  }
+
+  await db.execute(sql`
+    UPDATE banks
+    SET responsible_persons = (
+      SELECT jsonb_agg(
+        CASE WHEN ordinality - 1 = ${idx}
+          THEN elem || jsonb_build_object('storagePath', ${storagePath})
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(COALESCE(responsible_persons, '[]'::jsonb)) WITH ORDINALITY AS t(elem, ordinality)
+    )
+    WHERE id = ${bankId}
+  `);
+
+  // Keep first person's photo synced with legacy field
+  if (idx === 0) {
+    await db.update(banksTable).set({ responsiblePersonPhoto: storagePath } as any).where(eq(banksTable.id, bankId));
+  }
+
+  const photoUrl = await getSignedUrl(storagePath).catch(() => null);
+  res.json({ photoUrl, storagePath });
 });
 
 router.put("/banks/:id/org-chart-photo/:nodeId", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {

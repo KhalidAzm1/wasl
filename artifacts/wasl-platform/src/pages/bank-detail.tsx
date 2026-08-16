@@ -601,132 +601,163 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
   );
 }
 
-// ── Responsible-Person Card ────────────────────────────────────────────────────
+// ── Responsible-Person Card (multi-person) ─────────────────────────────────────
+type ResponsiblePersonEntry = { name: string; storagePath?: string | null; photoUrl?: string | null };
+
+function PersonAvatar({ person, size = 44 }: { person: ResponsiblePersonEntry; size?: number }) {
+  const initials = person.name.trim().split(/\s+/).filter(Boolean).slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+  return person.photoUrl
+    ? <img src={person.photoUrl} alt={person.name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }} />
+    : <div style={{ width: size, height: size, borderRadius: '50%', background: 'rgba(124,58,237,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.3, color: '#7c3aed' }}>{initials}</div>;
+}
+
 function ResponsiblePersonCard({
-  bankId, name, photoUrl, canEdit, onSaveName,
-}: { bankId: string; name: string | null; photoUrl: string | null; canEdit: boolean; onSaveName?: (name: string) => void }) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  bankId, persons: initialPersons, canEdit,
+}: { bankId: string; persons: ResponsiblePersonEntry[]; canEdit: boolean }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [uploading, setUploading] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState(name ?? '');
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [persons, setPersons] = useState<ResponsiblePersonEntry[]>(initialPersons);
+  const [saving, setSaving] = useState(false);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
-  useEffect(() => { setNameDraft(name ?? ''); }, [name]);
-  useEffect(() => { if (editingName) nameInputRef.current?.focus(); }, [editingName]);
+  // Sync when external data changes
+  useEffect(() => { setPersons(initialPersons); }, [JSON.stringify(initialPersons)]);
 
-  const initials = (name ?? '').trim()
-    .split(/\s+/).filter(Boolean).slice(0, 2)
-    .map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
-
-  function commitName() {
-    const trimmed = nameDraft.trim();
-    setEditingName(false);
-    if (trimmed === (name ?? '')) return;
-    onSaveName?.(trimmed);
+  async function getBearer() {
+    const { supabase } = await import('@/lib/supabaseClient');
+    const { data } = await supabase.auth.getSession();
+    const bearer = data.session?.access_token;
+    if (!bearer) throw new Error('Not authenticated');
+    return bearer;
   }
 
-  async function handleFile(file: File) {
-    setUploading(true);
+  async function savePersons(list: ResponsiblePersonEntry[]) {
+    setSaving(true);
     try {
-      const { supabase } = await import('@/lib/supabaseClient');
-      const { data } = await supabase.auth.getSession();
-      const bearer = data.session?.access_token;
-      if (!bearer) throw new Error('Not authenticated');
+      const bearer = await getBearer();
+      const r = await fetch(`${import.meta.env.BASE_URL}api/banks/${bankId}/responsible-persons`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bearer}` },
+        body: JSON.stringify({ persons: list.map(p => ({ name: p.name })) }),
+      });
+      if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
+      queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+      toast({ title: 'Saved' });
+    } catch (e: any) {
+      toast({ title: 'Failed to save', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  }
 
+  async function uploadPhoto(idx: number, file: File) {
+    setUploadingIdx(idx);
+    try {
+      const bearer = await getBearer();
       const reader = new FileReader();
       const dataUrl: string = await new Promise((res, rej) => {
         reader.onload = e => res(e.target?.result as string);
         reader.onerror = rej;
         reader.readAsDataURL(file);
       });
-
-      const r = await fetch(`${import.meta.env.BASE_URL}api/banks/${bankId}/responsible-person-photo`, {
+      const r = await fetch(`${import.meta.env.BASE_URL}api/banks/${bankId}/responsible-person/${idx}/photo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bearer}` },
         body: JSON.stringify({ dataUrl }),
       });
       if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
+      const { photoUrl } = await r.json();
+      setPersons(prev => prev.map((p, i) => i === idx ? { ...p, photoUrl } : p));
       queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
-      toast({ title: 'Responsible person photo updated' });
+      toast({ title: 'Photo updated' });
     } catch (e: any) {
-      toast({ title: 'فشل رفع الصورة', description: e.message, variant: 'destructive' });
-    } finally {
-      setUploading(false);
-    }
+      toast({ title: 'Photo upload failed', description: e.message, variant: 'destructive' });
+    } finally { setUploadingIdx(null); }
   }
 
-  if (!name && !canEdit) return null;
+  if (!persons.length && !canEdit) return null;
 
   return (
-    <div className="flex items-center gap-3 shrink-0">
-      {/* Avatar */}
-      <div className="relative group/rp shrink-0">
-        <div
-          onClick={() => canEdit && fileRef.current?.click()}
-          className={cn(
-            'w-12 h-12 rounded-full overflow-hidden border-2 border-foreground/10 shadow-lg flex items-center justify-center',
-            canEdit ? 'cursor-pointer' : 'cursor-default',
-          )}
-          title={canEdit ? 'Click to change photo' : undefined}
-        >
-          {photoUrl ? (
-            <img src={photoUrl} alt={name ?? ''} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-primary/20 text-primary font-bold text-sm">
-              {initials}
-            </div>
-          )}
-          {canEdit && (
-            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/rp:opacity-100 transition-opacity flex items-center justify-center">
-              {uploading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
-            </div>
-          )}
+    <>
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[10px] text-foreground/40 uppercase tracking-widest leading-none mb-1">Responsible</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {persons.map((p, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-foreground/10 shadow flex-shrink-0">
+                  <PersonAvatar person={p} size={36} />
+                </div>
+                <p className="text-sm font-semibold text-foreground whitespace-nowrap">{p.name}</p>
+                {i < persons.length - 1 && <span className="text-foreground/30 text-xs">·</span>}
+              </div>
+            ))}
+            {!persons.length && canEdit && (
+              <button onClick={() => setOpen(true)} className="text-xs text-foreground/40 italic hover:text-primary transition-colors">Add responsible person…</button>
+            )}
+          </div>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
-        />
+        {canEdit && (
+          <button onClick={() => setOpen(true)} className="ml-1 p-1.5 rounded-full hover:bg-foreground/10 transition-colors text-foreground/40 hover:text-foreground shrink-0">
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* Name display / inline edit */}
-      {(name || canEdit) && (
-        <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] text-foreground/40 uppercase tracking-widest leading-none">Responsible</p>
-          {editingName ? (
-            <input
-              ref={nameInputRef}
-              value={nameDraft}
-              onChange={e => setNameDraft(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') commitName();
-                if (e.key === 'Escape') { setNameDraft(name ?? ''); setEditingName(false); }
-              }}
-              onBlur={commitName}
-              className="text-sm font-semibold bg-foreground/10 border border-foreground/20 rounded px-2 py-0.5 w-36 outline-none focus:border-primary"
-              placeholder="Full name"
-            />
-          ) : (
-            <div
-              className={cn('flex items-center gap-1.5 group/name', canEdit && 'cursor-pointer')}
-              onClick={() => { if (canEdit) { setNameDraft(name ?? ''); setEditingName(true); } }}
-              title={canEdit ? 'Click to edit name' : undefined}
-            >
-              <p className="text-sm font-semibold text-foreground whitespace-nowrap">
-                {name || <span className="text-foreground/30 italic font-normal text-xs">Add name…</span>}
-              </p>
-              {canEdit && (
-                <Pencil className="w-3 h-3 text-foreground/30 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+      {/* Edit Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" /> Manage Responsible Persons
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1 max-h-80 overflow-y-auto">
+            {persons.map((p, i) => (
+              <div key={i} className="flex items-center gap-3 p-2 rounded-lg border border-border bg-muted/30">
+                {/* Avatar + photo upload */}
+                <div className="relative group/av shrink-0">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-foreground/10 shadow cursor-pointer"
+                    onClick={() => fileRefs.current[i]?.click()}>
+                    <PersonAvatar person={p} size={48} />
+                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+                      {uploadingIdx === i ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
+                    </div>
+                  </div>
+                  <input ref={el => { fileRefs.current[i] = el; }} type="file" accept="image/*" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(i, f); e.target.value = ''; }} />
+                </div>
+                {/* Name input */}
+                <input
+                  value={p.name}
+                  onChange={e => setPersons(prev => prev.map((pp, ii) => ii === i ? { ...pp, name: e.target.value } : pp))}
+                  placeholder="Full name"
+                  className="flex-1 h-9 text-sm border border-input bg-background rounded-md px-3 outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                {/* Remove */}
+                <button onClick={() => setPersons(prev => prev.filter((_, ii) => ii !== i))}
+                  className="p-1.5 rounded-full hover:bg-red-50 text-foreground/30 hover:text-red-500 transition-colors shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {/* Add person */}
+            <button
+              onClick={() => setPersons(prev => [...prev, { name: '', photoUrl: null }])}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border-2 border-dashed border-border text-foreground/40 hover:border-primary hover:text-primary transition-colors text-sm">
+              <Plus className="w-4 h-4" /> Add person
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button size="sm" disabled={saving} onClick={async () => { await savePersons(persons); setOpen(false); }}>
+              {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />} Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -1033,24 +1064,24 @@ export default function BankDetail() {
           <p className="text-foreground/50 text-lg">{bank.nameEn}</p>
         </div>
 
-        {/* Responsible person chip — top-left corner of the hero card */}
-        {(bank.responsiblePerson || (role === 'admin' || role === 'super_admin')) && (
-          <ResponsiblePersonCard
-            bankId={bank.id}
-            name={bank.responsiblePerson ?? null}
-            photoUrl={(bank as any).responsiblePersonPhoto ?? null}
-            canEdit={role === 'admin' || role === 'super_admin'}
-            onSaveName={(newName) => {
-              updateBank.mutate(
-                { id: bank.id, data: { responsiblePerson: newName || null } },
-                {
-                  onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) }),
-                  onError: () => toast({ title: 'Failed to save name', variant: 'destructive' }),
-                }
-              );
-            }}
-          />
-        )}
+        {/* Responsible persons chip — top-left corner of the hero card */}
+        {(() => {
+          const rawPersons: ResponsiblePersonEntry[] = (bank as any).responsiblePersons ?? [];
+          // Fallback: parse legacy text field if no structured data yet
+          const persons: ResponsiblePersonEntry[] = rawPersons.length > 0
+            ? rawPersons
+            : (bank.responsiblePerson ?? '').split(';').map(n => n.trim()).filter(Boolean)
+                .map(n => ({ name: n, photoUrl: (bank as any).responsiblePersonPhoto ?? null }));
+          const canEdit = role === 'admin' || role === 'super_admin';
+          if (!persons.length && !canEdit) return null;
+          return (
+            <ResponsiblePersonCard
+              bankId={bank.id}
+              persons={persons}
+              canEdit={canEdit}
+            />
+          );
+        })()}
       </div>
 
       <Tabs defaultValue="overview" className="w-full" onValueChange={(tab) => analytics.bankDetailsViewed({ bank_id: bank.id, bank_name_en: bank.nameEn, tab })}>

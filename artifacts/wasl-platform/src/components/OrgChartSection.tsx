@@ -3,7 +3,7 @@
  *
  * Modes:
  *   View mode  (default) — cards are read-only, clean look, tap photo to enlarge
- *   Edit mode  (pencil icon in header) — drag, edit, delete, add-child enabled
+ *   Edit mode  (pencil icon in header) — drag, edit, delete, add-child, add-sibling enabled
  */
 
 import React, {
@@ -73,7 +73,7 @@ function descendants(nodeId: string, nodes: OrgNode[]): Set<string> {
   return out;
 }
 
-/* ═══════════════════════════════════════════════════════ photo lightbox ══ */
+/* ═══════════════════════════════════════════════════ photo lightbox ══ */
 
 function PhotoLightbox({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
   useEffect(() => {
@@ -129,7 +129,6 @@ function Avatar({
 }) {
   const photoRef = useRef<HTMLInputElement>(null);
   const empty    = !node.name.trim();
-  // hasPhoto is independent of name — a photo can exist even on an unnamed node
   const hasPhoto = !!node.photoUrl;
 
   const handleClick = (e: React.MouseEvent) => {
@@ -179,13 +178,11 @@ function Avatar({
         className={cn('relative group/av rounded-full block', canInteract ? 'cursor-pointer' : 'cursor-default')}
         onClick={handleClick}>
         {inner}
-        {/* Edit overlay — change photo (show on any node in edit mode) */}
         {editMode && onUploadPhoto && (
           <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
             <Camera className="w-3.5 h-3.5 text-white" />
           </div>
         )}
-        {/* View overlay */}
         {!editMode && hasPhoto && onExpand && (
           <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
             <ZoomIn className="text-white" style={{ width: size * 0.28, height: size * 0.28 }} />
@@ -197,7 +194,6 @@ function Avatar({
         )}
       </button>
 
-      {/* Remove photo button — only in edit mode when there's a photo */}
       {editMode && hasPhoto && onRemovePhoto && (
         <button
           type="button"
@@ -216,7 +212,8 @@ function Avatar({
 
 function CardFace({
   node, depth, editMode = false, isDragging = false, isOver = false,
-  onEdit, onDelete, onAddChild, onUploadPhoto, onRemovePhoto, onExpandPhoto,
+  onEdit, onDelete, onAddChild, onAddSibling,
+  onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   depth: number;
@@ -226,13 +223,13 @@ function CardFace({
   onEdit?: () => void;
   onDelete?: () => void;
   onAddChild?: () => void;
+  onAddSibling?: () => void;
   onUploadPhoto?: (f: File) => void;
   onRemovePhoto?: () => void;
   onExpandPhoto?: () => void;
 }) {
   const empty = !node.name.trim();
 
-  // All cards use the same style — only root gets a top accent bar
   const cardCls = cn(
     'relative w-full rounded-xl bg-card border border-border transition-all select-none',
     depth === 0 && 'ring-2 ring-primary/30 shadow-md',
@@ -243,8 +240,31 @@ function CardFace({
     editMode && 'cursor-grab active:cursor-grabbing',
   );
 
+  /* Sibling button — shared style */
+  const siblingBtn = (side: 'left' | 'right') => (
+    <button
+      type="button"
+      onPointerDown={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); onAddSibling?.(); }}
+      title={side === 'left' ? 'Add sibling to the left' : 'Add sibling to the right'}
+      style={{
+        position: 'absolute',
+        top: '38px',
+        ...(side === 'left'  ? { left:  '-22px' } : { right: '-22px' }),
+        zIndex: 20,
+      }}
+      className="w-6 h-6 rounded-full border border-dashed border-foreground/20 bg-background flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-colors shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+    </button>
+  );
+
   return (
-    <div className="flex flex-col items-center gap-1" style={{ width: 164 }}>
+    <div className="relative flex flex-col items-center gap-1" style={{ width: 164 }}>
+      {/* Sibling add buttons — left & right, only in edit mode */}
+      {editMode && onAddSibling && siblingBtn('left')}
+      {editMode && onAddSibling && siblingBtn('right')}
+
       {/* ── card box ── */}
       <div className={cardCls} style={{ width: 164 }}>
         {/* root accent strip */}
@@ -316,7 +336,7 @@ function CardFace({
         </div>
       </div>
 
-      {/* ── add-child button — outside the card box (edit mode only) ── */}
+      {/* ── add-child button — below card (edit mode only) ── */}
       {editMode && onAddChild && (
         <button
           onClick={e => { e.stopPropagation(); onAddChild(); }}
@@ -334,7 +354,8 @@ function CardFace({
 
 function DndNode({
   node, depth, allNodes, editMode, activeId, overId,
-  onEdit, onDelete, onAddChild, onUploadPhoto, onRemovePhoto, onExpandPhoto,
+  onEdit, onDelete, onAddChild, onAddSibling,
+  onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   depth: number;
@@ -345,6 +366,7 @@ function DndNode({
   onEdit: () => void;
   onDelete: () => void;
   onAddChild: () => void;
+  onAddSibling: () => void;
   onUploadPhoto: (f: File) => void;
   onRemovePhoto: () => void;
   onExpandPhoto: () => void;
@@ -377,6 +399,7 @@ function DndNode({
         onEdit={onEdit}
         onDelete={onDelete}
         onAddChild={onAddChild}
+        onAddSibling={onAddSibling}
         onUploadPhoto={onUploadPhoto}
         onRemovePhoto={onRemovePhoto}
         onExpandPhoto={onExpandPhoto}
@@ -389,7 +412,8 @@ function DndNode({
 
 function OrgTree({
   node, allNodes, depth, editMode, activeId, overId,
-  onEdit, onDelete, onAddChild, onUploadPhoto, onRemovePhoto, onExpandPhoto,
+  onEdit, onDelete, onAddChild, onAddSibling,
+  onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   allNodes: OrgNode[];
@@ -400,6 +424,7 @@ function OrgTree({
   onEdit: (n: OrgNode) => void;
   onDelete: (n: OrgNode) => void;
   onAddChild: (parentId: string) => void;
+  onAddSibling: (parentId: string | null) => void;
   onUploadPhoto: (node: OrgNode, f: File) => void;
   onRemovePhoto: (node: OrgNode) => void;
   onExpandPhoto: (node: OrgNode) => void;
@@ -418,6 +443,7 @@ function OrgTree({
         onEdit={() => onEdit(node)}
         onDelete={() => onDelete(node)}
         onAddChild={() => onAddChild(node.id)}
+        onAddSibling={() => onAddSibling(node.parentId ?? null)}
         onUploadPhoto={f => onUploadPhoto(node, f)}
         onRemovePhoto={() => onRemovePhoto(node)}
         onExpandPhoto={() => onExpandPhoto(node)}
@@ -436,6 +462,7 @@ function OrgTree({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onAddChild={onAddChild}
+                onAddSibling={onAddSibling}
                 onUploadPhoto={onUploadPhoto}
                 onRemovePhoto={onRemovePhoto}
                 onExpandPhoto={onExpandPhoto}
@@ -664,6 +691,11 @@ export function OrgChartSection({ bank }: { bank: any }) {
     reader.readAsDataURL(file);
   };
 
+  /* ── add sibling: opens dialog pre-filled with same parentId ── */
+  const handleAddSibling = (parentId: string | null) => {
+    setDialog({ open: true, initial: { parentId } });
+  };
+
   const roots      = nodes.filter(n => !n.parentId);
   const activeNode = activeId ? nodes.find(n => n.id === activeId) : null;
 
@@ -696,7 +728,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
           </CardTitle>
           {editMode && (
             <p className="text-[11px] text-muted-foreground mt-1">
-              Drag cards to rearrange · Click ✏ to edit · Click photo to change it · Click 🔒 when done
+              Drag cards to rearrange · ✏ edit · ± left/right to add sibling · ＋ below to add report · 🔒 when done
             </p>
           )}
         </CardHeader>
@@ -729,6 +761,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
                       onEdit={n => setDialog({ open: true, initial: { ...n } })}
                       onDelete={handleDelete}
                       onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
+                      onAddSibling={handleAddSibling}
                       onUploadPhoto={handleUploadPhoto}
                       onRemovePhoto={handleRemovePhoto}
                       onExpandPhoto={n => setLightbox(n)}

@@ -1016,10 +1016,10 @@ export default function BankDetail() {
               {bank.contacts && bank.contacts.length > 0 && (
                 <ContactsCard bank={bank} />
               )}
-
-              <OrgChartSection bank={bank} />
             </div>
           </div>
+
+          <OrgChartSection bank={bank} />
         </TabsContent>
 
         <TabsContent value="products">

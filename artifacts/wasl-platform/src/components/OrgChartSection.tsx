@@ -2,9 +2,8 @@
  * OrgChartSection — Lucidchart-style interactive org chart
  *
  * Modes:
- *   View mode  (default) — cards are read-only, no buttons visible
- *   Edit mode  (pencil icon in header) — edit/delete/add-child buttons appear,
- *              drag-to-reparent is enabled
+ *   View mode  (default) — cards are read-only, clean look, tap photo to enlarge
+ *   Edit mode  (pencil icon in header) — drag, edit, delete, add-child enabled
  */
 
 import React, {
@@ -30,7 +29,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import {
   Plus, Pencil, Trash2, Loader2, Network, Camera,
-  GripVertical, ArrowUpToLine, Lock,
+  GripVertical, ArrowUpToLine, Lock, X, ZoomIn,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════ types ══════ */
@@ -74,6 +73,38 @@ function descendants(nodeId: string, nodes: OrgNode[]): Set<string> {
   return out;
 }
 
+/* ═══════════════════════════════════════════════════════ photo lightbox ══ */
+
+function PhotoLightbox({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}>
+      <button
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+        onClick={onClose}>
+        <X className="w-5 h-5" />
+      </button>
+      <div className="flex flex-col items-center gap-3 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+        <img
+          src={url}
+          alt={name}
+          className="w-64 h-64 rounded-2xl object-cover shadow-2xl border-4 border-white/20"
+        />
+        {name && (
+          <p className="text-white font-semibold text-lg text-center drop-shadow">{name}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════ avatar ═════ */
 
 const PALETTE = [
@@ -86,33 +117,82 @@ function pickColor(name: string) {
   return PALETTE[h % PALETTE.length];
 }
 
-function Avatar({ node, size }: { node: OrgNode; size: number }) {
-  const empty = !node.name.trim();
-  const initials = node.name.trim()
-    .split(/\s+/).filter(Boolean).slice(0, 2)
-    .map(w => w[0]?.toUpperCase() ?? '').join('');
+function Avatar({
+  node, size, editMode, onUploadPhoto, onExpand,
+}: {
+  node: OrgNode;
+  size: number;
+  editMode?: boolean;
+  onUploadPhoto?: (f: File) => void;
+  onExpand?: () => void;
+}) {
+  const photoRef = useRef<HTMLInputElement>(null);
+  const empty    = !node.name.trim();
+  const hasPhoto = !empty && !!node.photoUrl;
 
-  if (!empty && node.photoUrl) {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (editMode && onUploadPhoto) {
+      photoRef.current?.click();
+    } else if (!editMode && hasPhoto && onExpand) {
+      onExpand();
+    }
+  };
+
+  const inner = (() => {
+    if (hasPhoto) {
+      return (
+        <img src={node.photoUrl!} alt={node.name}
+          style={{ width: size, height: size }}
+          className="rounded-full object-cover border-2 border-border shadow"
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+      );
+    }
+    if (empty) {
+      return (
+        <div style={{ width: size, height: size }}
+          className="rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
+          <Network className="text-muted-foreground/40" style={{ width: size * 0.4, height: size * 0.4 }} />
+        </div>
+      );
+    }
+    const initials = node.name.trim()
+      .split(/\s+/).filter(Boolean).slice(0, 2)
+      .map(w => w[0]?.toUpperCase() ?? '').join('');
     return (
-      <img src={node.photoUrl} alt={node.name}
-        style={{ width: size, height: size }}
-        className="rounded-full object-cover border-2 border-white/30 shadow"
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-    );
-  }
-  if (empty) {
-    return (
-      <div style={{ width: size, height: size }}
-        className="rounded-full bg-foreground/8 border-2 border-dashed border-foreground/20 flex items-center justify-center">
-        <Network className="text-foreground/25" style={{ width: size * 0.4, height: size * 0.4 }} />
+      <div style={{ width: size, height: size, background: pickColor(node.name), fontSize: size * 0.34 }}
+        className="rounded-full flex items-center justify-center font-bold text-white shadow border-2 border-white/20 shrink-0">
+        {initials || '?'}
       </div>
     );
-  }
+  })();
+
+  const canInteract = (editMode && onUploadPhoto) || (!editMode && hasPhoto && onExpand);
+
   return (
-    <div style={{ width: size, height: size, background: pickColor(node.name), fontSize: size * 0.34 }}
-      className="rounded-full flex items-center justify-center font-bold text-white shadow border-2 border-white/20 shrink-0">
-      {initials || '?'}
-    </div>
+    <button
+      type="button"
+      disabled={!canInteract}
+      className={cn('relative group/av rounded-full block', canInteract ? 'cursor-pointer' : 'cursor-default')}
+      onClick={handleClick}>
+      {inner}
+      {/* Edit overlay */}
+      {editMode && onUploadPhoto && !empty && (
+        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+          <Camera className="w-3.5 h-3.5 text-white" />
+        </div>
+      )}
+      {/* View overlay */}
+      {!editMode && hasPhoto && onExpand && (
+        <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+          <ZoomIn className="text-white" style={{ width: size * 0.28, height: size * 0.28 }} />
+        </div>
+      )}
+      {onUploadPhoto && (
+        <input ref={photoRef} type="file" accept="image/*" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
+      )}
+    </button>
   );
 }
 
@@ -120,7 +200,7 @@ function Avatar({ node, size }: { node: OrgNode; size: number }) {
 
 function CardFace({
   node, depth, editMode = false, isDragging = false, isOver = false,
-  onEdit, onDelete, onAddChild, onUploadPhoto,
+  onEdit, onDelete, onAddChild, onUploadPhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   depth: number;
@@ -131,51 +211,46 @@ function CardFace({
   onDelete?: () => void;
   onAddChild?: () => void;
   onUploadPhoto?: (f: File) => void;
+  onExpandPhoto?: () => void;
 }) {
-  const photoRef = useRef<HTMLInputElement>(null);
   const empty = !node.name.trim();
 
+  // All cards use the same style — only root gets a top accent bar
   const cardCls = cn(
-    'relative w-full rounded-xl border transition-all select-none',
-    depth === 0 && 'bg-card border-primary/40 ring-2 ring-primary/30 shadow-md',
-    depth === 1 && 'bg-primary border-primary shadow-md',
-    depth >= 2 && 'bg-primary/10 border-primary/25 shadow-sm',
-    isDragging && 'opacity-0 pointer-events-none',
+    'relative w-full rounded-xl bg-card border border-border transition-all select-none',
+    depth === 0 && 'ring-2 ring-primary/30 shadow-md',
+    depth > 0  && 'shadow-sm',
+    isDragging  && 'opacity-0 pointer-events-none',
     isOver && !isDragging && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.03]',
-    empty && depth !== 1 && 'border-dashed border-foreground/25',
+    empty && 'border-dashed',
     editMode && 'cursor-grab active:cursor-grabbing',
-    !editMode && 'cursor-default',
   );
-
-  const nameCls  = cn('text-[13px] font-bold leading-snug', depth === 1 ? 'text-primary-foreground' : 'text-foreground');
-  const titleCls = cn('text-[11px] mt-0.5', depth === 1 ? 'text-primary-foreground/70' : 'text-muted-foreground');
-  const deptCls  = cn('text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full',
-    depth === 1 ? 'bg-white/20 text-primary-foreground' : 'bg-primary/10 text-primary');
-  const btnBase  = 'w-6 h-6 rounded-md flex items-center justify-center transition-colors';
-  const editBtn  = cn(btnBase, depth === 1
-    ? 'text-primary-foreground/60 hover:text-primary-foreground hover:bg-white/20'
-    : 'text-muted-foreground hover:text-primary hover:bg-primary/10');
-  const delBtn   = cn(btnBase, depth === 1
-    ? 'text-primary-foreground/60 hover:text-red-300 hover:bg-red-500/20'
-    : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10');
 
   return (
     <div className={cardCls} style={{ width: 164 }}>
+      {/* root accent strip */}
+      {depth === 0 && (
+        <div className="absolute top-0 inset-x-0 h-1 bg-primary rounded-t-xl" />
+      )}
 
-      {/* top-bar: grip (edit only) + action buttons (edit only) */}
+      {/* top-bar: grip + edit/delete (edit mode only) */}
       {editMode && (
         <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2 pt-2">
-          <div className={cn('drag-grip', depth === 1 ? 'text-primary-foreground/40' : 'text-foreground/25')}>
+          <div className="text-muted-foreground/30">
             <GripVertical className="w-3.5 h-3.5" />
           </div>
           <div className="flex gap-1">
             {onEdit && (
-              <button onClick={e => { e.stopPropagation(); onEdit(); }} title="Edit" className={editBtn}>
+              <button onClick={e => { e.stopPropagation(); onEdit(); }}
+                title="Edit"
+                className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Pencil className="w-3 h-3" />
               </button>
             )}
             {onDelete && (
-              <button onClick={e => { e.stopPropagation(); onDelete(); }} title="Delete" className={delBtn}>
+              <button onClick={e => { e.stopPropagation(); onDelete(); }}
+                title="Delete"
+                className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                 <Trash2 className="w-3 h-3" />
               </button>
             )}
@@ -184,60 +259,49 @@ function CardFace({
       )}
 
       {/* avatar */}
-      <div className={cn('flex justify-center mb-2', editMode ? 'mt-7' : 'mt-4')}>
-        <button
-          className="relative group/av rounded-full"
-          title={editMode ? 'Upload photo' : undefined}
-          disabled={!editMode}
-          onClick={e => { e.stopPropagation(); editMode && onUploadPhoto && photoRef.current?.click(); }}>
-          <Avatar node={node} size={depth === 0 ? 64 : 54} />
-          {editMode && onUploadPhoto && !empty && (
-            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
-              <Camera className="w-3.5 h-3.5 text-white" />
-            </div>
-          )}
-        </button>
-        {onUploadPhoto && (
-          <input ref={photoRef} type="file" accept="image/*" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
-        )}
+      <div className={cn('flex justify-center mb-2', editMode ? 'mt-7' : depth === 0 ? 'mt-5' : 'mt-4')}>
+        <Avatar
+          node={node}
+          size={depth === 0 ? 64 : 52}
+          editMode={editMode}
+          onUploadPhoto={onUploadPhoto}
+          onExpand={onExpandPhoto}
+        />
       </div>
 
-      {/* text content */}
+      {/* text */}
       <div className="px-3 pb-3 text-center">
         {empty ? (
           editMode ? (
             <button onClick={e => { e.stopPropagation(); onEdit?.(); }}
-              className={cn('text-[11px] font-medium border border-dashed rounded-lg px-3 py-1 w-full transition-colors',
-                depth === 1
-                  ? 'border-primary-foreground/30 text-primary-foreground/50 hover:text-primary-foreground'
-                  : 'border-foreground/20 text-muted-foreground hover:text-primary')}>
+              className="text-[11px] font-medium border border-dashed border-foreground/20 rounded-lg px-3 py-1 w-full text-muted-foreground hover:text-primary transition-colors">
               + Add name
             </button>
           ) : (
-            <p className={cn('text-[11px]', depth === 1 ? 'text-primary-foreground/40' : 'text-foreground/30')}>
-              —
-            </p>
+            <p className="text-[11px] text-foreground/25">—</p>
           )
         ) : (
           <>
-            <p className={nameCls}>{node.name}</p>
-            {node.title && <p className={titleCls}>{node.title}</p>}
-            {node.department && <span className={deptCls}>{node.department}</span>}
+            <p className="text-[13px] font-bold leading-snug text-foreground">{node.name}</p>
+            {node.title && (
+              <p className="text-[11px] mt-0.5 text-muted-foreground">{node.title}</p>
+            )}
+            {node.department && (
+              <span className="inline-block text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                {node.department}
+              </span>
+            )}
           </>
         )}
       </div>
 
-      {/* add-child button — edit mode only */}
+      {/* add-child (edit mode only) */}
       {editMode && onAddChild && (
         <div className="flex justify-center pb-2">
           <button
             onClick={e => { e.stopPropagation(); onAddChild(); }}
             title="Add direct report"
-            className={cn('flex items-center gap-0.5 text-[10px] font-medium rounded-full px-2 py-0.5 transition-colors',
-              depth === 1
-                ? 'text-primary-foreground/50 hover:text-primary-foreground hover:bg-white/10'
-                : 'text-muted-foreground hover:text-primary hover:bg-primary/10')}>
+            className="flex items-center gap-0.5 text-[10px] font-medium rounded-full px-2 py-0.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
             <Plus className="w-2.5 h-2.5" />
             Add report
           </button>
@@ -251,7 +315,7 @@ function CardFace({
 
 function DndNode({
   node, depth, allNodes, editMode, activeId, overId,
-  onEdit, onDelete, onAddChild, onUploadPhoto,
+  onEdit, onDelete, onAddChild, onUploadPhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   depth: number;
@@ -263,6 +327,7 @@ function DndNode({
   onDelete: () => void;
   onAddChild: () => void;
   onUploadPhoto: (f: File) => void;
+  onExpandPhoto: () => void;
 }) {
   const desc = useMemo(
     () => activeId ? descendants(activeId, allNodes) : new Set<string>(),
@@ -293,6 +358,7 @@ function DndNode({
         onDelete={onDelete}
         onAddChild={onAddChild}
         onUploadPhoto={onUploadPhoto}
+        onExpandPhoto={onExpandPhoto}
       />
     </div>
   );
@@ -302,7 +368,7 @@ function DndNode({
 
 function OrgTree({
   node, allNodes, depth, editMode, activeId, overId,
-  onEdit, onDelete, onAddChild, onUploadPhoto,
+  onEdit, onDelete, onAddChild, onUploadPhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   allNodes: OrgNode[];
@@ -314,6 +380,7 @@ function OrgTree({
   onDelete: (n: OrgNode) => void;
   onAddChild: (parentId: string) => void;
   onUploadPhoto: (node: OrgNode, f: File) => void;
+  onExpandPhoto: (node: OrgNode) => void;
 }) {
   const children = allNodes.filter(n => n.parentId === node.id);
 
@@ -330,6 +397,7 @@ function OrgTree({
         onDelete={() => onDelete(node)}
         onAddChild={() => onAddChild(node.id)}
         onUploadPhoto={f => onUploadPhoto(node, f)}
+        onExpandPhoto={() => onExpandPhoto(node)}
       />
       {children.length > 0 && (
         <div className="org-children">
@@ -346,6 +414,7 @@ function OrgTree({
                 onDelete={onDelete}
                 onAddChild={onAddChild}
                 onUploadPhoto={onUploadPhoto}
+                onExpandPhoto={onExpandPhoto}
               />
             </div>
           ))}
@@ -454,13 +523,14 @@ function NodeDialog({
 
 export function OrgChartSection({ bank }: { bank: any }) {
   const isFirst = (bank.orgChart ?? []).length === 0;
-  const [nodes, setNodes] = useState<OrgNode[]>(() =>
+  const [nodes,    setNodes]    = useState<OrgNode[]>(() =>
     isFirst ? DEFAULT_NODES : (bank.orgChart ?? []),
   );
-  const [editMode, setEditMode]   = useState(false);
-  const [activeId, setActiveId]   = useState<string | null>(null);
-  const [overId,   setOverId]     = useState<string | null>(null);
-  const [dialog,   setDialog]     = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId,   setOverId]   = useState<string | null>(null);
+  const [dialog,   setDialog]   = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
+  const [lightbox, setLightbox] = useState<OrgNode | null>(null);
 
   const queryClient = useQueryClient();
   const { toast }   = useToast();
@@ -471,7 +541,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  // persist default template on first load
   useEffect(() => {
     if (isFirst) {
       updateBank.mutate({
@@ -510,13 +579,11 @@ export function OrgChartSection({ bank }: { bank: any }) {
   const handleDragOver  = ({ over }: DragOverEvent)    => setOverId(over ? String(over.id) : null);
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    setActiveId(null);
-    setOverId(null);
+    setActiveId(null); setOverId(null);
     if (!over) return;
     const draggedId = String(active.id);
     const targetId  = String(over.id);
     if (draggedId === targetId) return;
-
     if (targetId === ROOT_DROP_ID) {
       const next = nodes.map(n => n.id === draggedId ? { ...n, parentId: null } : n);
       setNodes(next); save(next); return;
@@ -555,7 +622,9 @@ export function OrgChartSection({ bank }: { bank: any }) {
         { id: bank.id, nodeId: node.id, data: { dataUrl: e.target?.result as string } },
         {
           onSuccess: (res: any) => {
-            const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: res?.photoUrl ?? null } : n);
+            const next = nodes.map(n =>
+              n.id === node.id ? { ...n, photoUrl: res?.photoUrl ?? null } : n,
+            );
             setNodes(next); save(next);
           },
           onError: () => toast({ title: 'Photo upload failed. Please try again.', variant: 'destructive' }),
@@ -597,7 +666,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
           </CardTitle>
           {editMode && (
             <p className="text-[11px] text-muted-foreground mt-1">
-              Drag cards to rearrange · Click ✏ on a card to edit · Click 🔒 when done
+              Drag cards to rearrange · Click ✏ to edit · Click photo to change it · Click 🔒 when done
             </p>
           )}
         </CardHeader>
@@ -631,6 +700,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
                       onDelete={handleDelete}
                       onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
                       onUploadPhoto={handleUploadPhoto}
+                      onExpandPhoto={n => setLightbox(n)}
                     />
                   ))}
                 </div>
@@ -648,6 +718,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
         </CardContent>
       </Card>
 
+      {/* Edit dialog */}
       {dialog && (
         <NodeDialog
           open={dialog.open}
@@ -656,6 +727,15 @@ export function OrgChartSection({ bank }: { bank: any }) {
           allNodes={nodes}
           onSave={handleDialogSave}
           saving={updateBank.isPending}
+        />
+      )}
+
+      {/* Photo lightbox */}
+      {lightbox?.photoUrl && (
+        <PhotoLightbox
+          url={lightbox.photoUrl}
+          name={lightbox.name}
+          onClose={() => setLightbox(null)}
         />
       )}
     </>

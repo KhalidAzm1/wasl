@@ -278,60 +278,76 @@
   flex-direction: column;
   align-items: center;
 }
-.org-children {
+/* ── Org chart connector lines (Lucidchart style) ─────────────────────────── */
+
+/* wrapper around each node + its subtree */
+.org-node {
   display: flex;
-  flex-direction: row;
-  position: relative;
-  padding-top: 20px; /* space for vertical stub from parent */
+  flex-direction: column;
+  align-items: center;
 }
-/* Vertical line down from parent node to the horizontal connector bar */
-.org-children::before {
+
+/* vertical stub FROM the card DOWN to the children bracket */
+.org-node > .org-children {
+  position: relative;
+}
+.org-node > .org-children::before {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
-  height: 20px;
-  width: 1px;
-  background: hsl(var(--border));
+  height: 28px;           /* stub length */
+  width: 2px;
+  background: #93C5FD;    /* blue-300 */
   transform: translateX(-50%);
 }
-/* Each child column */
+
+/* row of children */
+.org-children {
+  display: flex;
+  flex-direction: row;
+  padding-top: 28px;      /* room for the stub above */
+}
+
+/* each child column */
 .org-child-col {
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
-  padding: 0 12px;
+  padding: 0 14px;
 }
-/* Horizontal connector bar above each child */
+
+/* horizontal bracket across siblings */
 .org-child-col::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: hsl(var(--border));
+  height: 2px;
+  background: #93C5FD;
 }
-/* Vertical line from horizontal bar down to the child node */
+
+/* vertical drop from bracket down to child card */
 .org-child-col::after {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
-  height: 20px;
-  width: 1px;
-  background: hsl(var(--border));
+  height: 28px;
+  width: 2px;
+  background: #93C5FD;
   transform: translateX(-50%);
 }
-/* First child: horizontal bar only on the right half */
+
+/* first child: bracket only on the right half */
 .org-child-col:first-child::before { left: 50%; }
-/* Last child: horizontal bar only on the left half */
-.org-child-col:last-child::before { right: 50%; }
-/* Single child: no horizontal bar at all — just the vertical from parent */
-.org-child-col:only-child::before { display: none; }
-/* Single child: vertical line starts right at top */
-.org-child-col:only-child::after { top: 0; }
+/* last child: bracket only on the left half */
+.org-child-col:last-child::before  { right: 50%; }
+/* only child: no bracket — just the stub from parent */
+.org-child-col:only-child::before  { display: none; }
+.org-child-col:only-child::after   { top: 0; }
 /* Defensive guard against unintended image mirroring (e.g. RTL contexts
    or transformed ancestors) for brand logos. */
 .no-mirror {

@@ -1,17 +1,46 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+/**
+ * OrgChartSection — Lucidchart-style interactive org chart
+ *
+ * Cards:
+ *   depth 0  → bg-card  +  ring-primary (root / CEO)
+ *   depth 1  → bg-primary  text-primary-foreground
+ *   depth 2+ → bg-primary/15  border-primary/30
+ *
+ * Interactions:
+ *   • ✏ Edit button inside card (always visible, top-right)
+ *   • 🗑 Delete button inside card (always visible, top-right)
+ *   • ➕ Add-child button inside card (always visible, bottom-center)
+ *   • Drag entire card → drop ON another card → reparent
+ *   • Drag to grey "Root" banner (visible while dragging) → make root
+ */
+
+import React, {
+  useState, useRef, useCallback, useEffect, useMemo,
+} from 'react';
+import {
+  DndContext, DragOverlay, PointerSensor,
+  useSensor, useSensors,
+  useDraggable, useDroppable,
+  type DragStartEvent, type DragEndEvent, type DragOverEvent,
+} from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   useUpdateBank, useSetOrgChartNodePhoto, getGetBankQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { Plus, Pencil, Trash2, Loader2, Network, UploadCloud, Camera } from 'lucide-react';
+import {
+  Plus, Pencil, Trash2, Loader2, Network, Camera,
+  GripVertical, ArrowUpToLine,
+} from 'lucide-react';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════ types ══════ */
 
 export type OrgNode = {
   id: string;
@@ -28,8 +57,9 @@ const EMPTY_NODE: Omit<OrgNode, 'id'> = {
   name: '', title: '', phone: '', email: '', department: '', parentId: null, photoUrl: null,
 };
 
-// ── Default 6-node template ───────────────────────────────────────────────────
+const ROOT_DROP_ID = '__root__';
 
+/* ─── default 6-node template ─────────────────────────────────────────── */
 const DEFAULT_NODES: OrgNode[] = [
   { id: 'def-1', name: '', title: '', department: '', parentId: null },
   { id: 'def-2', name: '', title: '', department: '', parentId: 'def-1' },
@@ -39,190 +69,264 @@ const DEFAULT_NODES: OrgNode[] = [
   { id: 'def-6', name: '', title: '', department: '', parentId: 'def-3' },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════ helpers ════ */
 
-function getDescendantIds(nodeId: string, nodes: OrgNode[]): Set<string> {
-  const result = new Set<string>();
-  const queue = [nodeId];
-  while (queue.length) {
-    const id = queue.shift()!;
-    result.add(id);
-    nodes.filter(n => n.parentId === id).forEach(n => queue.push(n.id));
+function descendants(nodeId: string, nodes: OrgNode[]): Set<string> {
+  const out = new Set<string>();
+  const q = [nodeId];
+  while (q.length) {
+    const id = q.shift()!;
+    out.add(id);
+    nodes.filter(n => n.parentId === id).forEach(n => q.push(n.id));
   }
-  return result;
+  return out;
 }
 
-// ── Avatar ───────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════ avatar ═════ */
 
-const PALETTE = ['#6D28D9','#2563EB','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777'];
-function pickColor(name: string): string {
+const PALETTE = [
+  '#6D28D9','#2563EB','#0891B2','#059669',
+  '#D97706','#DC2626','#7C3AED','#DB2777',
+];
+function pickColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return PALETTE[h % PALETTE.length];
 }
 
-function NodeAvatar({ node, size, isEmpty }: { node: OrgNode; size: number; isEmpty: boolean }) {
-  const initials = node.name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
+function Avatar({ node, size }: { node: OrgNode; size: number }) {
+  const empty = !node.name.trim();
+  const initials = node.name.trim()
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '').join('');
 
-  if (!isEmpty && node.photoUrl) {
+  if (!empty && node.photoUrl) {
     return (
-      <img
-        src={node.photoUrl}
-        alt={node.name}
+      <img src={node.photoUrl} alt={node.name}
         style={{ width: size, height: size }}
-        className="rounded-full object-cover"
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-      />
+        className="rounded-full object-cover border-2 border-white/30 shadow"
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
     );
   }
-
-  if (isEmpty) {
+  if (empty) {
     return (
-      <div
-        style={{ width: size, height: size }}
-        className="rounded-full bg-muted border-2 border-dashed border-foreground/20 flex items-center justify-center"
-      >
-        <Network className="w-5 h-5 text-foreground/20" />
+      <div style={{ width: size, height: size }}
+        className="rounded-full bg-foreground/8 border-2 border-dashed border-foreground/20 flex items-center justify-center">
+        <Network className="text-foreground/25" style={{ width: size * 0.4, height: size * 0.4 }} />
       </div>
     );
   }
-
   return (
-    <div
-      style={{ width: size, height: size, background: pickColor(node.name), fontSize: size * 0.34 }}
-      className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
-    >
+    <div style={{ width: size, height: size, background: pickColor(node.name), fontSize: size * 0.34 }}
+      className="rounded-full flex items-center justify-center font-bold text-white shadow border-2 border-white/20 shrink-0">
       {initials || '?'}
     </div>
   );
 }
 
-// ── Card ─────────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════ card face ══ */
 
-function OrgCard({
-  node, isRoot,
+/** Pure visual card — no DnD wiring, used in DragOverlay too */
+function CardFace({
+  node, depth, isDragging = false, isOver = false,
   onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
-  isRoot: boolean;
+  depth: number;
+  isDragging?: boolean;
+  isOver?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onAddChild?: () => void;
+  onUploadPhoto?: (f: File) => void;
+}) {
+  const photoRef = useRef<HTMLInputElement>(null);
+  const empty = !node.name.trim();
+
+  // depth-based background
+  const cardCls = cn(
+    'relative w-full rounded-xl border transition-all',
+    depth === 0 && 'bg-card border-primary/40 ring-2 ring-primary/30 shadow-md',
+    depth === 1 && 'bg-primary border-primary shadow-md',
+    depth >= 2 && 'bg-primary/10 border-primary/25 shadow-sm',
+    isDragging && 'opacity-0 pointer-events-none',
+    isOver && !isDragging && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.03]',
+    empty && depth !== 1 && 'border-dashed border-foreground/25',
+  );
+
+  const nameCls   = cn('text-[13px] font-bold leading-snug', depth === 1 ? 'text-primary-foreground' : 'text-foreground');
+  const titleCls  = cn('text-[11px] mt-0.5', depth === 1 ? 'text-primary-foreground/70' : 'text-muted-foreground');
+  const deptCls   = cn('text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full',
+    depth === 1
+      ? 'bg-white/20 text-primary-foreground'
+      : 'bg-primary/10 text-primary');
+  const btnBase   = cn('w-6 h-6 rounded-md flex items-center justify-center transition-colors');
+  const editBtn   = cn(btnBase,
+    depth === 1
+      ? 'text-primary-foreground/60 hover:text-primary-foreground hover:bg-white/20'
+      : 'text-muted-foreground hover:text-primary hover:bg-primary/10');
+  const delBtn    = cn(btnBase,
+    depth === 1
+      ? 'text-primary-foreground/60 hover:text-red-300 hover:bg-red-500/20'
+      : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10');
+
+  return (
+    <div className={cardCls} style={{ width: 164 }}>
+
+      {/* ── top strip: grip  +  edit/delete ── */}
+      <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2 pt-2">
+        {/* drag grip — rendered here so the parent can attach listeners */}
+        <div className={cn('drag-grip cursor-grab active:cursor-grabbing',
+          depth === 1 ? 'text-primary-foreground/40' : 'text-foreground/25')}>
+          <GripVertical className="w-3.5 h-3.5" />
+        </div>
+        <div className="flex gap-1">
+          {onEdit && (
+            <button onClick={e => { e.stopPropagation(); onEdit(); }} title="تعديل" className={editBtn}>
+              <Pencil className="w-3 h-3" />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={e => { e.stopPropagation(); onDelete(); }} title="حذف" className={delBtn}>
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── avatar ── */}
+      <div className="flex justify-center mt-7 mb-2">
+        <button className="relative group/av rounded-full" title="رفع صورة"
+          onClick={e => { e.stopPropagation(); onUploadPhoto && photoRef.current?.click(); }}>
+          <Avatar node={node} size={depth === 0 ? 64 : 54} />
+          {onUploadPhoto && !empty && (
+            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="w-3.5 h-3.5 text-white" />
+            </div>
+          )}
+        </button>
+        {onUploadPhoto && (
+          <input ref={photoRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
+        )}
+      </div>
+
+      {/* ── text ── */}
+      <div className="px-3 pb-3 text-center">
+        {empty ? (
+          <button onClick={e => { e.stopPropagation(); onEdit?.(); }}
+            className={cn('text-[11px] font-medium border border-dashed rounded-lg px-3 py-1 w-full transition-colors',
+              depth === 1
+                ? 'border-primary-foreground/30 text-primary-foreground/50 hover:text-primary-foreground'
+                : 'border-foreground/20 text-muted-foreground hover:text-primary')}>
+            + أضف اسماً
+          </button>
+        ) : (
+          <>
+            <p className={nameCls}>{node.name}</p>
+            {node.title && <p className={titleCls}>{node.title}</p>}
+            {node.department && <span className={deptCls}>{node.department}</span>}
+          </>
+        )}
+      </div>
+
+      {/* ── add-child button ── */}
+      {onAddChild && (
+        <div className="flex justify-center pb-2">
+          <button
+            onClick={e => { e.stopPropagation(); onAddChild(); }}
+            title="إضافة تابع مباشر"
+            className={cn('flex items-center gap-0.5 text-[10px] font-medium rounded-full px-2 py-0.5 transition-colors',
+              depth === 1
+                ? 'text-primary-foreground/50 hover:text-primary-foreground hover:bg-white/10'
+                : 'text-muted-foreground hover:text-primary hover:bg-primary/10')}>
+            <Plus className="w-2.5 h-2.5" />
+            إضافة تابع
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════ draggable node ══ */
+
+function DndNode({
+  node, depth, allNodes, activeId, overId,
+  onEdit, onDelete, onAddChild, onUploadPhoto,
+}: {
+  node: OrgNode;
+  depth: number;
+  allNodes: OrgNode[];
+  activeId: string | null;
+  overId: string | null;
   onEdit: () => void;
   onDelete: () => void;
   onAddChild: () => void;
   onUploadPhoto: (f: File) => void;
 }) {
-  const photoRef = useRef<HTMLInputElement>(null);
-  const isEmpty = !node.name.trim();
+  const desc = useMemo(() => activeId ? descendants(activeId, allNodes) : new Set<string>(), [activeId, allNodes]);
+
+  const {
+    attributes, listeners,
+    setNodeRef: setDrag,
+    isDragging,
+  } = useDraggable({ id: node.id });
+
+  const {
+    setNodeRef: setDrop,
+    isOver: rawIsOver,
+  } = useDroppable({ id: node.id });
+
+  // only highlight if this node is NOT a descendant of the dragged node
+  const isOver = rawIsOver && !desc.has(node.id) && node.id !== activeId;
+
+  const ref = (el: HTMLElement | null) => { setDrag(el); setDrop(el); };
 
   return (
-    <div className="flex flex-col items-center" style={{ width: 168 }}>
-
-      {/* ── Card body ──────────────────────────────────────────── */}
-      <div className={cn(
-        'relative w-full rounded-2xl border transition-shadow hover:shadow-lg',
-        'bg-card border-border shadow-sm',
-        // Root gets a primary-colour top accent bar via ring trick
-        isRoot && 'ring-2 ring-primary/60',
-        isEmpty && 'border-dashed border-foreground/20',
-      )}>
-
-        {/* Primary accent bar at top for root */}
-        {isRoot && (
-          <div className="absolute top-0 inset-x-0 h-1 rounded-t-2xl bg-primary" />
-        )}
-
-        {/* Edit / Delete — top-right, always visible */}
-        <div className="absolute top-2.5 right-2.5 flex gap-1 z-10">
-          <button
-            onClick={onEdit}
-            title="تعديل"
-            className="w-6 h-6 rounded-md flex items-center justify-center bg-muted hover:bg-primary/15 hover:text-primary text-muted-foreground transition-colors"
-          >
-            <Pencil className="w-3 h-3" />
-          </button>
-          <button
-            onClick={onDelete}
-            title="حذف"
-            className="w-6 h-6 rounded-md flex items-center justify-center bg-muted hover:bg-destructive/15 hover:text-destructive text-muted-foreground transition-colors"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
-
-        {/* Avatar with upload overlay */}
-        <div className="flex justify-center mt-5 mb-3">
-          <button
-            className="relative group/av rounded-full"
-            title="رفع صورة"
-            onClick={() => photoRef.current?.click()}
-          >
-            <NodeAvatar node={node} size={60} isEmpty={isEmpty} />
-            {!isEmpty && (
-              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
-                <Camera className="w-4 h-4 text-white" />
-              </div>
-            )}
-          </button>
-          <input ref={photoRef} type="file" accept="image/*" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
-        </div>
-
-        {/* Text */}
-        <div className="px-3 pb-4 text-center">
-          {isEmpty ? (
-            <button
-              onClick={onEdit}
-              className="text-[11px] text-muted-foreground hover:text-primary transition-colors font-medium border border-dashed border-foreground/20 rounded-lg px-3 py-1.5 w-full"
-            >
-              + اضغط لإضافة اسم
-            </button>
-          ) : (
-            <>
-              <p className="text-[13px] font-bold text-foreground leading-snug">{node.name}</p>
-              {node.title && (
-                <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{node.title}</p>
-              )}
-              {node.department && (
-                <span className="inline-block mt-1.5 text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5">
-                  {node.department}
-                </span>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Add child link */}
-      <button
-        onClick={onAddChild}
-        className="mt-2 flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors"
-      >
-        <Plus className="w-3 h-3" />
-        إضافة تابع
-      </button>
+    <div ref={ref} style={{ touchAction: 'none' }}
+      {...attributes} {...listeners}
+      className="cursor-grab active:cursor-grabbing">
+      <CardFace
+        node={node}
+        depth={depth}
+        isDragging={isDragging}
+        isOver={isOver}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onAddChild={onAddChild}
+        onUploadPhoto={onUploadPhoto}
+      />
     </div>
   );
 }
 
-// ── Recursive Tree ────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════ recursive tree ══ */
 
 function OrgTree({
-  node, allNodes, depth,
+  node, allNodes, depth, activeId, overId,
   onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
   allNodes: OrgNode[];
   depth: number;
+  activeId: string | null;
+  overId: string | null;
   onEdit: (n: OrgNode) => void;
   onDelete: (n: OrgNode) => void;
   onAddChild: (parentId: string) => void;
   onUploadPhoto: (node: OrgNode, f: File) => void;
 }) {
   const children = allNodes.filter(n => n.parentId === node.id);
+
   return (
     <div className="org-node">
-      <OrgCard
+      <DndNode
         node={node}
-        isRoot={depth === 0}
+        depth={depth}
+        allNodes={allNodes}
+        activeId={activeId}
+        overId={overId}
         onEdit={() => onEdit(node)}
         onDelete={() => onDelete(node)}
         onAddChild={() => onAddChild(node.id)}
@@ -236,6 +340,8 @@ function OrgTree({
                 node={child}
                 allNodes={allNodes}
                 depth={depth + 1}
+                activeId={activeId}
+                overId={overId}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onAddChild={onAddChild}
@@ -249,7 +355,26 @@ function OrgTree({
   );
 }
 
-// ── Edit Dialog ───────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════ root drop zone ══ */
+
+function RootDropZone({ visible }: { visible: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: ROOT_DROP_ID });
+  if (!visible) return null;
+  return (
+    <div ref={setNodeRef}
+      className={cn(
+        'flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-8 py-3 text-sm font-medium mb-6 transition-all',
+        isOver
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-foreground/15 text-foreground/30',
+      )}>
+      <ArrowUpToLine className="w-4 h-4" />
+      أسقط هنا لجعله مستوى أعلى
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════ edit dialog ════ */
 
 function NodeDialog({
   open, onClose, initial, allNodes, onSave, saving,
@@ -266,20 +391,18 @@ function NodeDialog({
 
   const field = (key: keyof OrgNode, label: string, placeholder?: string, dir?: 'ltr') => (
     <div className="space-y-1">
-      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">{label}</label>
-      <Input
-        value={(form[key] as string) ?? ''}
-        placeholder={placeholder}
-        dir={dir}
+      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+        {label}
+      </label>
+      <Input value={(form[key] as string) ?? ''} placeholder={placeholder} dir={dir}
         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-        className="h-9 text-sm"
-      />
+        className="h-9 text-sm" />
     </div>
   );
 
-  const selfAndDesc = new Set<string>();
-  if (initial.id) getDescendantIds(initial.id, allNodes).forEach(id => selfAndDesc.add(id));
-  const parentOptions = allNodes.filter(n => !selfAndDesc.has(n.id));
+  const selfDesc = new Set<string>();
+  if (initial.id) descendants(initial.id, allNodes).forEach(id => selfDesc.add(id));
+  const parentOpts = allNodes.filter(n => !selfDesc.has(n.id));
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
@@ -292,24 +415,21 @@ function NodeDialog({
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="grid grid-cols-2 gap-3">
-            {field('name',       'الاسم *',              'أحمد العمري')}
-            {field('title',      'المسمى الوظيفي',       'مدير تنفيذي')}
-            {field('department', 'القسم / الإدارة',      'العمليات')}
-            {field('phone',      'الجوال',               '+966 5x', 'ltr')}
+            {field('name',       'الاسم *',           'أحمد العمري')}
+            {field('title',      'المسمى الوظيفي',    'مدير تنفيذي')}
+            {field('department', 'القسم / الإدارة',   'العمليات')}
+            {field('phone',      'الجوال',            '+966 5x', 'ltr')}
           </div>
           {field('email', 'البريد الإلكتروني', 'name@bank.com', 'ltr')}
-
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
               يتبع لـ (المدير المباشر)
             </label>
-            <select
-              value={form.parentId ?? ''}
+            <select value={form.parentId ?? ''}
               onChange={e => setForm(f => ({ ...f, parentId: e.target.value || null }))}
-              className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 text-foreground outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">— مستوى أعلى (بدون مدير مباشر) —</option>
-              {parentOptions.map(n => (
+              className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 text-foreground outline-none focus:ring-2 focus:ring-primary/30">
+              <option value="">— مستوى أعلى (بدون مدير) —</option>
+              {parentOpts.map(n => (
                 <option key={n.id} value={n.id}>
                   {n.name || '(فارغ)'}{n.title ? ` · ${n.title}` : ''}
                 </option>
@@ -319,7 +439,8 @@ function NodeDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={onClose}>إلغاء</Button>
-          <Button size="sm" disabled={saving} onClick={() => onSave({ ...form, id: initial.id } as any)}>
+          <Button size="sm" disabled={saving}
+            onClick={() => onSave({ ...form, id: initial.id } as any)}>
             {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
             حفظ
           </Button>
@@ -329,23 +450,29 @@ function NodeDialog({
   );
 }
 
-// ── Main Section ──────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════ main section ═══ */
 
 export function OrgChartSection({ bank }: { bank: any }) {
-  const isFirstLoad = (bank.orgChart ?? []).length === 0;
+  const isFirst = (bank.orgChart ?? []).length === 0;
   const [nodes, setNodes] = useState<OrgNode[]>(() =>
-    isFirstLoad ? DEFAULT_NODES : (bank.orgChart ?? []),
+    isFirst ? DEFAULT_NODES : (bank.orgChart ?? []),
   );
-  const [dialog, setDialog] = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId,   setOverId]   = useState<string | null>(null);
+  const [dialog,   setDialog]   = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
 
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const updateBank = useUpdateBank();
+  const { toast }   = useToast();
+  const updateBank  = useUpdateBank();
   const uploadPhoto = useSetOrgChartNodePhoto();
 
-  // Persist the default template on first load
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
+  // persist default template on first load
   useEffect(() => {
-    if (isFirstLoad) {
+    if (isFirst) {
       updateBank.mutate({
         id: bank.id,
         data: {
@@ -377,6 +504,35 @@ export function OrgChartSection({ bank }: { bank: any }) {
     });
   }, [bank, updateBank, queryClient, toast]);
 
+  /* ── DnD handlers ── */
+  const handleDragStart = ({ active }: DragStartEvent) => setActiveId(String(active.id));
+  const handleDragOver  = ({ over }: DragOverEvent)    => setOverId(over ? String(over.id) : null);
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    setActiveId(null);
+    setOverId(null);
+    if (!over) return;
+
+    const draggedId = String(active.id);
+    const targetId  = String(over.id);
+    if (draggedId === targetId) return;
+
+    if (targetId === ROOT_DROP_ID) {
+      const next = nodes.map(n => n.id === draggedId ? { ...n, parentId: null } : n);
+      setNodes(next);
+      save(next);
+      return;
+    }
+
+    // prevent cycles
+    if (descendants(draggedId, nodes).has(targetId)) return;
+
+    const next = nodes.map(n => n.id === draggedId ? { ...n, parentId: targetId } : n);
+    setNodes(next);
+    save(next);
+  };
+
+  /* ── dialog save ── */
   const handleDialogSave = (data: Omit<OrgNode, 'id'> & { id?: string }) => {
     let next: OrgNode[];
     if (data.id) {
@@ -389,6 +545,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
     save(next, { onSuccess: () => setDialog(null) });
   };
 
+  /* ── delete ── */
   const handleDelete = (node: OrgNode) => {
     const next = nodes
       .filter(n => n.id !== node.id)
@@ -397,14 +554,13 @@ export function OrgChartSection({ bank }: { bank: any }) {
     save(next);
   };
 
+  /* ── photo upload ── */
   const handleUploadPhoto = (node: OrgNode, file: File) => {
     const reader = new FileReader();
     reader.onload = e => {
-      const dataUrl = e.target?.result as string;
-      uploadPhoto.mutate({ id: bank.id, nodeId: node.id, data: { dataUrl } }, {
+      uploadPhoto.mutate({ id: bank.id, nodeId: node.id, data: { dataUrl: e.target?.result as string } }, {
         onSuccess: (res: any) => {
-          const photoUrl = res?.photoUrl ?? null;
-          const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl } : n);
+          const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: res?.photoUrl ?? null } : n);
           setNodes(next);
           save(next);
         },
@@ -414,7 +570,8 @@ export function OrgChartSection({ bank }: { bank: any }) {
     reader.readAsDataURL(file);
   };
 
-  const roots = nodes.filter(n => !n.parentId);
+  const roots      = nodes.filter(n => !n.parentId);
+  const activeNode = activeId ? nodes.find(n => n.id === activeId) : null;
 
   return (
     <>
@@ -427,44 +584,60 @@ export function OrgChartSection({ bank }: { bank: any }) {
             {(updateBank.isPending || uploadPhoto.isPending) && (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              className="ml-auto h-7 text-xs gap-1.5"
-              onClick={() => setDialog({ open: true, initial: { parentId: null } })}
-            >
-              <Plus className="w-3 h-3" />
-              إضافة شخص
+            <Button size="sm" variant="outline" className="ml-auto h-7 text-xs gap-1.5"
+              onClick={() => setDialog({ open: true, initial: { parentId: null } })}>
+              <Plus className="w-3 h-3" /> إضافة شخص
             </Button>
           </CardTitle>
         </CardHeader>
 
-        {/* Chart area — uses bg-muted/40 so it adapts to dark/light */}
+        {/* Chart canvas */}
         <CardContent className="p-0">
-          <div className="overflow-x-auto rounded-b-xl">
-            <div
-              className="min-w-fit px-12 py-10 bg-muted/30"
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="overflow-x-auto rounded-b-xl"
               style={{
-                backgroundImage: 'radial-gradient(circle, hsl(var(--foreground)/0.05) 1px, transparent 1px)',
-                backgroundSize: '24px 24px',
-              }}
-            >
-              <div className="flex gap-14 items-start justify-center">
-                {roots.map(root => (
-                  <OrgTree
-                    key={root.id}
-                    node={root}
-                    allNodes={nodes}
-                    depth={0}
-                    onEdit={n => setDialog({ open: true, initial: { ...n } })}
-                    onDelete={handleDelete}
-                    onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
-                    onUploadPhoto={handleUploadPhoto}
-                  />
-                ))}
+                background: 'hsl(var(--muted)/0.3)',
+                backgroundImage: 'radial-gradient(circle, hsl(var(--foreground)/0.06) 1px, transparent 1px)',
+                backgroundSize: '22px 22px',
+              }}>
+              <div className="min-w-fit px-12 py-8">
+
+                {/* Root drop zone — only visible while dragging */}
+                <RootDropZone visible={!!activeId} />
+
+                <div className="flex gap-16 items-start justify-center">
+                  {roots.map(root => (
+                    <OrgTree
+                      key={root.id}
+                      node={root}
+                      allNodes={nodes}
+                      depth={0}
+                      activeId={activeId}
+                      overId={overId}
+                      onEdit={n => setDialog({ open: true, initial: { ...n } })}
+                      onDelete={handleDelete}
+                      onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
+                      onUploadPhoto={handleUploadPhoto}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+
+            {/* Ghost card while dragging */}
+            <DragOverlay dropAnimation={null}>
+              {activeNode && (
+                <div className="rotate-1 opacity-90 drop-shadow-2xl pointer-events-none">
+                  <CardFace node={activeNode} depth={nodes.find(n => n.id === activeNode.id) ? 1 : 0} />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         </CardContent>
       </Card>
 

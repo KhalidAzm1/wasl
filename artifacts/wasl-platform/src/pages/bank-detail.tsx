@@ -660,13 +660,13 @@ function ResponsiblePersonCard({
   if (!name && !canEdit) return null;
 
   return (
-    <div className="flex flex-col items-center gap-2 shrink-0">
-      <div className="relative group/rp">
-        {/* Avatar */}
+    <div className="flex items-center gap-3 shrink-0">
+      {/* Avatar */}
+      <div className="relative group/rp shrink-0">
         <div
           onClick={() => canEdit && fileRef.current?.click()}
           className={cn(
-            'w-14 h-14 rounded-full overflow-hidden border-2 border-foreground/10 shadow-lg flex items-center justify-center',
+            'w-12 h-12 rounded-full overflow-hidden border-2 border-foreground/10 shadow-lg flex items-center justify-center',
             canEdit ? 'cursor-pointer' : 'cursor-default',
           )}
           title={canEdit ? 'Click to change photo' : undefined}
@@ -692,33 +692,32 @@ function ResponsiblePersonCard({
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
         />
       </div>
+
       {/* Name display / inline edit */}
       {(name || canEdit) && (
-        <div className="text-center min-w-[90px]">
-          <p className="text-xs text-foreground/40 uppercase tracking-wide leading-none mb-1">Responsible</p>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[10px] text-foreground/40 uppercase tracking-widest leading-none">Responsible</p>
           {editingName ? (
-            <div className="flex items-center gap-1">
-              <input
-                ref={nameInputRef}
-                value={nameDraft}
-                onChange={e => setNameDraft(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') commitName();
-                  if (e.key === 'Escape') { setNameDraft(name ?? ''); setEditingName(false); }
-                }}
-                onBlur={commitName}
-                className="text-sm font-medium bg-foreground/10 border border-foreground/20 rounded px-1.5 py-0.5 w-24 text-center outline-none focus:border-primary"
-                placeholder="Full name"
-              />
-            </div>
+            <input
+              ref={nameInputRef}
+              value={nameDraft}
+              onChange={e => setNameDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitName();
+                if (e.key === 'Escape') { setNameDraft(name ?? ''); setEditingName(false); }
+              }}
+              onBlur={commitName}
+              className="text-sm font-semibold bg-foreground/10 border border-foreground/20 rounded px-2 py-0.5 w-36 outline-none focus:border-primary"
+              placeholder="Full name"
+            />
           ) : (
             <div
-              className={cn('flex items-center justify-center gap-1 group/name', canEdit && 'cursor-pointer')}
+              className={cn('flex items-center gap-1.5 group/name', canEdit && 'cursor-pointer')}
               onClick={() => { if (canEdit) { setNameDraft(name ?? ''); setEditingName(true); } }}
               title={canEdit ? 'Click to edit name' : undefined}
             >
-              <p className="text-sm font-medium text-foreground leading-snug max-w-[110px] break-words text-center">
-                {name || <span className="text-foreground/30 italic text-xs">Add name…</span>}
+              <p className="text-sm font-semibold text-foreground whitespace-nowrap">
+                {name || <span className="text-foreground/30 italic font-normal text-xs">Add name…</span>}
               </p>
               {canEdit && (
                 <Pencil className="w-3 h-3 text-foreground/30 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />

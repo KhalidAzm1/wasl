@@ -257,7 +257,7 @@ function InlineEditCard({
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
             onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
-            placeholder="الاسم *"
+            placeholder="Name *"
             style={{ ...inputSty, fontWeight: 600 }}
           />
           <input
@@ -266,7 +266,7 @@ function InlineEditCard({
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
             onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
-            placeholder="المنصب"
+            placeholder="Job Title"
             style={inputSty}
           />
           <input
@@ -275,7 +275,7 @@ function InlineEditCard({
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
             onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
-            placeholder="القسم"
+            placeholder="Department"
             style={inputSty}
           />
           <input
@@ -284,7 +284,7 @@ function InlineEditCard({
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
             onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
-            placeholder="الجوال"
+            placeholder="Phone"
             dir="ltr"
             style={inputSty}
           />
@@ -293,13 +293,13 @@ function InlineEditCard({
               onPointerDown={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); onCancel(); }}
               style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-              إلغاء
+              Cancel
             </button>
             <button
               onPointerDown={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); onSave(form); }}
               style={{ padding: '4px 12px', borderRadius: 7, border: 'none', background: accent, color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              حفظ
+              Save
             </button>
           </div>
         </div>
@@ -341,7 +341,7 @@ function CardFace({
       type="button"
       onPointerDown={e => e.stopPropagation()}
       onClick={e => { e.stopPropagation(); onAddSibling?.(); }}
-      title={side === 'left' ? 'إضافة شقيق يساراً' : 'إضافة شقيق يميناً'}
+      title={side === 'left' ? 'Add sibling left' : 'Add sibling right'}
       style={{
         position: 'absolute', top: 36,
         ...(side === 'left' ? { left: -20 } : { right: -20 }),
@@ -372,7 +372,7 @@ function CardFace({
             <GripVertical style={{ width: 13, height: 13, color: '#d1d5db' }} />
             <div style={{ display: 'flex', gap: 2 }}>
               {onEdit && (
-                <button onClick={e => { e.stopPropagation(); onEdit(); }} title="تعديل"
+                <button onClick={e => { e.stopPropagation(); onEdit(); }} title="Edit"
                   style={{ width: 22, height: 22, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', transition: 'all 0.15s' }}
                   onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.color = '#7c3aed'; t.style.background = '#ede9fe'; }}
                   onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.color = '#9ca3af'; t.style.background = 'transparent'; }}>
@@ -380,7 +380,7 @@ function CardFace({
                 </button>
               )}
               {onDelete && (
-                <button onClick={e => { e.stopPropagation(); onDelete(); }} title="حذف"
+                <button onClick={e => { e.stopPropagation(); onDelete(); }} title="Delete"
                   style={{ width: 22, height: 22, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', transition: 'all 0.15s' }}
                   onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.color = '#ef4444'; t.style.background = '#fee2e2'; }}
                   onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.color = '#9ca3af'; t.style.background = 'transparent'; }}>
@@ -413,7 +413,7 @@ function CardFace({
                 style={{ fontSize: 11, fontWeight: 500, border: '1px dashed #d1d5db', borderRadius: 8, padding: '4px 12px', width: '100%', color: '#9ca3af', background: '#f9fafb', cursor: 'pointer', transition: 'all 0.15s' }}
                 onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = accent; t.style.color = accent; }}
                 onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = '#d1d5db'; t.style.color = '#9ca3af'; }}>
-                + أضف اسماً
+                + Add name
               </button>
             ) : (
               <p style={{ fontSize: 11, color: '#d1d5db' }}>—</p>
@@ -437,12 +437,12 @@ function CardFace({
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onAddChild(); }}
-          title="إضافة مرؤوس"
+          title="Add report"
           style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, border: '1px dashed #d1d5db', borderRadius: 99, padding: '3px 12px', color: '#9ca3af', background: '#ffffff', cursor: 'pointer', transition: 'all 0.15s' }}
           onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = accent; t.style.color = accent; t.style.background = `${accent}08`; }}
           onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = '#d1d5db'; t.style.color = '#9ca3af'; t.style.background = '#ffffff'; }}>
           <Plus style={{ width: 10, height: 10 }} />
-          إضافة مرؤوس
+          Add report
         </button>
       )}
     </div>
@@ -585,7 +585,7 @@ function RootDropZone({ visible }: { visible: boolean }) {
         color: isOver ? '#7c3aed' : '#9ca3af', transition: 'all 0.2s',
       }}>
       <ArrowUpToLine style={{ width: 15, height: 15 }} />
-      اسقط هنا ليصبح مستوى رئيسي
+      Drop here to make top level
     </div>
   );
 }
@@ -623,37 +623,37 @@ function NodeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="w-4 h-4 text-primary" />
-            {initial.id ? 'تعديل الشخص' : 'إضافة شخص جديد'}
+            {initial.id ? 'Edit Person' : 'Add New Person'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="grid grid-cols-2 gap-3">
-            {field('name', 'الاسم الكامل *', 'أحمد العمري')}
-            {field('title', 'المنصب', 'مدير تنفيذي')}
-            {field('department', 'القسم', 'العمليات')}
-            {field('phone', 'الجوال', '+966 5x', 'ltr')}
+            {field('name', 'Full Name *', 'e.g. Ahmed Al-Omari')}
+            {field('title', 'Title', 'e.g. CEO')}
+            {field('department', 'Department', 'e.g. Operations')}
+            {field('phone', 'Phone', '+966 5x', 'ltr')}
           </div>
           {field('email', 'البريد الإلكتروني', 'name@bank.com', 'ltr')}
           <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">يرفع إلى</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Reports To</label>
             <select value={form.parentId ?? ''}
               onChange={e => setForm(f => ({ ...f, parentId: e.target.value || null }))}
               className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 text-foreground outline-none focus:ring-2 focus:ring-primary/30">
-              <option value="">— مستوى رئيسي (بدون مدير) —</option>
+              <option value="">— Top level (no manager) —</option>
               {parentOpts.map(n => (
                 <option key={n.id} value={n.id}>
-                  {n.name || '(فارغ)'}{n.title ? ` · ${n.title}` : ''}
+                  {n.name || '(empty)'}{n.title ? ` · ${n.title}` : ''}
                 </option>
               ))}
             </select>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={onClose}>إلغاء</Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" disabled={saving}
             onClick={() => onSave({ ...form, id: initial.id } as any)}>
             {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-            حفظ
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -697,7 +697,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
       { id: bank.id, data: { nameEn: bank.nameEn, nameAr: bank.nameAr, category: bank.category, status: bank.status, riskLevel: bank.riskLevel, priorityImpact: bank.priorityImpact, orgChart: next } },
       {
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) }); opts?.onSuccess?.(); },
-        onError: () => toast({ title: 'فشل الحفظ. حاول مرة أخرى.', variant: 'destructive' }),
+        onError: () => toast({ title: 'Failed to save. Please try again.', variant: 'destructive' }),
       },
     );
   }, [bank, updateBank, queryClient, toast]);
@@ -729,7 +729,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
     });
 
     setNodes(next);
-    save(next, { onSuccess: () => toast({ title: '✓ تم استيراد جهات الاتصال بنجاح' }) });
+    save(next, { onSuccess: () => toast({ title: '✓ Contacts imported successfully' }) });
   }, [contacts, save, toast]);
 
   /* ── inline edit handlers ────────────────────────────────────────────── */
@@ -815,7 +815,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
             const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: res?.photoUrl ?? null } : n);
             setNodes(next); save(next);
           },
-          onError: () => toast({ title: 'فشل رفع الصورة. حاول مرة أخرى.', variant: 'destructive' }),
+          onError: () => toast({ title: 'Photo upload failed. Please try again.', variant: 'destructive' }),
         },
       );
     };
@@ -830,7 +830,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
         <CardHeader className="pb-3 border-b border-border">
           <CardTitle className="flex items-center gap-2 text-base">
             <Network className="w-4 h-4 text-primary" />
-            الهيكل التنظيمي
+            Org Chart
             {(updateBank.isPending || uploadPhoto.isPending) && (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />
             )}
@@ -838,20 +838,20 @@ export function OrgChartSection({ bank }: { bank: any }) {
               {editMode && contacts.length > 0 && (
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
                   onClick={importFromContacts}>
-                  <Users className="w-3 h-3" /> استيراد من الكونتاكتس
+                  <Users className="w-3 h-3" /> Import Contacts
                 </Button>
               )}
               {editMode && (
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
                   onClick={() => setDialog({ open: true, initial: { parentId: null } })}>
-                  <Plus className="w-3 h-3" /> إضافة شخص
+                  <Plus className="w-3 h-3" /> Add Person
                 </Button>
               )}
               <Button
                 size="sm"
                 variant={editMode ? 'default' : 'ghost'}
                 className={cn('h-7 w-7 p-0', editMode && 'bg-primary text-primary-foreground')}
-                title={editMode ? 'قفل (عرض فقط)' : 'تعديل الهيكل'}
+                title={editMode ? 'Lock (view only)' : 'Edit chart'}
                 onClick={() => { setEditMode(v => !v); setInlineEditId(null); }}>
                 {editMode ? <Lock className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
               </Button>
@@ -859,7 +859,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
           </CardTitle>
           {editMode && (
             <p className="text-[11px] text-muted-foreground mt-1">
-              اسحب الكروت لإعادة الترتيب · ✏ تعديل · ± أشقاء · ＋ مرؤوسون · 🔒 عند الانتهاء
+              Drag to rearrange · ✏ Edit · ± Siblings · ＋ Reports · 🔒 when done
             </p>
           )}
         </CardHeader>

@@ -1,9 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import {
-  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  useDraggable, useDroppable,
-  type DragStartEvent, type DragOverEvent, type DragEndEvent,
-} from '@dnd-kit/core';
+import React, { useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import {
   Plus, Pencil, Trash2, Loader2, Network, Phone, Mail,
-  UserPlus, UploadCloud, GripVertical, CornerDownLeft,
+  UserPlus, UploadCloud,
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -35,8 +30,6 @@ export type OrgNode = {
 const EMPTY_NODE: Omit<OrgNode, 'id'> = {
   name: '', title: '', phone: '', email: '', department: '', parentId: null, photoUrl: null,
 };
-
-const ROOT_ZONE_ID = '__root_zone__';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -84,41 +77,26 @@ function NodeAvatar({ node, size = 52 }: { node: OrgNode; size?: number }) {
   );
 }
 
-// ── Card (pure visual, no DnD) ────────────────────────────────────────────────
+// ── Card ─────────────────────────────────────────────────────────────────────
 
-function OrgCardFace({
-  node, depth, dragHandleProps, onEdit, onDelete, onAddChild, onUploadPhoto, isDragging, isOver,
+function OrgCard({
+  node, depth, onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
   depth: number;
-  dragHandleProps?: React.HTMLAttributes<HTMLElement>;
   onEdit?: () => void;
   onDelete?: () => void;
   onAddChild?: () => void;
   onUploadPhoto?: (f: File) => void;
-  isDragging?: boolean;
-  isOver?: boolean;
 }) {
   const photoRef = useRef<HTMLInputElement>(null);
   const isRoot = depth === 0;
 
   return (
     <div className={cn(
-      'group relative rounded-xl border flex flex-col items-center text-center select-none transition-all',
+      'group relative rounded-xl border flex flex-col items-center text-center transition-all',
       isRoot ? 'bg-primary/10 border-primary/30 shadow-sm' : 'bg-card border-foreground/10 shadow-sm',
-      isDragging && 'opacity-40',
-      isOver && !isDragging && 'ring-2 ring-primary ring-offset-1 ring-offset-background scale-[1.03] shadow-lg',
     )} style={{ width: '172px' }}>
-
-      {/* Drag handle */}
-      {dragHandleProps && (
-        <div
-          {...dragHandleProps}
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-foreground/25 hover:text-foreground/60 touch-none"
-        >
-          <GripVertical className="w-3.5 h-3.5" />
-        </div>
-      )}
 
       {/* Avatar */}
       <button className="mt-4 mb-3 relative" title="Upload photo"
@@ -191,69 +169,15 @@ function OrgCardFace({
   );
 }
 
-// ── DnD-aware node ────────────────────────────────────────────────────────────
-
-function DraggableDroppableNode({
-  node, depth, activeId, overId, allNodes,
-  onEdit, onDelete, onAddChild, onUploadPhoto,
-  children,
-}: {
-  node: OrgNode;
-  depth: number;
-  activeId: string | null;
-  overId: string | null;
-  allNodes: OrgNode[];
-  onEdit: () => void;
-  onDelete: () => void;
-  onAddChild: () => void;
-  onUploadPhoto: (f: File) => void;
-  children?: React.ReactNode;
-}) {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: node.id });
-  const { setNodeRef: setDropRef, isOver: dndIsOver } = useDroppable({ id: node.id });
-
-  // Don't highlight a node as drop target if it's a descendant of the dragged node
-  const isDescendantOfActive = useMemo(() => {
-    if (!activeId) return false;
-    return getDescendantIds(activeId, allNodes).has(node.id);
-  }, [activeId, allNodes, node.id]);
-
-  const isOver = dndIsOver && !isDescendantOfActive && node.id !== activeId;
-
-  const combinedRef = (el: HTMLElement | null) => {
-    setDragRef(el);
-    setDropRef(el);
-  };
-
-  return (
-    <div ref={combinedRef} className="org-node">
-      <OrgCardFace
-        node={node}
-        depth={depth}
-        dragHandleProps={{ ...attributes, ...listeners }}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onAddChild={onAddChild}
-        onUploadPhoto={onUploadPhoto}
-        isDragging={isDragging}
-        isOver={isOver}
-      />
-      {children}
-    </div>
-  );
-}
-
 // ── Recursive Tree ────────────────────────────────────────────────────────────
 
 function OrgTree({
-  node, allNodes, depth, activeId, overId,
+  node, allNodes, depth,
   onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
   allNodes: OrgNode[];
   depth: number;
-  activeId: string | null;
-  overId: string | null;
   onEdit: (n: OrgNode) => void;
   onDelete: (n: OrgNode) => void;
   onAddChild: (parentId: string) => void;
@@ -262,17 +186,15 @@ function OrgTree({
   const children = allNodes.filter(n => n.parentId === node.id);
 
   return (
-    <DraggableDroppableNode
-      node={node}
-      depth={depth}
-      activeId={activeId}
-      overId={overId}
-      allNodes={allNodes}
-      onEdit={() => onEdit(node)}
-      onDelete={() => onDelete(node)}
-      onAddChild={() => onAddChild(node.id)}
-      onUploadPhoto={f => onUploadPhoto(node, f)}
-    >
+    <div className="org-node">
+      <OrgCard
+        node={node}
+        depth={depth}
+        onEdit={() => onEdit(node)}
+        onDelete={() => onDelete(node)}
+        onAddChild={() => onAddChild(node.id)}
+        onUploadPhoto={f => onUploadPhoto(node, f)}
+      />
       {children.length > 0 && (
         <div className="org-children">
           {children.map(child => (
@@ -281,8 +203,6 @@ function OrgTree({
                 node={child}
                 allNodes={allNodes}
                 depth={depth + 1}
-                activeId={activeId}
-                overId={overId}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onAddChild={onAddChild}
@@ -292,24 +212,6 @@ function OrgTree({
           ))}
         </div>
       )}
-    </DraggableDroppableNode>
-  );
-}
-
-// ── Root Drop Zone ────────────────────────────────────────────────────────────
-
-function RootDropZone({ activeId }: { activeId: string | null }) {
-  const { setNodeRef, isOver } = useDroppable({ id: ROOT_ZONE_ID });
-  if (!activeId) return null;
-  return (
-    <div ref={setNodeRef} className={cn(
-      'flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-3 text-sm font-medium transition-all mb-4',
-      isOver
-        ? 'border-primary bg-primary/10 text-primary'
-        : 'border-foreground/15 text-foreground/30'
-    )}>
-      <CornerDownLeft className="w-4 h-4" />
-      Drop here to make Root
     </div>
   );
 }
@@ -338,6 +240,7 @@ function NodeDialog({
     </div>
   );
 
+  // Exclude self and descendants from parent options
   const selfAndDesc = new Set<string>();
   if (initial.id) getDescendantIds(initial.id, allNodes).forEach(id => selfAndDesc.add(id));
   const parentOptions = allNodes.filter(n => !selfAndDesc.has(n.id));
@@ -383,18 +286,12 @@ function NodeDialog({
 
 export function OrgChartSection({ bank }: { bank: any }) {
   const [nodes, setNodes] = useState<OrgNode[]>(() => bank.orgChart ?? []);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updateBank = useUpdateBank();
   const uploadPhoto = useSetOrgChartNodePhoto();
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-  );
 
   const save = useCallback((next: OrgNode[], opts?: { onSuccess?: () => void }) => {
     updateBank.mutate({
@@ -414,37 +311,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
     });
   }, [bank, updateBank, queryClient, toast]);
 
-  // ── DnD events ──
-  const handleDragStart = ({ active }: DragStartEvent) => setActiveId(String(active.id));
-  const handleDragOver = ({ over }: DragOverEvent) => setOverId(over ? String(over.id) : null);
-
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    setActiveId(null);
-    setOverId(null);
-    if (!over) return;
-
-    const draggedId = String(active.id);
-    const targetId = String(over.id);
-    if (draggedId === targetId) return;
-
-    if (targetId === ROOT_ZONE_ID) {
-      // Make it a root node
-      const next = nodes.map(n => n.id === draggedId ? { ...n, parentId: null } : n);
-      setNodes(next);
-      save(next);
-      return;
-    }
-
-    // Prevent dropping onto a descendant (would create a cycle)
-    const descendants = getDescendantIds(draggedId, nodes);
-    if (descendants.has(targetId)) return;
-
-    const next = nodes.map(n => n.id === draggedId ? { ...n, parentId: targetId } : n);
-    setNodes(next);
-    save(next);
-  };
-
-  // ── Dialog actions ──
   const handleDialogSave = (data: Omit<OrgNode, 'id'> & { id?: string }) => {
     let next: OrgNode[];
     if (data.id) {
@@ -458,6 +324,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
   };
 
   const handleDelete = (node: OrgNode) => {
+    // Re-parent children to deleted node's parent
     const next = nodes
       .filter(n => n.id !== node.id)
       .map(n => n.parentId === node.id ? { ...n, parentId: node.parentId ?? null } : n);
@@ -483,7 +350,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
   };
 
   const roots = nodes.filter(n => !n.parentId);
-  const activeNode = activeId ? nodes.find(n => n.id === activeId) : null;
 
   return (
     <>
@@ -516,41 +382,24 @@ export function OrgChartSection({ bank }: { bank: any }) {
               </Button>
             </div>
           ) : (
-            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-              <div className="overflow-x-auto">
-                <div className="min-w-fit px-6 py-4">
-                  {/* Root drop zone — shows only while dragging */}
-                  <RootDropZone activeId={activeId} />
-
-                  {/* Tree */}
-                  <div className="flex gap-12 items-start justify-center">
-                    {roots.map(root => (
-                      <OrgTree
-                        key={root.id}
-                        node={root}
-                        allNodes={nodes}
-                        depth={0}
-                        activeId={activeId}
-                        overId={overId}
-                        onEdit={n => setDialog({ open: true, initial: { ...n } })}
-                        onDelete={handleDelete}
-                        onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
-                        onUploadPhoto={handleUploadPhoto}
-                      />
-                    ))}
-                  </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-fit px-6 py-4">
+                <div className="flex gap-12 items-start justify-center">
+                  {roots.map(root => (
+                    <OrgTree
+                      key={root.id}
+                      node={root}
+                      allNodes={nodes}
+                      depth={0}
+                      onEdit={n => setDialog({ open: true, initial: { ...n } })}
+                      onDelete={handleDelete}
+                      onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
+                      onUploadPhoto={handleUploadPhoto}
+                    />
+                  ))}
                 </div>
               </div>
-
-              {/* Ghost card while dragging */}
-              <DragOverlay dropAnimation={null}>
-                {activeNode && (
-                  <div className="rotate-2 opacity-90 pointer-events-none drop-shadow-xl">
-                    <OrgCardFace node={activeNode} depth={0} />
-                  </div>
-                )}
-              </DragOverlay>
-            </DndContext>
+            </div>
           )}
         </CardContent>
       </Card>

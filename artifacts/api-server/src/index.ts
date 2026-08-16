@@ -43,8 +43,9 @@ const server = app.listen(port, (err) => {
   // requiring a full Drizzle migration run.
   db.execute(sql`
     ALTER TABLE banks ADD COLUMN IF NOT EXISTS responsible_person_photo text;
+    ALTER TABLE banks ADD COLUMN IF NOT EXISTS responsible_persons jsonb;
   `)
-    .then(() => logger.info("responsible_person_photo column ensured"))
+    .then(() => logger.info("responsible_person_photo + responsible_persons columns ensured"))
     .catch((alterErr) =>
       logger.warn({ err: alterErr }, "bootstrap schema alter failed (non-fatal)"),
     );

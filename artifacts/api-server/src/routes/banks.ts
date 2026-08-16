@@ -600,19 +600,25 @@ router.put("/banks/:id/responsible-person/:index/photo", requireRole("super_admi
     res.status(502).json({ error: "Failed to upload photo", detail: e?.message }); return;
   }
 
-  await db.execute(sql`
-    UPDATE banks
-    SET responsible_persons = (
-      SELECT jsonb_agg(
-        CASE WHEN ordinality - 1 = ${idx}
-          THEN elem || jsonb_build_object('storagePath', ${storagePath})
-          ELSE elem
-        END
+  try {
+    await db.execute(sql`
+      UPDATE banks
+      SET responsible_persons = (
+        SELECT jsonb_agg(
+          CASE WHEN ordinality - 1 = ${idx}
+            THEN elem || jsonb_build_object('storagePath', ${storagePath})
+            ELSE elem
+          END
+        )
+        FROM jsonb_array_elements(COALESCE(responsible_persons, '[]'::jsonb)) WITH ORDINALITY AS t(elem, ordinality)
       )
-      FROM jsonb_array_elements(COALESCE(responsible_persons, '[]'::jsonb)) WITH ORDINALITY AS t(elem, ordinality)
-    )
-    WHERE id = ${bankId}
-  `);
+      WHERE id = ${bankId}
+    `);
+  } catch (e: any) {
+    req.log.error({ err: e?.message ?? String(e) }, "responsible-person photo DB update failed");
+    res.status(500).json({ error: "Photo upload failed", detail: "Could not update person photo in database" });
+    return;
+  }
 
   // Keep first person's photo synced with legacy field
   if (idx === 0) {

@@ -533,11 +533,15 @@ router.put("/banks/:id/org-chart-photo/:nodeId", requireRole("super_admin", "adm
   try {
     await uploadToStorage(storagePath, buffer, contentType);
   } catch (e: any) {
-    res.status(502).json({ error: "Failed to upload photo — please try again" }); return;
+    req.log.error({ storagePath, err: e?.message ?? String(e) }, "org-chart-photo upload failed");
+    res.status(502).json({ error: "Failed to upload photo — please try again", detail: e?.message }); return;
   }
 
   let photoUrl: string;
-  try { photoUrl = await getSignedUrl(storagePath); } catch { res.status(502).json({ error: "Uploaded but could not sign URL" }); return; }
+  try { photoUrl = await getSignedUrl(storagePath); } catch (e: any) {
+    req.log.error({ storagePath, err: e?.message ?? String(e) }, "org-chart-photo sign-url failed");
+    res.status(502).json({ error: "Uploaded but could not sign URL", detail: e?.message }); return;
+  }
 
   res.json({ photoUrl });
 });

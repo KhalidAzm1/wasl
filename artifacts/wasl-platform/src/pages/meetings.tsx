@@ -40,13 +40,13 @@ export default function Meetings() {
       <div className="space-y-4">
         {sortedMeetings.map(m => {
           // Bank name comes from the JOIN — works even for archived/deleted banks
-          const bankLabel = m.bankNameAr ?? m.bankNameEn ?? 'بنك محذوف';
+          const bankLabel = (m as any).bankNameAr ?? (m as any).bankNameEn ?? 'بنك محذوف';
           return (
             <Card key={m.id} className="bg-foreground/5 border-foreground/10 hover:border-foreground/20 transition-all">
               <CardContent className="p-6 flex flex-col md:flex-row gap-6 items-start md:items-center">
                 <div className="md:w-48 shrink-0">
                   <div className="text-foreground/80 font-mono text-sm mb-1">{formatDate(m.date)}</div>
-                  <Badge variant="outline" className={`bg-foreground/5 border-foreground/10 ${m.bankNameEn ? 'text-foreground/70' : 'text-foreground/30 italic'}`}>
+                  <Badge variant="outline" className={`bg-foreground/5 border-foreground/10 ${(m as any).bankNameEn ? 'text-foreground/70' : 'text-foreground/30 italic'}`}>
                     {bankLabel}
                   </Badge>
                 </div>

@@ -17,7 +17,8 @@ const __dirname = path.dirname(__filename);
  * Relative from artifacts/api-server/src/lib/ → workspace root → lib/db/drizzle
  * Works both with tsx (source) and compiled JS (same relative layout in dist/).
  */
-const migrationsFolder = path.resolve(__dirname, "../../../../lib/db/drizzle");
+// process.cwd() is always artifacts/api-server/ regardless of tsx vs compiled
+const migrationsFolder = path.resolve(process.cwd(), "../../lib/db/drizzle");
 
 /**
  * Idempotent column additions that may not yet be in a drizzle migration file.

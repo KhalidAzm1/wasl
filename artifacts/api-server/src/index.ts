@@ -29,31 +29,32 @@ const server = app.listen(port, (err) => {
 
   // Best-effort: ensure the Supabase Storage bucket exists so upload routes
   // never fail on a missing bucket. Never blocks server startup.
-  ensureStorageBucket().catch((err) => {
-    logger.warn({ err }, "Failed to ensure Supabase Storage bucket");
+  ensureStorageBucket().catch((bucketErr) => {
+    logger.warn({ err: bucketErr }, "Failed to ensure Supabase Storage bucket");
   });
 
   // One-time idempotent fix: sync missing/broken logo paths for known banks.
-  fixLogoPaths().catch((err) => {
-    logger.warn({ err }, "fixLogoPaths failed (non-fatal)");
+  fixLogoPaths().catch((fixErr) => {
+    logger.warn({ err: fixErr }, "fixLogoPaths failed (non-fatal)");
   });
 
   // Idempotent schema additions — safe to re-run on every startup.
-  db.execute(sql`ALTER TABLE banks ADD COLUMN IF NOT EXISTS responsible_person_photo text`)
+  // This ensures the column exists on both dev and production without
+  // requiring a full Drizzle migration run.
+  db.execute(sql`
+    ALTER TABLE banks ADD COLUMN IF NOT EXISTS responsible_person_photo text;
+  `)
     .then(() => logger.info("responsible_person_photo column ensured"))
-    .catch((err) => logger.warn({ err }, "bootstrap schema alter failed (non-fatal)"));
+    .catch((alterErr) =>
+      logger.warn({ err: alterErr }, "bootstrap schema alter failed (non-fatal)"),
+    );
 });
 
 // --- Graceful shutdown: drain in-flight requests then close DB pool ---
 function shutdown(signal: string) {
   logger.info({ signal }, "Shutdown signal received — closing server");
   server.close(async () => {
-    logger.info("HTTP server closed, draining DB pool");
-    try {
-      await (db as unknown as { $client?: { end?: () => Promise<void> } }).$client?.end?.();
-    } catch {
-      // ignore pool close errors
-    }
+    logger.info("HTTP server closed");
     logger.info("Shutdown complete");
     process.exit(0);
   });
@@ -65,7 +66,7 @@ function shutdown(signal: string) {
 }
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
 
 // Catch unhandled promise rejections so they don't silently crash Node
 process.on("unhandledRejection", (reason) => {

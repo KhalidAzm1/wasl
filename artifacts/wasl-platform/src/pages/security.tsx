@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavControls } from '@/components/NavControls';
-import { useListAuditLogs } from '@workspace/api-client-react';
+import { useListAuditLogs, getListAuditLogsQueryKey } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTime } from '@/lib/utils';
 import { ShieldCheck, ChevronDown, Lock } from 'lucide-react';
@@ -55,7 +55,7 @@ function formatDetailValue(value: unknown): string {
 export default function Security() {
   const { role } = useAuth();
   const canAccess = role === 'admin' || role === 'super_admin';
-  const { data, isLoading, isError } = useListAuditLogs({ limit: 100 }, { query: { enabled: canAccess } });
+  const { data, isLoading, isError } = useListAuditLogs({ limit: 100 }, { query: { enabled: canAccess, queryKey: getListAuditLogsQueryKey({ limit: 100 }) } });
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   if (!canAccess || isError) {

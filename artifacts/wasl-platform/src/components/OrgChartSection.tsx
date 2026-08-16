@@ -723,29 +723,13 @@ export function OrgChartSection({ bank }: { bank: any }) {
   const contacts: BankContact[] = bank.contacts ?? [];
 
   const importFromContacts = useCallback(() => {
-    const responsibleNames: string[] = (bank.responsiblePerson ?? '')
-      .split(';').map((s: string) => s.trim()).filter(Boolean);
-
-    if (!contacts.length && !responsibleNames.length) return;
+    if (!contacts.length) return;
 
     const ts = Date.now();
     const nameToId = new Map<string, string>();
     const next: OrgNode[] = [];
 
-    // 1. Responsible persons → root hierarchy (first = root, rest = children of root)
-    responsibleNames.forEach((name, i) => {
-      const id = `responsible-${ts}-${i}`;
-      nameToId.set(name, id);
-      next.push({
-        id, name, title: 'Account Manager',
-        parentId: i === 0 ? null : `responsible-${ts}-0`,
-        department: null, phone: null, email: null, photoUrl: null,
-      });
-    });
-
-    const firstRespId = next[0]?.id ?? null;
-
-    // 2. Contacts — starred first, then rest
+    // Contacts — starred first, then rest; wire by manager field
     const sorted = [...contacts].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
     sorted.forEach((c, i) => {
       const id = `contact-${ts}-${i}`;
@@ -753,22 +737,21 @@ export function OrgChartSection({ bank }: { bank: any }) {
       next.push({
         id, name: c.name, title: c.title ?? null, phone: c.phone ?? null,
         email: c.email ?? null, department: c.department ?? null,
-        parentId: firstRespId,   // default: under first responsible person
+        parentId: null,   // resolved below via manager field
         photoUrl: null,
       });
     });
 
-    // 3. Wire parentIds using manager field
+    // Wire parentIds using the manager field
     sorted.forEach((c, i) => {
       if (!c.manager) return;
       const parentId = nameToId.get(c.manager);
-      const nodeIdx = responsibleNames.length + i;
-      if (parentId && parentId !== next[nodeIdx].id) next[nodeIdx].parentId = parentId;
+      if (parentId && parentId !== next[i].id) next[i].parentId = parentId;
     });
 
     setNodes(next);
     save(next, { onSuccess: () => toast({ title: '✓ Contacts imported successfully' }) });
-  }, [bank.responsiblePerson, contacts, save, toast]);
+  }, [contacts, save, toast]);
 
   /* ── inline edit handlers ────────────────────────────────────────────── */
   const handleInlineSave = useCallback((nodeId: string, form: InlineForm) => {

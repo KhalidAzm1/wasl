@@ -296,9 +296,9 @@
   position: absolute;
   top: 0;
   left: 50%;
-  height: 28px;           /* stub length */
+  height: 28px;
   width: 2px;
-  background: #93C5FD;    /* blue-300 */
+  background: hsl(var(--border));
   transform: translateX(-50%);
 }
 

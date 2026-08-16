@@ -9,7 +9,7 @@ import {
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { Plus, Pencil, Trash2, Loader2, Network, UploadCloud } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Network, UploadCloud, Camera } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,42 +54,45 @@ function getDescendantIds(nodeId: string, nodes: OrgNode[]): Set<string> {
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
 
-const PALETTE: string[] = [
-  '#3B82F6','#8B5CF6','#10B981','#F59E0B','#EF4444','#06B6D4','#6366F1','#EC4899',
-];
+const PALETTE = ['#6D28D9','#2563EB','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777'];
 function pickColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return PALETTE[h % PALETTE.length];
 }
 
-function NodeAvatar({ node, size }: { node: OrgNode; size: number }) {
-  const isEmpty = !node.name.trim();
+function NodeAvatar({ node, size, isEmpty }: { node: OrgNode; size: number; isEmpty: boolean }) {
   const initials = node.name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
 
   if (!isEmpty && node.photoUrl) {
     return (
-      <img src={node.photoUrl} alt={node.name}
+      <img
+        src={node.photoUrl}
+        alt={node.name}
         style={{ width: size, height: size }}
-        className="rounded-full object-cover border-2 border-white shadow-sm"
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        className="rounded-full object-cover"
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      />
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-full bg-muted border-2 border-dashed border-foreground/20 flex items-center justify-center"
+      >
+        <Network className="w-5 h-5 text-foreground/20" />
+      </div>
     );
   }
 
   return (
     <div
-      style={{
-        width: size, height: size,
-        background: isEmpty ? '#E5E7EB' : pickColor(node.name),
-        fontSize: size * 0.35,
-      }}
-      className="rounded-full flex items-center justify-center font-bold text-white border-2 border-white shadow-sm shrink-0"
+      style={{ width: size, height: size, background: pickColor(node.name), fontSize: size * 0.34 }}
+      className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
     >
-      {isEmpty ? (
-        <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5">
-          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-        </svg>
-      ) : (initials || '?')}
+      {initials || '?'}
     </div>
   );
 }
@@ -111,91 +114,90 @@ function OrgCard({
   const isEmpty = !node.name.trim();
 
   return (
-    <div className="flex flex-col items-center">
-      {/* Card */}
-      <div className={cn(
-        'relative flex flex-col items-center rounded-2xl border-2 shadow-sm transition-shadow hover:shadow-md',
-        isRoot
-          ? 'border-blue-300 bg-blue-500'
-          : isEmpty
-            ? 'border-dashed border-gray-300 bg-white'
-            : 'border-gray-200 bg-white',
-      )} style={{ width: 156 }}>
+    <div className="flex flex-col items-center" style={{ width: 168 }}>
 
-        {/* Edit & Delete buttons — always visible top-right */}
-        <div className="absolute top-2 right-2 flex gap-1">
+      {/* ── Card body ──────────────────────────────────────────── */}
+      <div className={cn(
+        'relative w-full rounded-2xl border transition-shadow hover:shadow-lg',
+        'bg-card border-border shadow-sm',
+        // Root gets a primary-colour top accent bar via ring trick
+        isRoot && 'ring-2 ring-primary/60',
+        isEmpty && 'border-dashed border-foreground/20',
+      )}>
+
+        {/* Primary accent bar at top for root */}
+        {isRoot && (
+          <div className="absolute top-0 inset-x-0 h-1 rounded-t-2xl bg-primary" />
+        )}
+
+        {/* Edit / Delete — top-right, always visible */}
+        <div className="absolute top-2.5 right-2.5 flex gap-1 z-10">
           <button
             onClick={onEdit}
             title="تعديل"
-            className={cn(
-              'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
-              isRoot
-                ? 'bg-white/20 hover:bg-white/40 text-white'
-                : 'bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-500',
-            )}
+            className="w-6 h-6 rounded-md flex items-center justify-center bg-muted hover:bg-primary/15 hover:text-primary text-muted-foreground transition-colors"
           >
             <Pencil className="w-3 h-3" />
           </button>
           <button
             onClick={onDelete}
             title="حذف"
-            className={cn(
-              'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
-              isRoot
-                ? 'bg-white/20 hover:bg-red-500/80 text-white'
-                : 'bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500',
-            )}
+            className="w-6 h-6 rounded-md flex items-center justify-center bg-muted hover:bg-destructive/15 hover:text-destructive text-muted-foreground transition-colors"
           >
             <Trash2 className="w-3 h-3" />
           </button>
         </div>
 
-        {/* Avatar */}
-        <button
-          className="mt-5 mb-2.5 relative group/av"
-          title="رفع صورة"
-          onClick={() => photoRef.current?.click()}
-        >
-          <NodeAvatar node={node} size={56} />
-          <div className="absolute inset-0 rounded-full bg-black/35 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
-            <UploadCloud className="w-3.5 h-3.5 text-white" />
-          </div>
-        </button>
-        <input ref={photoRef} type="file" accept="image/*" className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
+        {/* Avatar with upload overlay */}
+        <div className="flex justify-center mt-5 mb-3">
+          <button
+            className="relative group/av rounded-full"
+            title="رفع صورة"
+            onClick={() => photoRef.current?.click()}
+          >
+            <NodeAvatar node={node} size={60} isEmpty={isEmpty} />
+            {!isEmpty && (
+              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="w-4 h-4 text-white" />
+              </div>
+            )}
+          </button>
+          <input ref={photoRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
+        </div>
 
-        {/* Text content */}
-        <div className="px-3 pb-4 w-full text-center">
+        {/* Text */}
+        <div className="px-3 pb-4 text-center">
           {isEmpty ? (
-            <button onClick={onEdit} className={cn('text-xs font-medium', isRoot ? 'text-blue-100' : 'text-gray-400')}>
-              اضغط للإضافة
+            <button
+              onClick={onEdit}
+              className="text-[11px] text-muted-foreground hover:text-primary transition-colors font-medium border border-dashed border-foreground/20 rounded-lg px-3 py-1.5 w-full"
+            >
+              + اضغط لإضافة اسم
             </button>
           ) : (
             <>
-              <p className={cn('text-[13px] font-bold leading-snug', isRoot ? 'text-white' : 'text-gray-800')}>
-                {node.name}
-              </p>
+              <p className="text-[13px] font-bold text-foreground leading-snug">{node.name}</p>
               {node.title && (
-                <p className={cn('text-[11px] mt-0.5', isRoot ? 'text-blue-100' : 'text-gray-500')}>
-                  {node.title}
-                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{node.title}</p>
               )}
               {node.department && (
-                <p className={cn('text-[10px] mt-0.5 font-semibold', isRoot ? 'text-blue-200' : 'text-blue-400')}>
+                <span className="inline-block mt-1.5 text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5">
                   {node.department}
-                </p>
+                </span>
               )}
             </>
           )}
         </div>
       </div>
 
-      {/* Add child — always visible, below card */}
+      {/* Add child link */}
       <button
         onClick={onAddChild}
-        className="mt-1.5 flex items-center gap-1 text-[11px] text-gray-400 hover:text-blue-500 transition-colors font-medium"
+        className="mt-2 flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors"
       >
-        <Plus className="w-3 h-3" /> إضافة تابع
+        <Plus className="w-3 h-3" />
+        إضافة تابع
       </button>
     </div>
   );
@@ -216,7 +218,6 @@ function OrgTree({
   onUploadPhoto: (node: OrgNode, f: File) => void;
 }) {
   const children = allNodes.filter(n => n.parentId === node.id);
-
   return (
     <div className="org-node">
       <OrgCard
@@ -265,7 +266,7 @@ function NodeDialog({
 
   const field = (key: keyof OrgNode, label: string, placeholder?: string, dir?: 'ltr') => (
     <div className="space-y-1">
-      <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">{label}</label>
+      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">{label}</label>
       <Input
         value={(form[key] as string) ?? ''}
         placeholder={placeholder}
@@ -284,24 +285,30 @@ function NodeDialog({
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{initial.id ? 'تعديل الشخص' : 'إضافة شخص جديد'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Network className="w-4 h-4 text-primary" />
+            {initial.id ? 'تعديل الشخص' : 'إضافة شخص جديد'}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="grid grid-cols-2 gap-3">
-            {field('name', 'الاسم *', 'أحمد العمري')}
-            {field('title', 'المسمى الوظيفي', 'مدير تنفيذي')}
-            {field('department', 'القسم / الإدارة', 'العمليات')}
-            {field('phone', 'الجوال', '+966 5x', 'ltr')}
+            {field('name',       'الاسم *',              'أحمد العمري')}
+            {field('title',      'المسمى الوظيفي',       'مدير تنفيذي')}
+            {field('department', 'القسم / الإدارة',      'العمليات')}
+            {field('phone',      'الجوال',               '+966 5x', 'ltr')}
           </div>
           {field('email', 'البريد الإلكتروني', 'name@bank.com', 'ltr')}
+
           <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">يتبع لـ</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+              يتبع لـ (المدير المباشر)
+            </label>
             <select
               value={form.parentId ?? ''}
               onChange={e => setForm(f => ({ ...f, parentId: e.target.value || null }))}
-              className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 text-foreground outline-none focus:ring-2 focus:ring-primary/30"
             >
-              <option value="">— مستوى أعلى (بدون مدير) —</option>
+              <option value="">— مستوى أعلى (بدون مدير مباشر) —</option>
               {parentOptions.map(n => (
                 <option key={n.id} value={n.id}>
                   {n.name || '(فارغ)'}{n.title ? ` · ${n.title}` : ''}
@@ -312,11 +319,7 @@ function NodeDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={onClose}>إلغاء</Button>
-          <Button
-            size="sm"
-            disabled={saving}
-            onClick={() => onSave({ ...form, id: initial.id } as any)}
-          >
+          <Button size="sm" disabled={saving} onClick={() => onSave({ ...form, id: initial.id } as any)}>
             {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
             حفظ
           </Button>
@@ -340,7 +343,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
   const updateBank = useUpdateBank();
   const uploadPhoto = useSetOrgChartNodePhoto();
 
-  // Save the default template immediately so it persists on refresh
+  // Persist the default template on first load
   useEffect(() => {
     if (isFirstLoad) {
       updateBank.mutate({
@@ -353,7 +356,6 @@ export function OrgChartSection({ bank }: { bank: any }) {
         },
       });
     }
-    // run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -416,27 +418,37 @@ export function OrgChartSection({ bank }: { bank: any }) {
 
   return (
     <>
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-3 border-b">
+      <Card>
+        {/* Header */}
+        <CardHeader className="pb-3 border-b border-border">
           <CardTitle className="flex items-center gap-2 text-base">
             <Network className="w-4 h-4 text-primary" />
             الهيكل التنظيمي
             {(updateBank.isPending || uploadPhoto.isPending) && (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400 ml-1" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />
             )}
             <Button
               size="sm"
               variant="outline"
-              className="ml-auto h-7 text-xs gap-1"
+              className="ml-auto h-7 text-xs gap-1.5"
               onClick={() => setDialog({ open: true, initial: { parentId: null } })}
             >
-              <Plus className="w-3 h-3" /> إضافة شخص
+              <Plus className="w-3 h-3" />
+              إضافة شخص
             </Button>
           </CardTitle>
         </CardHeader>
+
+        {/* Chart area — uses bg-muted/40 so it adapts to dark/light */}
         <CardContent className="p-0">
-          <div className="overflow-x-auto bg-gray-50/60">
-            <div className="min-w-fit px-10 py-8">
+          <div className="overflow-x-auto rounded-b-xl">
+            <div
+              className="min-w-fit px-12 py-10 bg-muted/30"
+              style={{
+                backgroundImage: 'radial-gradient(circle, hsl(var(--foreground)/0.05) 1px, transparent 1px)',
+                backgroundSize: '24px 24px',
+              }}
+            >
               <div className="flex gap-14 items-start justify-center">
                 {roots.map(root => (
                   <OrgTree

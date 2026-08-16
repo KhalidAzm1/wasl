@@ -365,7 +365,7 @@ function DndNode({
   const ref = (el: HTMLElement | null) => { setDrag(el); setDrop(el); };
 
   return (
-    <div ref={ref} style={{ touchAction: 'none' }} {...attributes} {...(editMode ? listeners : {})}>
+    <div ref={ref} style={{ touchAction: editMode ? 'none' : 'auto' }} {...attributes} {...(editMode ? listeners : {})}>
       <CardFace
         node={node}
         depth={depth}

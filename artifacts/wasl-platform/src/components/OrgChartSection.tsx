@@ -129,7 +129,8 @@ function Avatar({
 }) {
   const photoRef = useRef<HTMLInputElement>(null);
   const empty    = !node.name.trim();
-  const hasPhoto = !empty && !!node.photoUrl;
+  // hasPhoto is independent of name — a photo can exist even on an unnamed node
+  const hasPhoto = !!node.photoUrl;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -178,8 +179,8 @@ function Avatar({
         className={cn('relative group/av rounded-full block', canInteract ? 'cursor-pointer' : 'cursor-default')}
         onClick={handleClick}>
         {inner}
-        {/* Edit overlay — change photo */}
-        {editMode && onUploadPhoto && !empty && (
+        {/* Edit overlay — change photo (show on any node in edit mode) */}
+        {editMode && onUploadPhoto && (
           <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
             <Camera className="w-3.5 h-3.5 text-white" />
           </div>

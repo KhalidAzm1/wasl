@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import {
   Plus, Pencil, Trash2, Loader2, Network, Camera,
   GripVertical, ArrowUpToLine, Lock, X, ZoomIn, Users,
+  Phone, Mail,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════ types ══════ */
@@ -421,11 +422,27 @@ function CardFace({
           ) : (
             <>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
-              {node.title && <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 5, lineHeight: 1.4 }}>{node.title}</p>}
+              {node.title && <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, lineHeight: 1.4 }}>{node.title}</p>}
               {node.department && (
-                <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent }}>
+                <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent, marginBottom: 4 }}>
                   {node.department}
                 </span>
+              )}
+              {(node.phone || node.email) && (
+                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+                  {node.phone && (
+                    <span style={{ fontSize: 10, color: '#6b7280', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Phone style={{ width: 9, height: 9, flexShrink: 0 }} />
+                      {node.phone}
+                    </span>
+                  )}
+                  {node.email && (
+                    <span style={{ fontSize: 9, color: '#9ca3af', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3, maxWidth: '100%', overflow: 'hidden' }}>
+                      <Mail style={{ width: 9, height: 9, flexShrink: 0 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.email}</span>
+                    </span>
+                  )}
+                </div>
               )}
             </>
           )}
@@ -706,31 +723,52 @@ export function OrgChartSection({ bank }: { bank: any }) {
   const contacts: BankContact[] = bank.contacts ?? [];
 
   const importFromContacts = useCallback(() => {
-    if (!contacts.length) return;
-    // Starred contacts first, then rest
-    const sorted = [...contacts].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
-    const nameToId = new Map<string, string>();
+    const responsibleNames: string[] = (bank.responsiblePerson ?? '')
+      .split(';').map((s: string) => s.trim()).filter(Boolean);
 
-    const next: OrgNode[] = sorted.map((c, i) => {
-      const id = `contact-${Date.now()}-${i}`;
-      nameToId.set(c.name, id);
-      return {
-        id, name: c.name, title: c.title ?? null, phone: c.phone ?? null,
-        email: c.email ?? null, department: c.department ?? null,
-        parentId: null, photoUrl: null,
-      };
+    if (!contacts.length && !responsibleNames.length) return;
+
+    const ts = Date.now();
+    const nameToId = new Map<string, string>();
+    const next: OrgNode[] = [];
+
+    // 1. Responsible persons → root hierarchy (first = root, rest = children of root)
+    responsibleNames.forEach((name, i) => {
+      const id = `responsible-${ts}-${i}`;
+      nameToId.set(name, id);
+      next.push({
+        id, name, title: 'Account Manager',
+        parentId: i === 0 ? null : `responsible-${ts}-0`,
+        department: null, phone: null, email: null, photoUrl: null,
+      });
     });
 
-    // Wire parent IDs using manager field
+    const firstRespId = next[0]?.id ?? null;
+
+    // 2. Contacts — starred first, then rest
+    const sorted = [...contacts].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+    sorted.forEach((c, i) => {
+      const id = `contact-${ts}-${i}`;
+      nameToId.set(c.name, id);
+      next.push({
+        id, name: c.name, title: c.title ?? null, phone: c.phone ?? null,
+        email: c.email ?? null, department: c.department ?? null,
+        parentId: firstRespId,   // default: under first responsible person
+        photoUrl: null,
+      });
+    });
+
+    // 3. Wire parentIds using manager field
     sorted.forEach((c, i) => {
       if (!c.manager) return;
       const parentId = nameToId.get(c.manager);
-      if (parentId && parentId !== next[i].id) next[i].parentId = parentId;
+      const nodeIdx = responsibleNames.length + i;
+      if (parentId && parentId !== next[nodeIdx].id) next[nodeIdx].parentId = parentId;
     });
 
     setNodes(next);
     save(next, { onSuccess: () => toast({ title: '✓ Contacts imported successfully' }) });
-  }, [contacts, save, toast]);
+  }, [bank.responsiblePerson, contacts, save, toast]);
 
   /* ── inline edit handlers ────────────────────────────────────────────── */
   const handleInlineSave = useCallback((nodeId: string, form: InlineForm) => {

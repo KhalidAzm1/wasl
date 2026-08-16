@@ -227,85 +227,86 @@ function CardFace({
   );
 
   return (
-    <div className={cardCls} style={{ width: 164 }}>
-      {/* root accent strip */}
-      {depth === 0 && (
-        <div className="absolute top-0 inset-x-0 h-1 bg-primary rounded-t-xl" />
-      )}
-
-      {/* top-bar: grip + edit/delete (edit mode only) */}
-      {editMode && (
-        <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2 pt-2">
-          <div className="text-muted-foreground/30">
-            <GripVertical className="w-3.5 h-3.5" />
-          </div>
-          <div className="flex gap-1">
-            {onEdit && (
-              <button onClick={e => { e.stopPropagation(); onEdit(); }}
-                title="Edit"
-                className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
-                <Pencil className="w-3 h-3" />
-              </button>
-            )}
-            {onDelete && (
-              <button onClick={e => { e.stopPropagation(); onDelete(); }}
-                title="Delete"
-                className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* avatar */}
-      <div className={cn('flex justify-center mb-2', editMode ? 'mt-7' : depth === 0 ? 'mt-5' : 'mt-4')}>
-        <Avatar
-          node={node}
-          size={depth === 0 ? 64 : 52}
-          editMode={editMode}
-          onUploadPhoto={onUploadPhoto}
-          onExpand={onExpandPhoto}
-        />
-      </div>
-
-      {/* text */}
-      <div className="px-3 pb-3 text-center">
-        {empty ? (
-          editMode ? (
-            <button onClick={e => { e.stopPropagation(); onEdit?.(); }}
-              className="text-[11px] font-medium border border-dashed border-foreground/20 rounded-lg px-3 py-1 w-full text-muted-foreground hover:text-primary transition-colors">
-              + Add name
-            </button>
-          ) : (
-            <p className="text-[11px] text-foreground/25">—</p>
-          )
-        ) : (
-          <>
-            <p className="text-[13px] font-bold leading-snug text-foreground">{node.name}</p>
-            {node.title && (
-              <p className="text-[11px] mt-0.5 text-muted-foreground">{node.title}</p>
-            )}
-            {node.department && (
-              <span className="inline-block text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                {node.department}
-              </span>
-            )}
-          </>
+    <div className="flex flex-col items-center gap-1" style={{ width: 164 }}>
+      {/* ── card box ── */}
+      <div className={cardCls} style={{ width: 164 }}>
+        {/* root accent strip */}
+        {depth === 0 && (
+          <div className="absolute top-0 inset-x-0 h-1 bg-primary rounded-t-xl" />
         )}
+
+        {/* top-bar: grip + edit/delete (edit mode only) */}
+        {editMode && (
+          <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2 pt-2">
+            <div className="text-muted-foreground/30">
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+            <div className="flex gap-1">
+              {onEdit && (
+                <button onClick={e => { e.stopPropagation(); onEdit(); }}
+                  title="Edit"
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+                  <Pencil className="w-3 h-3" />
+                </button>
+              )}
+              {onDelete && (
+                <button onClick={e => { e.stopPropagation(); onDelete(); }}
+                  title="Delete"
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* avatar */}
+        <div className={cn('flex justify-center mb-2', editMode ? 'mt-7' : depth === 0 ? 'mt-5' : 'mt-4')}>
+          <Avatar
+            node={node}
+            size={depth === 0 ? 64 : 52}
+            editMode={editMode}
+            onUploadPhoto={onUploadPhoto}
+            onExpand={onExpandPhoto}
+          />
+        </div>
+
+        {/* text */}
+        <div className="px-3 pb-3 text-center">
+          {empty ? (
+            editMode ? (
+              <button onClick={e => { e.stopPropagation(); onEdit?.(); }}
+                className="text-[11px] font-medium border border-dashed border-foreground/20 rounded-lg px-3 py-1 w-full text-muted-foreground hover:text-primary transition-colors">
+                + Add name
+              </button>
+            ) : (
+              <p className="text-[11px] text-foreground/25">—</p>
+            )
+          ) : (
+            <>
+              <p className="text-[13px] font-bold leading-snug text-foreground">{node.name}</p>
+              {node.title && (
+                <p className="text-[11px] mt-0.5 text-muted-foreground">{node.title}</p>
+              )}
+              {node.department && (
+                <span className="inline-block text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {node.department}
+                </span>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* add-child (edit mode only) */}
+      {/* ── add-child button — outside the card box (edit mode only) ── */}
       {editMode && onAddChild && (
-        <div className="flex justify-center pb-2">
-          <button
-            onClick={e => { e.stopPropagation(); onAddChild(); }}
-            title="Add direct report"
-            className="flex items-center gap-0.5 text-[10px] font-medium rounded-full px-2 py-0.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
-            <Plus className="w-2.5 h-2.5" />
-            Add report
-          </button>
-        </div>
+        <button
+          onClick={e => { e.stopPropagation(); onAddChild(); }}
+          title="Add direct report"
+          className="flex items-center gap-1 text-[10px] font-medium rounded-full border border-dashed border-foreground/20 px-3 py-1 text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+          <Plus className="w-2.5 h-2.5" />
+          Add report
+        </button>
       )}
     </div>
   );

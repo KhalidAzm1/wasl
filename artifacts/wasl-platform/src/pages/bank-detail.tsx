@@ -636,7 +636,7 @@ function ResponsiblePersonCard({
       });
       if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
       queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
-      toast({ title: 'تم تحديث صورة المسؤول' });
+      toast({ title: 'Responsible person photo updated' });
     } catch (e: any) {
       toast({ title: 'فشل رفع الصورة', description: e.message, variant: 'destructive' });
     } finally {
@@ -656,7 +656,7 @@ function ResponsiblePersonCard({
             'w-14 h-14 rounded-full overflow-hidden border-2 border-foreground/10 shadow-lg flex items-center justify-center',
             canEdit ? 'cursor-pointer' : 'cursor-default',
           )}
-          title={canEdit ? 'انقر لتغيير صورة المسؤول' : undefined}
+          title={canEdit ? 'Click to change photo' : undefined}
         >
           {photoUrl ? (
             <img src={photoUrl} alt={name ?? ''} className="w-full h-full object-cover" />
@@ -681,7 +681,7 @@ function ResponsiblePersonCard({
       </div>
       {name && (
         <div className="text-center">
-          <p className="text-xs text-foreground/40 uppercase tracking-wide leading-none mb-0.5">المسؤول</p>
+          <p className="text-xs text-foreground/40 uppercase tracking-wide leading-none mb-0.5">Responsible</p>
           <p className="text-sm font-medium text-foreground leading-snug max-w-[100px] truncate">{name}</p>
         </div>
       )}
@@ -864,7 +864,7 @@ export default function BankDetail() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {bank.responsiblePerson && (
                     <div className="bg-foreground/5 rounded-2xl p-5 border border-foreground/10 flex flex-col gap-1">
-                      <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">المسؤول</span>
+                      <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">Responsible</span>
                       <span className="text-foreground/90 font-medium text-lg">{bank.responsiblePerson}</span>
                     </div>
                   )}

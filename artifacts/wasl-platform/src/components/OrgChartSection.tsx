@@ -118,12 +118,13 @@ function pickColor(name: string) {
 }
 
 function Avatar({
-  node, size, editMode, onUploadPhoto, onExpand,
+  node, size, editMode, onUploadPhoto, onRemovePhoto, onExpand,
 }: {
   node: OrgNode;
   size: number;
   editMode?: boolean;
   onUploadPhoto?: (f: File) => void;
+  onRemovePhoto?: () => void;
   onExpand?: () => void;
 }) {
   const photoRef = useRef<HTMLInputElement>(null);
@@ -170,29 +171,42 @@ function Avatar({
   const canInteract = (editMode && onUploadPhoto) || (!editMode && hasPhoto && onExpand);
 
   return (
-    <button
-      type="button"
-      disabled={!canInteract}
-      className={cn('relative group/av rounded-full block', canInteract ? 'cursor-pointer' : 'cursor-default')}
-      onClick={handleClick}>
-      {inner}
-      {/* Edit overlay */}
-      {editMode && onUploadPhoto && !empty && (
-        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
-          <Camera className="w-3.5 h-3.5 text-white" />
-        </div>
+    <div className="relative inline-block">
+      <button
+        type="button"
+        disabled={!canInteract}
+        className={cn('relative group/av rounded-full block', canInteract ? 'cursor-pointer' : 'cursor-default')}
+        onClick={handleClick}>
+        {inner}
+        {/* Edit overlay — change photo */}
+        {editMode && onUploadPhoto && !empty && (
+          <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+            <Camera className="w-3.5 h-3.5 text-white" />
+          </div>
+        )}
+        {/* View overlay */}
+        {!editMode && hasPhoto && onExpand && (
+          <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+            <ZoomIn className="text-white" style={{ width: size * 0.28, height: size * 0.28 }} />
+          </div>
+        )}
+        {onUploadPhoto && (
+          <input ref={photoRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
+        )}
+      </button>
+
+      {/* Remove photo button — only in edit mode when there's a photo */}
+      {editMode && hasPhoto && onRemovePhoto && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onRemovePhoto(); }}
+          title="Remove photo"
+          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center shadow hover:bg-destructive/80 transition-colors z-10">
+          <X className="w-2.5 h-2.5" />
+        </button>
       )}
-      {/* View overlay */}
-      {!editMode && hasPhoto && onExpand && (
-        <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
-          <ZoomIn className="text-white" style={{ width: size * 0.28, height: size * 0.28 }} />
-        </div>
-      )}
-      {onUploadPhoto && (
-        <input ref={photoRef} type="file" accept="image/*" className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) onUploadPhoto(f); e.target.value = ''; }} />
-      )}
-    </button>
+    </div>
   );
 }
 
@@ -200,7 +214,7 @@ function Avatar({
 
 function CardFace({
   node, depth, editMode = false, isDragging = false, isOver = false,
-  onEdit, onDelete, onAddChild, onUploadPhoto, onExpandPhoto,
+  onEdit, onDelete, onAddChild, onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   depth: number;
@@ -211,6 +225,7 @@ function CardFace({
   onDelete?: () => void;
   onAddChild?: () => void;
   onUploadPhoto?: (f: File) => void;
+  onRemovePhoto?: () => void;
   onExpandPhoto?: () => void;
 }) {
   const empty = !node.name.trim();
@@ -267,6 +282,7 @@ function CardFace({
             size={depth === 0 ? 64 : 52}
             editMode={editMode}
             onUploadPhoto={onUploadPhoto}
+            onRemovePhoto={onRemovePhoto}
             onExpand={onExpandPhoto}
           />
         </div>
@@ -316,7 +332,7 @@ function CardFace({
 
 function DndNode({
   node, depth, allNodes, editMode, activeId, overId,
-  onEdit, onDelete, onAddChild, onUploadPhoto, onExpandPhoto,
+  onEdit, onDelete, onAddChild, onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   depth: number;
@@ -328,6 +344,7 @@ function DndNode({
   onDelete: () => void;
   onAddChild: () => void;
   onUploadPhoto: (f: File) => void;
+  onRemovePhoto: () => void;
   onExpandPhoto: () => void;
 }) {
   const desc = useMemo(
@@ -359,6 +376,7 @@ function DndNode({
         onDelete={onDelete}
         onAddChild={onAddChild}
         onUploadPhoto={onUploadPhoto}
+        onRemovePhoto={onRemovePhoto}
         onExpandPhoto={onExpandPhoto}
       />
     </div>
@@ -369,7 +387,7 @@ function DndNode({
 
 function OrgTree({
   node, allNodes, depth, editMode, activeId, overId,
-  onEdit, onDelete, onAddChild, onUploadPhoto, onExpandPhoto,
+  onEdit, onDelete, onAddChild, onUploadPhoto, onRemovePhoto, onExpandPhoto,
 }: {
   node: OrgNode;
   allNodes: OrgNode[];
@@ -381,6 +399,7 @@ function OrgTree({
   onDelete: (n: OrgNode) => void;
   onAddChild: (parentId: string) => void;
   onUploadPhoto: (node: OrgNode, f: File) => void;
+  onRemovePhoto: (node: OrgNode) => void;
   onExpandPhoto: (node: OrgNode) => void;
 }) {
   const children = allNodes.filter(n => n.parentId === node.id);
@@ -398,6 +417,7 @@ function OrgTree({
         onDelete={() => onDelete(node)}
         onAddChild={() => onAddChild(node.id)}
         onUploadPhoto={f => onUploadPhoto(node, f)}
+        onRemovePhoto={() => onRemovePhoto(node)}
         onExpandPhoto={() => onExpandPhoto(node)}
       />
       {children.length > 0 && (
@@ -415,6 +435,7 @@ function OrgTree({
                 onDelete={onDelete}
                 onAddChild={onAddChild}
                 onUploadPhoto={onUploadPhoto}
+                onRemovePhoto={onRemovePhoto}
                 onExpandPhoto={onExpandPhoto}
               />
             </div>
@@ -615,6 +636,12 @@ export function OrgChartSection({ bank }: { bank: any }) {
     setNodes(next); save(next);
   };
 
+  /* ── remove photo ── */
+  const handleRemovePhoto = (node: OrgNode) => {
+    const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: null } : n);
+    setNodes(next); save(next);
+  };
+
   /* ── photo ── */
   const handleUploadPhoto = (node: OrgNode, file: File) => {
     const reader = new FileReader();
@@ -701,6 +728,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
                       onDelete={handleDelete}
                       onAddChild={parentId => setDialog({ open: true, initial: { parentId } })}
                       onUploadPhoto={handleUploadPhoto}
+                      onRemovePhoto={handleRemovePhoto}
                       onExpandPhoto={n => setLightbox(n)}
                     />
                   ))}

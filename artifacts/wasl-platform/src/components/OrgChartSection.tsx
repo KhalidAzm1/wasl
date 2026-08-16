@@ -1,17 +1,10 @@
 /**
  * OrgChartSection — Lucidchart-style interactive org chart
  *
- * Cards:
- *   depth 0  → bg-card  +  ring-primary (root / CEO)
- *   depth 1  → bg-primary  text-primary-foreground
- *   depth 2+ → bg-primary/15  border-primary/30
- *
- * Interactions:
- *   • ✏ Edit button inside card (always visible, top-right)
- *   • 🗑 Delete button inside card (always visible, top-right)
- *   • ➕ Add-child button inside card (always visible, bottom-center)
- *   • Drag entire card → drop ON another card → reparent
- *   • Drag to grey "Root" banner (visible while dragging) → make root
+ * Modes:
+ *   View mode  (default) — cards are read-only, no buttons visible
+ *   Edit mode  (pencil icon in header) — edit/delete/add-child buttons appear,
+ *              drag-to-reparent is enabled
  */
 
 import React, {
@@ -37,7 +30,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import {
   Plus, Pencil, Trash2, Loader2, Network, Camera,
-  GripVertical, ArrowUpToLine,
+  GripVertical, ArrowUpToLine, Lock,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════ types ══════ */
@@ -59,7 +52,6 @@ const EMPTY_NODE: Omit<OrgNode, 'id'> = {
 
 const ROOT_DROP_ID = '__root__';
 
-/* ─── default 6-node template ─────────────────────────────────────────── */
 const DEFAULT_NODES: OrgNode[] = [
   { id: 'def-1', name: '', title: '', department: '', parentId: null },
   { id: 'def-2', name: '', title: '', department: '', parentId: 'def-1' },
@@ -126,13 +118,13 @@ function Avatar({ node, size }: { node: OrgNode; size: number }) {
 
 /* ═══════════════════════════════════════════════════════════ card face ══ */
 
-/** Pure visual card — no DnD wiring, used in DragOverlay too */
 function CardFace({
-  node, depth, isDragging = false, isOver = false,
+  node, depth, editMode = false, isDragging = false, isOver = false,
   onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
   depth: number;
+  editMode?: boolean;
   isDragging?: boolean;
   isOver?: boolean;
   onEdit?: () => void;
@@ -143,63 +135,63 @@ function CardFace({
   const photoRef = useRef<HTMLInputElement>(null);
   const empty = !node.name.trim();
 
-  // depth-based background
   const cardCls = cn(
-    'relative w-full rounded-xl border transition-all',
+    'relative w-full rounded-xl border transition-all select-none',
     depth === 0 && 'bg-card border-primary/40 ring-2 ring-primary/30 shadow-md',
     depth === 1 && 'bg-primary border-primary shadow-md',
     depth >= 2 && 'bg-primary/10 border-primary/25 shadow-sm',
     isDragging && 'opacity-0 pointer-events-none',
     isOver && !isDragging && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.03]',
     empty && depth !== 1 && 'border-dashed border-foreground/25',
+    editMode && 'cursor-grab active:cursor-grabbing',
+    !editMode && 'cursor-default',
   );
 
-  const nameCls   = cn('text-[13px] font-bold leading-snug', depth === 1 ? 'text-primary-foreground' : 'text-foreground');
-  const titleCls  = cn('text-[11px] mt-0.5', depth === 1 ? 'text-primary-foreground/70' : 'text-muted-foreground');
-  const deptCls   = cn('text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full',
-    depth === 1
-      ? 'bg-white/20 text-primary-foreground'
-      : 'bg-primary/10 text-primary');
-  const btnBase   = cn('w-6 h-6 rounded-md flex items-center justify-center transition-colors');
-  const editBtn   = cn(btnBase,
-    depth === 1
-      ? 'text-primary-foreground/60 hover:text-primary-foreground hover:bg-white/20'
-      : 'text-muted-foreground hover:text-primary hover:bg-primary/10');
-  const delBtn    = cn(btnBase,
-    depth === 1
-      ? 'text-primary-foreground/60 hover:text-red-300 hover:bg-red-500/20'
-      : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10');
+  const nameCls  = cn('text-[13px] font-bold leading-snug', depth === 1 ? 'text-primary-foreground' : 'text-foreground');
+  const titleCls = cn('text-[11px] mt-0.5', depth === 1 ? 'text-primary-foreground/70' : 'text-muted-foreground');
+  const deptCls  = cn('text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full',
+    depth === 1 ? 'bg-white/20 text-primary-foreground' : 'bg-primary/10 text-primary');
+  const btnBase  = 'w-6 h-6 rounded-md flex items-center justify-center transition-colors';
+  const editBtn  = cn(btnBase, depth === 1
+    ? 'text-primary-foreground/60 hover:text-primary-foreground hover:bg-white/20'
+    : 'text-muted-foreground hover:text-primary hover:bg-primary/10');
+  const delBtn   = cn(btnBase, depth === 1
+    ? 'text-primary-foreground/60 hover:text-red-300 hover:bg-red-500/20'
+    : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10');
 
   return (
     <div className={cardCls} style={{ width: 164 }}>
 
-      {/* ── top strip: grip  +  edit/delete ── */}
-      <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2 pt-2">
-        {/* drag grip — rendered here so the parent can attach listeners */}
-        <div className={cn('drag-grip cursor-grab active:cursor-grabbing',
-          depth === 1 ? 'text-primary-foreground/40' : 'text-foreground/25')}>
-          <GripVertical className="w-3.5 h-3.5" />
+      {/* top-bar: grip (edit only) + action buttons (edit only) */}
+      {editMode && (
+        <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2 pt-2">
+          <div className={cn('drag-grip', depth === 1 ? 'text-primary-foreground/40' : 'text-foreground/25')}>
+            <GripVertical className="w-3.5 h-3.5" />
+          </div>
+          <div className="flex gap-1">
+            {onEdit && (
+              <button onClick={e => { e.stopPropagation(); onEdit(); }} title="Edit" className={editBtn}>
+                <Pencil className="w-3 h-3" />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={e => { e.stopPropagation(); onDelete(); }} title="Delete" className={delBtn}>
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex gap-1">
-          {onEdit && (
-            <button onClick={e => { e.stopPropagation(); onEdit(); }} title="تعديل" className={editBtn}>
-              <Pencil className="w-3 h-3" />
-            </button>
-          )}
-          {onDelete && (
-            <button onClick={e => { e.stopPropagation(); onDelete(); }} title="حذف" className={delBtn}>
-              <Trash2 className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
-      {/* ── avatar ── */}
-      <div className="flex justify-center mt-7 mb-2">
-        <button className="relative group/av rounded-full" title="رفع صورة"
-          onClick={e => { e.stopPropagation(); onUploadPhoto && photoRef.current?.click(); }}>
+      {/* avatar */}
+      <div className={cn('flex justify-center mb-2', editMode ? 'mt-7' : 'mt-4')}>
+        <button
+          className="relative group/av rounded-full"
+          title={editMode ? 'Upload photo' : undefined}
+          disabled={!editMode}
+          onClick={e => { e.stopPropagation(); editMode && onUploadPhoto && photoRef.current?.click(); }}>
           <Avatar node={node} size={depth === 0 ? 64 : 54} />
-          {onUploadPhoto && !empty && (
+          {editMode && onUploadPhoto && !empty && (
             <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
               <Camera className="w-3.5 h-3.5 text-white" />
             </div>
@@ -211,16 +203,22 @@ function CardFace({
         )}
       </div>
 
-      {/* ── text ── */}
+      {/* text content */}
       <div className="px-3 pb-3 text-center">
         {empty ? (
-          <button onClick={e => { e.stopPropagation(); onEdit?.(); }}
-            className={cn('text-[11px] font-medium border border-dashed rounded-lg px-3 py-1 w-full transition-colors',
-              depth === 1
-                ? 'border-primary-foreground/30 text-primary-foreground/50 hover:text-primary-foreground'
-                : 'border-foreground/20 text-muted-foreground hover:text-primary')}>
-            + أضف اسماً
-          </button>
+          editMode ? (
+            <button onClick={e => { e.stopPropagation(); onEdit?.(); }}
+              className={cn('text-[11px] font-medium border border-dashed rounded-lg px-3 py-1 w-full transition-colors',
+                depth === 1
+                  ? 'border-primary-foreground/30 text-primary-foreground/50 hover:text-primary-foreground'
+                  : 'border-foreground/20 text-muted-foreground hover:text-primary')}>
+              + Add name
+            </button>
+          ) : (
+            <p className={cn('text-[11px]', depth === 1 ? 'text-primary-foreground/40' : 'text-foreground/30')}>
+              —
+            </p>
+          )
         ) : (
           <>
             <p className={nameCls}>{node.name}</p>
@@ -230,18 +228,18 @@ function CardFace({
         )}
       </div>
 
-      {/* ── add-child button ── */}
-      {onAddChild && (
+      {/* add-child button — edit mode only */}
+      {editMode && onAddChild && (
         <div className="flex justify-center pb-2">
           <button
             onClick={e => { e.stopPropagation(); onAddChild(); }}
-            title="إضافة تابع مباشر"
+            title="Add direct report"
             className={cn('flex items-center gap-0.5 text-[10px] font-medium rounded-full px-2 py-0.5 transition-colors',
               depth === 1
                 ? 'text-primary-foreground/50 hover:text-primary-foreground hover:bg-white/10'
                 : 'text-muted-foreground hover:text-primary hover:bg-primary/10')}>
             <Plus className="w-2.5 h-2.5" />
-            إضافة تابع
+            Add report
           </button>
         </div>
       )}
@@ -249,15 +247,16 @@ function CardFace({
   );
 }
 
-/* ═══════════════════════════════════════════════════════ draggable node ══ */
+/* ═══════════════════════════════════════════════════ draggable node ═════ */
 
 function DndNode({
-  node, depth, allNodes, activeId, overId,
+  node, depth, allNodes, editMode, activeId, overId,
   onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
   depth: number;
   allNodes: OrgNode[];
+  editMode: boolean;
   activeId: string | null;
   overId: string | null;
   onEdit: () => void;
@@ -265,31 +264,29 @@ function DndNode({
   onAddChild: () => void;
   onUploadPhoto: (f: File) => void;
 }) {
-  const desc = useMemo(() => activeId ? descendants(activeId, allNodes) : new Set<string>(), [activeId, allNodes]);
+  const desc = useMemo(
+    () => activeId ? descendants(activeId, allNodes) : new Set<string>(),
+    [activeId, allNodes],
+  );
 
-  const {
-    attributes, listeners,
-    setNodeRef: setDrag,
-    isDragging,
-  } = useDraggable({ id: node.id });
+  const { attributes, listeners, setNodeRef: setDrag, isDragging } = useDraggable({
+    id: node.id,
+    disabled: !editMode,
+  });
+  const { setNodeRef: setDrop, isOver: rawIsOver } = useDroppable({
+    id: node.id,
+    disabled: !editMode,
+  });
 
-  const {
-    setNodeRef: setDrop,
-    isOver: rawIsOver,
-  } = useDroppable({ id: node.id });
-
-  // only highlight if this node is NOT a descendant of the dragged node
   const isOver = rawIsOver && !desc.has(node.id) && node.id !== activeId;
-
   const ref = (el: HTMLElement | null) => { setDrag(el); setDrop(el); };
 
   return (
-    <div ref={ref} style={{ touchAction: 'none' }}
-      {...attributes} {...listeners}
-      className="cursor-grab active:cursor-grabbing">
+    <div ref={ref} style={{ touchAction: 'none' }} {...attributes} {...(editMode ? listeners : {})}>
       <CardFace
         node={node}
         depth={depth}
+        editMode={editMode}
         isDragging={isDragging}
         isOver={isOver}
         onEdit={onEdit}
@@ -301,15 +298,16 @@ function DndNode({
   );
 }
 
-/* ═══════════════════════════════════════════════════════ recursive tree ══ */
+/* ═══════════════════════════════════════════════════ recursive tree ═════ */
 
 function OrgTree({
-  node, allNodes, depth, activeId, overId,
+  node, allNodes, depth, editMode, activeId, overId,
   onEdit, onDelete, onAddChild, onUploadPhoto,
 }: {
   node: OrgNode;
   allNodes: OrgNode[];
   depth: number;
+  editMode: boolean;
   activeId: string | null;
   overId: string | null;
   onEdit: (n: OrgNode) => void;
@@ -325,6 +323,7 @@ function OrgTree({
         node={node}
         depth={depth}
         allNodes={allNodes}
+        editMode={editMode}
         activeId={activeId}
         overId={overId}
         onEdit={() => onEdit(node)}
@@ -340,6 +339,7 @@ function OrgTree({
                 node={child}
                 allNodes={allNodes}
                 depth={depth + 1}
+                editMode={editMode}
                 activeId={activeId}
                 overId={overId}
                 onEdit={onEdit}
@@ -355,7 +355,7 @@ function OrgTree({
   );
 }
 
-/* ═══════════════════════════════════════════════════════ root drop zone ══ */
+/* ═══════════════════════════════════════════════════ root drop zone ═════ */
 
 function RootDropZone({ visible }: { visible: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: ROOT_DROP_ID });
@@ -369,12 +369,12 @@ function RootDropZone({ visible }: { visible: boolean }) {
           : 'border-foreground/15 text-foreground/30',
       )}>
       <ArrowUpToLine className="w-4 h-4" />
-      أسقط هنا لجعله مستوى أعلى
+      Drop here to make top level
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════ edit dialog ════ */
+/* ═══════════════════════════════════════════════════ edit dialog ═════════ */
 
 function NodeDialog({
   open, onClose, initial, allNodes, onSave, saving,
@@ -410,39 +410,39 @@ function NodeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="w-4 h-4 text-primary" />
-            {initial.id ? 'تعديل الشخص' : 'إضافة شخص جديد'}
+            {initial.id ? 'Edit Person' : 'Add New Person'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="grid grid-cols-2 gap-3">
-            {field('name',       'الاسم *',           'أحمد العمري')}
-            {field('title',      'المسمى الوظيفي',    'مدير تنفيذي')}
-            {field('department', 'القسم / الإدارة',   'العمليات')}
-            {field('phone',      'الجوال',            '+966 5x', 'ltr')}
+            {field('name',       'Full Name *',   'Ahmed Al-Omari')}
+            {field('title',      'Job Title',     'Executive Director')}
+            {field('department', 'Department',    'Operations')}
+            {field('phone',      'Mobile',        '+966 5x', 'ltr')}
           </div>
-          {field('email', 'البريد الإلكتروني', 'name@bank.com', 'ltr')}
+          {field('email', 'Email', 'name@bank.com', 'ltr')}
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-              يتبع لـ (المدير المباشر)
+              Reports To
             </label>
             <select value={form.parentId ?? ''}
               onChange={e => setForm(f => ({ ...f, parentId: e.target.value || null }))}
               className="w-full h-9 rounded-md border border-input bg-background text-sm px-2 text-foreground outline-none focus:ring-2 focus:ring-primary/30">
-              <option value="">— مستوى أعلى (بدون مدير) —</option>
+              <option value="">— Top level (no manager) —</option>
               {parentOpts.map(n => (
                 <option key={n.id} value={n.id}>
-                  {n.name || '(فارغ)'}{n.title ? ` · ${n.title}` : ''}
+                  {n.name || '(empty)'}{n.title ? ` · ${n.title}` : ''}
                 </option>
               ))}
             </select>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={onClose}>إلغاء</Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" disabled={saving}
             onClick={() => onSave({ ...form, id: initial.id } as any)}>
             {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-            حفظ
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -450,16 +450,17 @@ function NodeDialog({
   );
 }
 
-/* ═══════════════════════════════════════════════════════ main section ═══ */
+/* ═══════════════════════════════════════════════════ main section ════════ */
 
 export function OrgChartSection({ bank }: { bank: any }) {
   const isFirst = (bank.orgChart ?? []).length === 0;
   const [nodes, setNodes] = useState<OrgNode[]>(() =>
     isFirst ? DEFAULT_NODES : (bank.orgChart ?? []),
   );
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [overId,   setOverId]   = useState<string | null>(null);
-  const [dialog,   setDialog]   = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
+  const [editMode, setEditMode]   = useState(false);
+  const [activeId, setActiveId]   = useState<string | null>(null);
+  const [overId,   setOverId]     = useState<string | null>(null);
+  const [dialog,   setDialog]     = useState<{ open: boolean; initial: Partial<OrgNode> & { id?: string } } | null>(null);
 
   const queryClient = useQueryClient();
   const { toast }   = useToast();
@@ -500,11 +501,11 @@ export function OrgChartSection({ bank }: { bank: any }) {
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) });
         opts?.onSuccess?.();
       },
-      onError: () => toast({ title: 'فشل الحفظ، حاول مجدداً', variant: 'destructive' }),
+      onError: () => toast({ title: 'Failed to save. Please try again.', variant: 'destructive' }),
     });
   }, [bank, updateBank, queryClient, toast]);
 
-  /* ── DnD handlers ── */
+  /* ── DnD ── */
   const handleDragStart = ({ active }: DragStartEvent) => setActiveId(String(active.id));
   const handleDragOver  = ({ over }: DragOverEvent)    => setOverId(over ? String(over.id) : null);
 
@@ -512,24 +513,17 @@ export function OrgChartSection({ bank }: { bank: any }) {
     setActiveId(null);
     setOverId(null);
     if (!over) return;
-
     const draggedId = String(active.id);
     const targetId  = String(over.id);
     if (draggedId === targetId) return;
 
     if (targetId === ROOT_DROP_ID) {
       const next = nodes.map(n => n.id === draggedId ? { ...n, parentId: null } : n);
-      setNodes(next);
-      save(next);
-      return;
+      setNodes(next); save(next); return;
     }
-
-    // prevent cycles
     if (descendants(draggedId, nodes).has(targetId)) return;
-
     const next = nodes.map(n => n.id === draggedId ? { ...n, parentId: targetId } : n);
-    setNodes(next);
-    save(next);
+    setNodes(next); save(next);
   };
 
   /* ── dialog save ── */
@@ -550,22 +544,23 @@ export function OrgChartSection({ bank }: { bank: any }) {
     const next = nodes
       .filter(n => n.id !== node.id)
       .map(n => n.parentId === node.id ? { ...n, parentId: node.parentId ?? null } : n);
-    setNodes(next);
-    save(next);
+    setNodes(next); save(next);
   };
 
-  /* ── photo upload ── */
+  /* ── photo ── */
   const handleUploadPhoto = (node: OrgNode, file: File) => {
     const reader = new FileReader();
     reader.onload = e => {
-      uploadPhoto.mutate({ id: bank.id, nodeId: node.id, data: { dataUrl: e.target?.result as string } }, {
-        onSuccess: (res: any) => {
-          const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: res?.photoUrl ?? null } : n);
-          setNodes(next);
-          save(next);
+      uploadPhoto.mutate(
+        { id: bank.id, nodeId: node.id, data: { dataUrl: e.target?.result as string } },
+        {
+          onSuccess: (res: any) => {
+            const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: res?.photoUrl ?? null } : n);
+            setNodes(next); save(next);
+          },
+          onError: () => toast({ title: 'Photo upload failed. Please try again.', variant: 'destructive' }),
         },
-        onError: () => toast({ title: 'فشل رفع الصورة', variant: 'destructive' }),
-      });
+      );
     };
     reader.readAsDataURL(file);
   };
@@ -576,22 +571,37 @@ export function OrgChartSection({ bank }: { bank: any }) {
   return (
     <>
       <Card>
-        {/* Header */}
         <CardHeader className="pb-3 border-b border-border">
           <CardTitle className="flex items-center gap-2 text-base">
             <Network className="w-4 h-4 text-primary" />
-            الهيكل التنظيمي
+            Organizational Chart
             {(updateBank.isPending || uploadPhoto.isPending) && (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />
             )}
-            <Button size="sm" variant="outline" className="ml-auto h-7 text-xs gap-1.5"
-              onClick={() => setDialog({ open: true, initial: { parentId: null } })}>
-              <Plus className="w-3 h-3" /> إضافة شخص
-            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              {editMode && (
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+                  onClick={() => setDialog({ open: true, initial: { parentId: null } })}>
+                  <Plus className="w-3 h-3" /> Add Person
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant={editMode ? 'default' : 'ghost'}
+                className={cn('h-7 w-7 p-0', editMode && 'bg-primary text-primary-foreground')}
+                title={editMode ? 'Lock (view only)' : 'Edit chart'}
+                onClick={() => setEditMode(v => !v)}>
+                {editMode ? <Lock className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
           </CardTitle>
+          {editMode && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Drag cards to rearrange · Click ✏ on a card to edit · Click 🔒 when done
+            </p>
+          )}
         </CardHeader>
 
-        {/* Chart canvas */}
         <CardContent className="p-0">
           <DndContext
             sensors={sensors}
@@ -606,10 +616,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
                 backgroundSize: '22px 22px',
               }}>
               <div className="min-w-fit px-12 py-8">
-
-                {/* Root drop zone — only visible while dragging */}
-                <RootDropZone visible={!!activeId} />
-
+                <RootDropZone visible={editMode && !!activeId} />
                 <div className="flex gap-16 items-start justify-center">
                   {roots.map(root => (
                     <OrgTree
@@ -617,6 +624,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
                       node={root}
                       allNodes={nodes}
                       depth={0}
+                      editMode={editMode}
                       activeId={activeId}
                       overId={overId}
                       onEdit={n => setDialog({ open: true, initial: { ...n } })}
@@ -629,11 +637,10 @@ export function OrgChartSection({ bank }: { bank: any }) {
               </div>
             </div>
 
-            {/* Ghost card while dragging */}
             <DragOverlay dropAnimation={null}>
               {activeNode && (
                 <div className="rotate-1 opacity-90 drop-shadow-2xl pointer-events-none">
-                  <CardFace node={activeNode} depth={nodes.find(n => n.id === activeNode.id) ? 1 : 0} />
+                  <CardFace node={activeNode} depth={1} editMode />
                 </div>
               )}
             </DragOverlay>

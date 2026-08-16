@@ -58,7 +58,7 @@ export async function uploadToStorage(
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
     contentType,
-    upsert: false,
+    upsert: true,
   });
   if (error) {
     throw new Error(`Storage upload failed: ${error.message}`);

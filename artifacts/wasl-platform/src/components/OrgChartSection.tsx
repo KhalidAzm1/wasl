@@ -132,8 +132,8 @@ function Avatar({
     }
     if (empty) {
       return (
-        <div style={{ width: size, height: size, background: 'rgba(255,255,255,0.08)', border: '1.5px dashed rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Network style={{ width: size * 0.4, height: size * 0.4, color: 'rgba(255,255,255,0.25)' }} />
+        <div style={{ width: size, height: size, background: '#f3f4f6', border: '1.5px dashed #d1d5db', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Network style={{ width: size * 0.4, height: size * 0.4, color: '#9ca3af' }} />
         </div>
       );
     }
@@ -158,8 +158,8 @@ function Avatar({
         style={{
           borderRadius: '50%',
           display: 'block',
-          border: hasPhoto ? '2px solid rgba(255,255,255,0.2)' : 'none',
-          boxShadow: hasPhoto ? '0 4px 16px rgba(0,0,0,0.4)' : 'none',
+          border: hasPhoto ? '2px solid #e5e7eb' : 'none',
+          boxShadow: hasPhoto ? '0 2px 8px rgba(0,0,0,0.12)' : 'none',
           cursor: canInteract ? 'pointer' : 'default',
         }}
         className="relative group/av"
@@ -199,29 +199,31 @@ function Avatar({
 
 /* ════════════════════════════════════════════════════════ card face ═════ */
 
-// Shared glass card inline styles
-const glassCard = {
-  background: 'rgba(255,255,255,0.07)',
-  backdropFilter: 'blur(20px) saturate(150%)',
-  WebkitBackdropFilter: 'blur(20px) saturate(150%)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-  borderRadius: 20,
+// Depth accent colours for the top strip
+const DEPTH_ACCENT = ['#7c3aed', '#4f46e5', '#0284c7', '#0d9488', '#d97706'];
+const depthAccent = (d: number) => DEPTH_ACCENT[Math.min(d, DEPTH_ACCENT.length - 1)];
+
+// Light-mode card base styles
+const lightCard: React.CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid #e5e7eb',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
+  borderRadius: 14,
+  overflow: 'hidden',
 };
 
-const glassCardRoot = {
-  background: 'rgba(109,40,217,0.18)',
-  backdropFilter: 'blur(24px) saturate(160%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-  border: '1px solid rgba(139,92,246,0.4)',
-  boxShadow: '0 0 48px rgba(109,40,217,0.25), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)',
-  borderRadius: 20,
+const lightCardRoot: React.CSSProperties = {
+  background: 'linear-gradient(150deg, #faf5ff 0%, #ffffff 60%)',
+  border: '1.5px solid #ddd6fe',
+  boxShadow: '0 0 0 4px rgba(124,58,237,0.07), 0 6px 24px rgba(109,40,217,0.10)',
+  borderRadius: 14,
+  overflow: 'hidden',
 };
 
-const glassCardOver = {
-  border: '1.5px solid rgba(139,92,246,0.7)',
-  boxShadow: '0 0 32px rgba(139,92,246,0.4), 0 8px 32px rgba(0,0,0,0.4)',
-  transform: 'scale(1.04)',
+const lightCardOver: React.CSSProperties = {
+  border: '1.5px solid #7c3aed',
+  boxShadow: '0 0 0 3px rgba(124,58,237,0.15), 0 6px 20px rgba(109,40,217,0.12)',
+  transform: 'scale(1.03)',
 };
 
 function CardFace({
@@ -238,16 +240,18 @@ function CardFace({
 }) {
   const empty = !node.name.trim();
 
-  const baseStyle = depth === 0 ? glassCardRoot : glassCard;
-  const cardStyle = {
+  const baseStyle = depth === 0 ? lightCardRoot : lightCard;
+  const cardStyle: React.CSSProperties = {
     ...baseStyle,
-    ...(isOver && !isDragging ? glassCardOver : {}),
-    ...(isDragging ? { opacity: 0, pointerEvents: 'none' as const } : {}),
-    width: 164,
+    ...(isOver && !isDragging ? lightCardOver : {}),
+    ...(isDragging ? { opacity: 0, pointerEvents: 'none' } : {}),
+    width: 176,
     transition: 'all 0.2s ease',
     cursor: editMode ? 'grab' : 'default',
-    userSelect: 'none' as const,
+    userSelect: 'none',
   };
+
+  const accent = depthAccent(depth);
 
   /* Sibling button */
   const siblingBtn = (side: 'left' | 'right') => (
@@ -258,75 +262,68 @@ function CardFace({
       title={side === 'left' ? 'Add sibling to the left' : 'Add sibling to the right'}
       style={{
         position: 'absolute',
-        top: 38,
-        ...(side === 'left' ? { left: -22 } : { right: -22 }),
+        top: 36,
+        ...(side === 'left' ? { left: -20 } : { right: -20 }),
         zIndex: 20,
-        width: 24, height: 24,
+        width: 22, height: 22,
         borderRadius: '50%',
-        background: 'rgba(255,255,255,0.06)',
-        backdropFilter: 'blur(8px)',
-        border: '1px dashed rgba(255,255,255,0.25)',
+        background: '#ffffff',
+        border: '1.5px dashed #d1d5db',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'rgba(255,255,255,0.45)',
+        color: '#9ca3af',
         cursor: 'pointer',
         transition: 'all 0.15s',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.7)';
-        (e.currentTarget as HTMLElement).style.color = '#a78bfa';
-        (e.currentTarget as HTMLElement).style.background = 'rgba(109,40,217,0.15)';
+        (e.currentTarget as HTMLElement).style.borderColor = accent;
+        (e.currentTarget as HTMLElement).style.color = accent;
+        (e.currentTarget as HTMLElement).style.background = `${accent}10`;
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.25)';
-        (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)';
-        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)';
+        (e.currentTarget as HTMLElement).style.borderColor = '#d1d5db';
+        (e.currentTarget as HTMLElement).style.color = '#9ca3af';
+        (e.currentTarget as HTMLElement).style.background = '#ffffff';
       }}
     >
-      <Plus style={{ width: 11, height: 11 }} />
+      <Plus style={{ width: 10, height: 10 }} />
     </button>
   );
 
   return (
-    <div className="relative flex flex-col items-center gap-1" style={{ width: 164 }}>
+    <div className="relative flex flex-col items-center gap-1.5" style={{ width: 176 }}>
       {/* Sibling buttons */}
       {editMode && onAddSibling && siblingBtn('left')}
       {editMode && onAddSibling && siblingBtn('right')}
 
       {/* Card */}
       <div style={cardStyle}>
-        {/* root gradient top strip */}
-        {depth === 0 && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-            background: 'linear-gradient(90deg, #7c3aed, #818cf8, #7c3aed)',
-            borderRadius: '20px 20px 0 0',
-          }} />
-        )}
+        {/* coloured top accent strip */}
+        <div style={{ height: 4, background: `linear-gradient(90deg, ${accent}, ${accent}99)` }} />
 
         {/* top-bar: grip + edit/delete */}
         {editMode && (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 8px 0' }}>
-            <GripVertical style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.2)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 0' }}>
+            <GripVertical style={{ width: 13, height: 13, color: '#d1d5db' }} />
             <div style={{ display: 'flex', gap: 2 }}>
               {onEdit && (
                 <button
                   onClick={e => { e.stopPropagation(); onEdit(); }}
                   title="Edit"
-                  style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#a78bfa'; (e.currentTarget as HTMLElement).style.background = 'rgba(109,40,217,0.25)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-                  <Pencil style={{ width: 11, height: 11 }} />
+                  style={{ width: 22, height: 22, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#7c3aed'; (e.currentTarget as HTMLElement).style.background = '#ede9fe'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                  <Pencil style={{ width: 10, height: 10 }} />
                 </button>
               )}
               {onDelete && (
                 <button
                   onClick={e => { e.stopPropagation(); onDelete(); }}
                   title="Delete"
-                  style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f87171'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-                  <Trash2 style={{ width: 11, height: 11 }} />
+                  style={{ width: 22, height: 22, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; (e.currentTarget as HTMLElement).style.background = '#fee2e2'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                  <Trash2 style={{ width: 10, height: 10 }} />
                 </button>
               )}
             </div>
@@ -334,10 +331,10 @@ function CardFace({
         )}
 
         {/* avatar */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: editMode ? 28 : depth === 0 ? 18 : 14, marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: editMode ? 8 : 14, marginBottom: 10 }}>
           <Avatar
             node={node}
-            size={depth === 0 ? 64 : 52}
+            size={depth === 0 ? 60 : 48}
             editMode={editMode}
             onUploadPhoto={onUploadPhoto}
             onRemovePhoto={onRemovePhoto}
@@ -353,30 +350,30 @@ function CardFace({
                 onClick={e => { e.stopPropagation(); onEdit?.(); }}
                 style={{
                   fontSize: 11, fontWeight: 500,
-                  border: '1px dashed rgba(255,255,255,0.2)',
+                  border: '1px dashed #d1d5db',
                   borderRadius: 8, padding: '4px 12px',
-                  width: '100%', color: 'rgba(255,255,255,0.35)',
-                  background: 'transparent', cursor: 'pointer',
+                  width: '100%', color: '#9ca3af',
+                  background: '#f9fafb', cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}>
                 + Add name
               </button>
             ) : (
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>—</p>
+              <p style={{ fontSize: 11, color: '#d1d5db' }}>—</p>
             )
           ) : (
             <>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.92)', lineHeight: 1.3, marginBottom: 3 }}>{node.name}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
               {node.title && (
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{node.title}</p>
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 5, lineHeight: 1.4 }}>{node.title}</p>
               )}
               {node.department && (
                 <span style={{
                   display: 'inline-block', fontSize: 10, fontWeight: 600,
                   padding: '2px 8px', borderRadius: 99,
-                  background: 'rgba(109,40,217,0.25)',
-                  border: '1px solid rgba(139,92,246,0.3)',
-                  color: '#c4b5fd',
+                  background: `${accent}14`,
+                  border: `1px solid ${accent}30`,
+                  color: accent,
                 }}>
                   {node.department}
                 </span>
@@ -394,12 +391,21 @@ function CardFace({
           style={{
             display: 'flex', alignItems: 'center', gap: 4,
             fontSize: 10, fontWeight: 500,
-            border: '1px dashed rgba(255,255,255,0.15)',
+            border: '1px dashed #d1d5db',
             borderRadius: 99, padding: '3px 12px',
-            color: 'rgba(255,255,255,0.35)',
-            background: 'rgba(255,255,255,0.04)',
-            backdropFilter: 'blur(8px)',
+            color: '#9ca3af',
+            background: '#ffffff',
             cursor: 'pointer', transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.borderColor = accent;
+            (e.currentTarget as HTMLElement).style.color = accent;
+            (e.currentTarget as HTMLElement).style.background = `${accent}08`;
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.borderColor = '#d1d5db';
+            (e.currentTarget as HTMLElement).style.color = '#9ca3af';
+            (e.currentTarget as HTMLElement).style.background = '#ffffff';
           }}>
           <Plus style={{ width: 10, height: 10 }} />
           Add report
@@ -507,11 +513,11 @@ function RootDropZone({ visible }: { visible: boolean }) {
     <div ref={setNodeRef}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        borderRadius: 16, border: `2px dashed ${isOver ? 'rgba(139,92,246,0.8)' : 'rgba(255,255,255,0.15)'}`,
+        borderRadius: 12, border: `2px dashed ${isOver ? '#7c3aed' : '#d1d5db'}`,
         padding: '10px 32px', marginBottom: 24, fontSize: 13, fontWeight: 500,
-        background: isOver ? 'rgba(109,40,217,0.15)' : 'rgba(255,255,255,0.04)',
-        color: isOver ? '#a78bfa' : 'rgba(255,255,255,0.3)',
-        backdropFilter: 'blur(8px)', transition: 'all 0.2s',
+        background: isOver ? '#f5f3ff' : '#f9fafb',
+        color: isOver ? '#7c3aed' : '#9ca3af',
+        transition: 'all 0.2s',
       }}>
       <ArrowUpToLine style={{ width: 15, height: 15 }} />
       Drop here to make top level
@@ -754,17 +760,10 @@ export function OrgChartSection({ bank }: { bank: any }) {
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
-            {/* ── dark glass background ── */}
+            {/* ── light background ── */}
             <div
               className="overflow-x-auto rounded-b-xl"
-              style={{
-                backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(160deg, #0a0f2e 0%, #1a1040 45%, #0a1628 100%)',
-                backgroundSize: '22px 22px, cover',
-              }}>
-              {/* subtle top noise band */}
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.4,
-                background: 'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(109,40,217,0.3), transparent)',
-              }} />
+              style={{ background: 'hsl(var(--muted) / 0.4)' }}>
 
               <div className="min-w-fit px-12 py-8 relative">
                 <RootDropZone visible={editMode && !!activeId} />
@@ -789,7 +788,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
 
             <DragOverlay dropAnimation={null}>
               {activeNode && (
-                <div style={{ transform: 'rotate(2deg)', opacity: 0.9, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))' }}>
+                <div style={{ transform: 'rotate(2deg)', opacity: 0.95, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.18))' }}>
                   <CardFace node={activeNode} depth={1} editMode />
                 </div>
               )}

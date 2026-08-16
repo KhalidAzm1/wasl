@@ -601,15 +601,16 @@ router.put("/banks/:id/responsible-person/:index/photo", requireRole("super_admi
   }
 
   try {
-    await db.execute(sql`
-      UPDATE banks
-      SET responsible_persons = jsonb_set(
-        COALESCE(responsible_persons, '[]'::jsonb),
-        ARRAY[${String(idx)}],
-        COALESCE(responsible_persons->${idx}, '{}'::jsonb) || jsonb_build_object('storagePath', ${storagePath})
-      )
-      WHERE id = ${bankId}
-    `);
+    const [bankRow] = await db.select({ responsiblePersons: banksTable.responsiblePersons })
+      .from(banksTable).where(eq(banksTable.id, bankId));
+    const persons: Array<Record<string, unknown>> = Array.isArray(bankRow?.responsiblePersons)
+      ? (bankRow.responsiblePersons as Array<Record<string, unknown>>).map(p => ({ ...p as object }))
+      : [];
+    while (persons.length <= idx) persons.push({});
+    persons[idx] = { ...persons[idx], storagePath };
+    await db.update(banksTable)
+      .set({ responsiblePersons: persons } as any)
+      .where(eq(banksTable.id, bankId));
   } catch (e: any) {
     req.log.error({ err: e?.message ?? String(e) }, "responsible-person photo DB update failed");
     res.status(500).json({ error: "Photo upload failed", detail: "Could not update person photo in database" });

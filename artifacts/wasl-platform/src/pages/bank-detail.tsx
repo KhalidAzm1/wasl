@@ -1143,7 +1143,6 @@ export default function BankDetail() {
                 </CardContent>
               </Card>
 
-              <OrgChartSection bank={bank} />
             </div>
 
             <div className="space-y-6">
@@ -1201,6 +1200,8 @@ export default function BankDetail() {
               )}
             </div>
           </div>
+
+          <OrgChartSection bank={bank} />
         </TabsContent>
 
         <TabsContent value="products">

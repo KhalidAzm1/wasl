@@ -201,14 +201,14 @@ const DEPTH_ACCENT = ['#7c3aed', '#4f46e5', '#0284c7', '#0d9488', '#d97706'];
 const depthAccent  = (d: number) => DEPTH_ACCENT[Math.min(d, DEPTH_ACCENT.length - 1)];
 
 const lightCard: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: 'var(--card)',
+  border: '1px solid var(--border)',
   boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
   borderRadius: 14,
   overflow: 'hidden',
 };
 const lightCardRoot: React.CSSProperties = {
-  background: 'linear-gradient(150deg, #faf5ff 0%, #ffffff 60%)',
+  background: 'var(--card)',
   border: '1.5px solid #ddd6fe',
   boxShadow: '0 0 0 4px rgba(124,58,237,0.07), 0 6px 24px rgba(109,40,217,0.10)',
   borderRadius: 14,
@@ -241,9 +241,9 @@ function InlineEditCard({
 
   const base = depth === 0 ? lightCardRoot : lightCard;
   const inputSty: React.CSSProperties = {
-    fontSize: 12, border: '1px solid #e5e7eb', borderRadius: 6,
-    padding: '5px 8px', outline: 'none', width: '100%', color: '#111827',
-    background: '#fafafa', transition: 'border-color 0.15s',
+    fontSize: 12, border: '1px solid var(--border)', borderRadius: 6,
+    padding: '5px 8px', outline: 'none', width: '100%', color: 'var(--foreground)',
+    background: 'var(--muted)', transition: 'border-color 0.15s',
   };
 
   return (
@@ -257,7 +257,7 @@ function InlineEditCard({
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
-            onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
+            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             placeholder="Name *"
             style={{ ...inputSty, fontWeight: 600 }}
           />
@@ -266,7 +266,7 @@ function InlineEditCard({
             onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
-            onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
+            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             placeholder="Job Title"
             style={inputSty}
           />
@@ -275,7 +275,7 @@ function InlineEditCard({
             onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
-            onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
+            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             placeholder="Department"
             style={inputSty}
           />
@@ -284,7 +284,7 @@ function InlineEditCard({
             onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
             onKeyDown={onKey}
             onFocus={e => (e.target.style.borderColor = accent)}
-            onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
+            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             placeholder="Phone"
             dir="ltr"
             style={inputSty}
@@ -293,7 +293,7 @@ function InlineEditCard({
             <button
               onPointerDown={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); onCancel(); }}
-              style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--muted)', color: 'var(--muted-foreground)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
               Cancel
             </button>
             <button
@@ -347,13 +347,13 @@ function CardFace({
         position: 'absolute', top: 36,
         ...(side === 'left' ? { left: -20 } : { right: -20 }),
         zIndex: 20, width: 22, height: 22, borderRadius: '50%',
-        background: '#ffffff', border: '1.5px dashed #d1d5db',
+        background: 'var(--card)', border: '1.5px dashed var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#9ca3af', cursor: 'pointer', transition: 'all 0.15s',
+        color: 'var(--muted-foreground)', cursor: 'pointer', transition: 'all 0.15s',
         boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
       }}
       onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = accent; t.style.color = accent; t.style.background = `${accent}12`; }}
-      onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = '#d1d5db'; t.style.color = '#9ca3af'; t.style.background = '#ffffff'; }}>
+      onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted-foreground)'; t.style.background = 'var(--card)'; }}>
       <Plus style={{ width: 10, height: 10 }} />
     </button>
   );
@@ -370,7 +370,7 @@ function CardFace({
         {/* grip + edit/delete row */}
         {editMode && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 0' }}>
-            <GripVertical style={{ width: 13, height: 13, color: '#d1d5db' }} />
+            <GripVertical style={{ width: 13, height: 13, color: 'var(--border)' }} />
             <div style={{ display: 'flex', gap: 2 }}>
               {onEdit && (
                 <button onClick={e => { e.stopPropagation(); onEdit(); }} title="Edit"
@@ -411,18 +411,18 @@ function CardFace({
               <button
                 onPointerDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onInlineEdit?.(node.id); }}
-                style={{ fontSize: 11, fontWeight: 500, border: '1px dashed #d1d5db', borderRadius: 8, padding: '4px 12px', width: '100%', color: '#9ca3af', background: '#f9fafb', cursor: 'pointer', transition: 'all 0.15s' }}
+                style={{ fontSize: 11, fontWeight: 500, border: '1px dashed var(--border)', borderRadius: 8, padding: '4px 12px', width: '100%', color: 'var(--muted-foreground)', background: 'var(--muted)', cursor: 'pointer', transition: 'all 0.15s' }}
                 onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = accent; t.style.color = accent; }}
-                onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = '#d1d5db'; t.style.color = '#9ca3af'; }}>
+                onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted-foreground)'; }}>
                 + Add name
               </button>
             ) : (
-              <p style={{ fontSize: 11, color: '#d1d5db' }}>—</p>
+              <p style={{ fontSize: 11, color: 'var(--muted-foreground)', opacity: 0.4 }}>—</p>
             )
           ) : (
             <>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
-              {node.title && <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, lineHeight: 1.4 }}>{node.title}</p>}
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--card-foreground)', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
+              {node.title && <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 4, lineHeight: 1.4 }}>{node.title}</p>}
               {node.department && (
                 <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent, marginBottom: 4 }}>
                   {node.department}
@@ -431,13 +431,13 @@ function CardFace({
               {(node.phone || node.email) && (
                 <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
                   {node.phone && (
-                    <span style={{ fontSize: 10, color: '#6b7280', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ fontSize: 10, color: 'var(--muted-foreground)', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Phone style={{ width: 9, height: 9, flexShrink: 0 }} />
                       {node.phone}
                     </span>
                   )}
                   {node.email && (
-                    <span style={{ fontSize: 9, color: '#9ca3af', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3, maxWidth: '100%', overflow: 'hidden' }}>
+                    <span style={{ fontSize: 9, color: 'var(--muted-foreground)', opacity: 0.7, direction: 'ltr', display: 'flex', alignItems: 'center', gap: 3, maxWidth: '100%', overflow: 'hidden' }}>
                       <Mail style={{ width: 9, height: 9, flexShrink: 0 }} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.email}</span>
                     </span>
@@ -455,9 +455,9 @@ function CardFace({
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onAddChild(); }}
           title="Add report"
-          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, border: '1px dashed #d1d5db', borderRadius: 99, padding: '3px 12px', color: '#9ca3af', background: '#ffffff', cursor: 'pointer', transition: 'all 0.15s' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 500, border: '1px dashed var(--border)', borderRadius: 99, padding: '3px 12px', color: 'var(--muted-foreground)', background: 'var(--card)', cursor: 'pointer', transition: 'all 0.15s' }}
           onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = accent; t.style.color = accent; t.style.background = `${accent}08`; }}
-          onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = '#d1d5db'; t.style.color = '#9ca3af'; t.style.background = '#ffffff'; }}>
+          onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted-foreground)'; t.style.background = 'var(--card)'; }}>
           <Plus style={{ width: 10, height: 10 }} />
           Add report
         </button>

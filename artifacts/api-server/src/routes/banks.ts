@@ -603,14 +603,10 @@ router.put("/banks/:id/responsible-person/:index/photo", requireRole("super_admi
   try {
     await db.execute(sql`
       UPDATE banks
-      SET responsible_persons = (
-        SELECT jsonb_agg(
-          CASE WHEN ordinality - 1 = ${idx}
-            THEN elem || jsonb_build_object('storagePath', ${storagePath})
-            ELSE elem
-          END
-        )
-        FROM jsonb_array_elements(COALESCE(responsible_persons, '[]'::jsonb)) WITH ORDINALITY AS t(elem, ordinality)
+      SET responsible_persons = jsonb_set(
+        COALESCE(responsible_persons, '[]'::jsonb),
+        ARRAY[${String(idx)}],
+        COALESCE(responsible_persons->${idx}, '{}'::jsonb) || jsonb_build_object('storagePath', ${storagePath})
       )
       WHERE id = ${bankId}
     `);

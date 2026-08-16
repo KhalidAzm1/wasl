@@ -40,6 +40,7 @@ export const banksTable = pgTable("banks", {
   riskLevel: text("risk_level").notNull(),
   priorityImpact: text("priority_impact").notNull(),
   responsiblePerson: text("responsible_person"),
+  responsiblePersonPhoto: text("responsible_person_photo"),
   relationshipManager: text("relationship_manager"),
   email: text("email"),
   website: text("website"),

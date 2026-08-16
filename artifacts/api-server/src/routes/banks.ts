@@ -112,15 +112,16 @@ async function getProductTypeIds(bankId: string): Promise<number[]> {
   return rows.map((row) => row.productTypeId);
 }
 
-/** Replaces stored logo/hero paths with fresh Supabase signed URLs. */
-async function withSignedImageUrls<T extends { logoUrl: string | null; heroImageUrl: string | null }>(
+/** Replaces stored logo/hero/responsible-photo paths with fresh Supabase signed URLs. */
+async function withSignedImageUrls<T extends { logoUrl: string | null; heroImageUrl: string | null; responsiblePersonPhoto?: string | null }>(
   bank: T,
 ): Promise<T> {
-  const [logoUrl, heroImageUrl] = await Promise.all([
+  const [logoUrl, heroImageUrl, responsiblePersonPhoto] = await Promise.all([
     resolveStoredUrl(bank.logoUrl),
     resolveStoredUrl(bank.heroImageUrl),
+    resolveStoredUrl(bank.responsiblePersonPhoto ?? null),
   ]);
-  return { ...bank, logoUrl, heroImageUrl };
+  return { ...bank, logoUrl, heroImageUrl, responsiblePersonPhoto };
 }
 
 async function syncProductTypes(bankId: string, productTypeIds: number[]): Promise<void> {
@@ -508,6 +509,42 @@ router.put("/banks/:id/logo", requireRole("super_admin", "admin"), requireBankEd
       toPlain(await withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),
     ),
   );
+});
+
+/** PUT /banks/:id/responsible-person-photo — upload / replace the responsible-person avatar */
+router.put("/banks/:id/responsible-person-photo", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
+  const bankId = String(req.params.id);
+  const parsed = SetBankLogoBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const imageError = validateImageDataUrl(parsed.data.dataUrl);
+  if (imageError) { res.status(400).json({ error: imageError }); return; }
+
+  const [existingBank] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
+  if (!existingBank) { res.status(404).json({ error: "Bank not found" }); return; }
+
+  let parsed2: { contentType: string; buffer: Buffer };
+  try { parsed2 = parseDataUrl(parsed.data.dataUrl); } catch (e: any) { res.status(400).json({ error: e.message }); return; }
+
+  const { contentType, buffer } = parsed2;
+  const ext = contentType.replace("image/", "").replace("jpeg", "jpg").replace("svg+xml", "svg");
+  const storagePath = `responsible-person/${bankId}/photo.${ext}`;
+  try {
+    await uploadToStorage(storagePath, buffer, contentType);
+  } catch (e: any) {
+    req.log.error({ storagePath, err: e?.message ?? String(e) }, "responsible-person-photo upload failed");
+    res.status(502).json({ error: "Failed to upload photo — please try again", detail: e?.message }); return;
+  }
+
+  const [bank] = await db
+    .update(banksTable)
+    .set({ responsiblePersonPhoto: storagePath, updatedBy: req.authUser?.name ?? null } as any)
+    .where(eq(banksTable.id, bankId))
+    .returning();
+  if (!bank) { res.status(404).json({ error: "Bank not found" }); return; }
+
+  const photoUrl = await getSignedUrl(storagePath).catch(() => null);
+  res.json({ photoUrl });
 });
 
 router.put("/banks/:id/org-chart-photo/:nodeId", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {

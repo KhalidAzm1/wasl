@@ -40,7 +40,7 @@ import {
   ChevronRight, Building2, LayoutGrid, Calendar, AlertTriangle, 
   CheckSquare, FileText, Plus, Trash2, Edit, ExternalLink, Phone, User, UploadCloud, Paperclip,
   Maximize2, BarChart2, CheckCircle2, Circle, Ban, Clock, Flag, Loader2,
-  GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw, QrCode, Star,
+  GripVertical, SkipForward, Pencil, X, ChevronDown, ChevronUp, RotateCcw, QrCode, Star, Camera,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/lib/authContext';
@@ -601,6 +601,94 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
   );
 }
 
+// ── Responsible-Person Card ────────────────────────────────────────────────────
+function ResponsiblePersonCard({
+  bankId, name, photoUrl, canEdit,
+}: { bankId: string; name: string | null; photoUrl: string | null; canEdit: boolean }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  const initials = (name ?? '').trim()
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      const { supabase } = await import('@/lib/supabaseClient');
+      const { data } = await supabase.auth.getSession();
+      const bearer = data.session?.access_token;
+      if (!bearer) throw new Error('Not authenticated');
+
+      const reader = new FileReader();
+      const dataUrl: string = await new Promise((res, rej) => {
+        reader.onload = e => res(e.target?.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+
+      const r = await fetch(`${import.meta.env.BASE_URL}api/banks/${bankId}/responsible-person-photo`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bearer}` },
+        body: JSON.stringify({ dataUrl }),
+      });
+      if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
+      queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+      toast({ title: 'تم تحديث صورة المسؤول' });
+    } catch (e: any) {
+      toast({ title: 'فشل رفع الصورة', description: e.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  if (!name && !canEdit) return null;
+
+  return (
+    <div className="flex flex-col items-center gap-2 shrink-0">
+      <div className="relative group/rp">
+        {/* Avatar */}
+        <div
+          onClick={() => canEdit && fileRef.current?.click()}
+          className={cn(
+            'w-14 h-14 rounded-full overflow-hidden border-2 border-foreground/10 shadow-lg flex items-center justify-center',
+            canEdit ? 'cursor-pointer' : 'cursor-default',
+          )}
+          title={canEdit ? 'انقر لتغيير صورة المسؤول' : undefined}
+        >
+          {photoUrl ? (
+            <img src={photoUrl} alt={name ?? ''} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary/20 text-primary font-bold text-sm">
+              {initials}
+            </div>
+          )}
+          {canEdit && (
+            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/rp:opacity-100 transition-opacity flex items-center justify-center">
+              {uploading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
+            </div>
+          )}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+        />
+      </div>
+      {name && (
+        <div className="text-center">
+          <p className="text-xs text-foreground/40 uppercase tracking-wide leading-none mb-0.5">المسؤول</p>
+          <p className="text-sm font-medium text-foreground leading-snug max-w-[100px] truncate">{name}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── QR Quick-Update Dialog ─────────────────────────────────────────────────────
 function QRDialog({ bankId, open, onClose }: { bankId: string; open: boolean; onClose: () => void }) {
   const [token, setToken]     = useState<string | null>(null);
@@ -901,6 +989,15 @@ export default function BankDetail() {
           <p className="text-foreground/50 text-lg">{bank.nameEn}</p>
         </div>
 
+        {/* Responsible person chip — top-left corner of the hero card */}
+        {(bank.responsiblePerson || (role === 'admin' || role === 'super_admin')) && (
+          <ResponsiblePersonCard
+            bankId={bank.id}
+            name={bank.responsiblePerson ?? null}
+            photoUrl={(bank as any).responsiblePersonPhoto ?? null}
+            canEdit={role === 'admin' || role === 'super_admin'}
+          />
+        )}
       </div>
 
       <Tabs defaultValue="overview" className="w-full" onValueChange={(tab) => analytics.bankDetailsViewed({ bank_id: bank.id, bank_name_en: bank.nameEn, tab })}>

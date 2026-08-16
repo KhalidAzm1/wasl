@@ -717,7 +717,7 @@ function ResponsiblePersonCard({
               onClick={() => { if (canEdit) { setNameDraft(name ?? ''); setEditingName(true); } }}
               title={canEdit ? 'Click to edit name' : undefined}
             >
-              <p className="text-sm font-medium text-foreground leading-snug max-w-[90px] truncate">
+              <p className="text-sm font-medium text-foreground leading-snug max-w-[110px] break-words text-center">
                 {name || <span className="text-foreground/30 italic text-xs">Add name…</span>}
               </p>
               {canEdit && (

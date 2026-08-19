@@ -210,6 +210,7 @@ function Avatar({
 
 const DEPTH_ACCENT = ['#7c3aed', '#4f46e5', '#0284c7', '#0d9488', '#d97706'];
 const depthAccent  = (d: number) => DEPTH_ACCENT[Math.min(d, DEPTH_ACCENT.length - 1)];
+const ORG_CARD_WIDTH = 118;
 
 const lightCard: React.CSSProperties = {
   background: 'var(--card)',
@@ -342,7 +343,7 @@ function CardFace({
     ...(depth === 0 ? lightCardRoot : lightCard),
     ...(isOver && !isDragging ? lightCardOver : {}),
     ...(isDragging ? { opacity: 0.55, transform: 'scale(0.95) rotate(1.5deg)', boxShadow: '0 12px 32px rgba(0,0,0,0.12)' } : {}),
-    width: 132,
+    width: ORG_CARD_WIDTH,
     transition: isDragging ? 'none' : 'all 0.18s ease',
     cursor: editMode ? (isDragging ? 'grabbing' : 'grab') : 'default',
     userSelect: 'none',
@@ -370,7 +371,7 @@ function CardFace({
   );
 
   return (
-    <div className="relative flex flex-col items-center gap-1.5" style={{ width: 132 }}>
+    <div className="relative flex flex-col items-center gap-1" style={{ width: ORG_CARD_WIDTH }}>
       {editMode && onAddSibling && siblingBtn('left')}
       {editMode && onAddSibling && siblingBtn('right')}
 
@@ -404,10 +405,10 @@ function CardFace({
         )}
 
         {/* avatar */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: editMode ? 8 : 14, marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: editMode ? 6 : 10, marginBottom: 7 }}>
           <Avatar
             node={node}
-            size={depth === 0 ? 40 : 32}
+              size={depth === 0 ? 36 : 29}
             editMode={editMode}
             onUploadPhoto={onUploadPhoto}
             onRemovePhoto={onRemovePhoto}
@@ -416,7 +417,7 @@ function CardFace({
         </div>
 
         {/* text content */}
-        <div style={{ padding: '0 10px 11px', textAlign: 'center' }}>
+        <div style={{ padding: '0 7px 9px', textAlign: 'center', minWidth: 0 }}>
           {empty ? (
             editMode ? (
               <button
@@ -433,9 +434,9 @@ function CardFace({
           ) : (
             <>
               {node.title && <p style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 2, lineHeight: 1.4 }}>{node.title}</p>}
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--card-foreground)', lineHeight: 1.3, marginBottom: 2 }}>{node.name}</p>
+              <p style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--card-foreground)', lineHeight: 1.25, marginBottom: 2, overflowWrap: 'anywhere' }}>{node.name}</p>
               {node.department && (
-                <span style={{ display: 'inline-block', fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent, marginBottom: 3 }}>
+                <span style={{ display: 'inline-block', maxWidth: '100%', fontSize: 8, fontWeight: 600, padding: '1px 5px', borderRadius: 99, background: `${accent}14`, border: `1px solid ${accent}30`, color: accent, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {node.department}
                 </span>
               )}
@@ -444,7 +445,7 @@ function CardFace({
                   {node.phone && (
                     <span style={{ fontSize: 9, color: 'var(--muted-foreground)', direction: 'ltr', display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Phone style={{ width: 8, height: 8, flexShrink: 0 }} />
-                      {node.phone}
+                       {node.phone}
                     </span>
                   )}
                   {node.email && (
@@ -921,9 +922,9 @@ export function OrgChartSection({ bank }: { bank: any }) {
             onDragEnd={handleDragEnd}
           >
             <div className="overflow-x-auto rounded-b-xl" style={{ background: 'hsl(var(--muted) / 0.4)' }}>
-              <div className="min-w-fit px-12 py-8">
+              <div className="min-w-max px-6 py-6 sm:px-8 sm:py-7">
                 <RootDropZone visible={editMode && !!activeId} />
-                <div className="flex gap-16 items-start justify-center">
+                <div className="flex gap-8 items-start justify-center">
                   {roots.map(root => (
                     <OrgTree
                       key={root.id}

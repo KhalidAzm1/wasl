@@ -46,6 +46,11 @@ export interface OrgChartNode {
   parentId?: string | null;
   /** @nullable */
   photoUrl?: string | null;
+  /**
+     * Durable storage path for the photo; the server resolves it to a signed photoUrl.
+     * @nullable
+     */
+  photoStoragePath?: string | null;
 }
 
 export interface Bank {
@@ -503,6 +508,7 @@ export interface ArchiveSummary {
 
 export type SetOrgChartNodePhoto200 = {
   photoUrl: string;
+  storagePath?: string;
 };
 
 export type ListProductsParams = {

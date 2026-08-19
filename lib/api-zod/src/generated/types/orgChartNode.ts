@@ -21,4 +21,9 @@ export interface OrgChartNode {
   parentId?: string | null;
   /** @nullable */
   photoUrl?: string | null;
+  /**
+     * Durable storage path for the photo; the server resolves it to a signed photoUrl.
+     * @nullable
+     */
+  photoStoragePath?: string | null;
 }

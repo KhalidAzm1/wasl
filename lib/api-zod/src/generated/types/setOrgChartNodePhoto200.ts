@@ -8,4 +8,5 @@
 
 export type SetOrgChartNodePhoto200 = {
   photoUrl: string;
+  storagePath?: string;
 };

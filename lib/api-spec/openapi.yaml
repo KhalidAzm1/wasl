@@ -189,6 +189,24 @@ paths:
                 required: [photoUrl]
                 properties:
                   photoUrl: { type: string }
+                  storagePath: { type: string }
+
+  /banks/{id}/org-chart/restore-latest-photo-snapshot:
+    post:
+      operationId: restoreBankOrgChartPhotoSnapshot
+      tags: [banks]
+      summary: Restore the latest audited organization chart snapshot that contains profile photos
+      parameters:
+        - $ref: "#/components/parameters/BankId"
+      responses:
+        "200":
+          description: Restored organization chart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bank"
+        "404":
+          description: No earlier chart snapshot with photos was found
 
   /banks/{id}/hero:
     put:
@@ -971,6 +989,9 @@ components:
         department: { type: ["string", "null"] }
         parentId: { type: ["string", "null"] }
         photoUrl: { type: ["string", "null"] }
+        photoStoragePath:
+          type: ["string", "null"]
+          description: Durable storage path for the photo; the server resolves it to a signed photoUrl.
 
     Product:
       type: object

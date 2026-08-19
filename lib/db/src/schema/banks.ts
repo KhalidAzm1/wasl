@@ -29,6 +29,8 @@ export const orgChartNodeSchema = z.object({
   department: z.string().nullish(),
   parentId: z.string().nullish(),
   photoUrl: z.string().nullish(),
+  // Stored separately so signed display URLs can expire without losing the image reference.
+  photoStoragePath: z.string().nullish(),
 });
 export type OrgChartNode = z.infer<typeof orgChartNodeSchema>;
 

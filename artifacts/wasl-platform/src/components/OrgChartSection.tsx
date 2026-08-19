@@ -18,17 +18,27 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
-  useUpdateBank, useSetOrgChartNodePhoto, getGetBankQueryKey,
+  useUpdateBank, useSetOrgChartNodePhoto, useRestoreBankOrgChartPhotoSnapshot, getGetBankQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import {
+  mergeContactsIntoOrgChart,
+  type OrgChartImportContact,
+  type OrgChartImportNode,
+} from '@/lib/org-chart-import';
+import {
   Plus, Pencil, Trash2, Loader2, Network, Camera,
   GripVertical, ArrowUpToLine, Lock, X, ZoomIn, Users,
   Phone, Mail,
+  History,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════ types ══════ */
@@ -42,6 +52,7 @@ export type OrgNode = {
   department?: string | null;
   parentId?: string | null;
   photoUrl?: string | null;
+  photoStoragePath?: string | null;
 };
 
 type InlineForm = { name: string; title: string; department: string; phone: string };
@@ -696,6 +707,8 @@ export function OrgChartSection({ bank }: { bank: any }) {
   const { toast }   = useToast();
   const updateBank  = useUpdateBank();
   const uploadPhoto = useSetOrgChartNodePhoto();
+  const restorePhotoSnapshot = useRestoreBankOrgChartPhotoSnapshot();
+  const [restoreConfirmationOpen, setRestoreConfirmationOpen] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -726,32 +739,21 @@ export function OrgChartSection({ bank }: { bank: any }) {
     if (!contacts.length) return;
 
     const ts = Date.now();
-    const nameToId = new Map<string, string>();
-    const next: OrgNode[] = [];
-
-    // Contacts — starred first, then rest; wire by manager field
     const sorted = [...contacts].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
-    sorted.forEach((c, i) => {
-      const id = `contact-${ts}-${i}`;
-      nameToId.set(c.name, id);
-      next.push({
-        id, name: c.name, title: c.title ?? null, phone: c.phone ?? null,
-        email: c.email ?? null, department: c.department ?? null,
-        parentId: null,   // resolved below via manager field
-        photoUrl: null,
-      });
-    });
-
-    // Wire parentIds using the manager field
-    sorted.forEach((c, i) => {
-      if (!c.manager) return;
-      const parentId = nameToId.get(c.manager);
-      if (parentId && parentId !== next[i].id) next[i].parentId = parentId;
-    });
-
+    const result = mergeContactsIntoOrgChart(
+      nodes as OrgChartImportNode[],
+      sorted as OrgChartImportContact[],
+      (index) => `contact-${ts}-${index}`,
+    );
+    const next = result.nodes as OrgNode[];
     setNodes(next);
-    save(next, { onSuccess: () => toast({ title: '✓ Contacts imported successfully' }) });
-  }, [contacts, save, toast]);
+    save(next, {
+      onSuccess: () => toast({
+        title: '✓ Contacts imported safely',
+        description: `${result.added} added, ${result.updated} updated. Existing photos and hierarchy were kept.`,
+      }),
+    });
+  }, [contacts, nodes, save, toast]);
 
   /* ── inline edit handlers ────────────────────────────────────────────── */
   const handleInlineSave = useCallback((nodeId: string, form: InlineForm) => {
@@ -822,7 +824,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
   };
 
   const handleRemovePhoto = (node: OrgNode) => {
-    const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: null } : n);
+    const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: null, photoStoragePath: null } : n);
     setNodes(next); save(next);
   };
 
@@ -833,7 +835,9 @@ export function OrgChartSection({ bank }: { bank: any }) {
         { id: bank.id, nodeId: node.id, data: { dataUrl: e.target?.result as string } },
         {
           onSuccess: (res: any) => {
-            const next = nodes.map(n => n.id === node.id ? { ...n, photoUrl: res?.photoUrl ?? null } : n);
+            const next = nodes.map(n => n.id === node.id
+              ? { ...n, photoUrl: res?.photoUrl ?? null, photoStoragePath: res?.storagePath ?? null }
+              : n);
             setNodes(next); save(next);
           },
           onError: () => toast({ title: 'Photo upload failed. Please try again.', variant: 'destructive' }),
@@ -841,6 +845,26 @@ export function OrgChartSection({ bank }: { bank: any }) {
       );
     };
     reader.readAsDataURL(file);
+  };
+
+  const restoreLatestPhotoSnapshot = () => {
+    restorePhotoSnapshot.mutate({ id: bank.id }, {
+      onSuccess: (restoredBank: any) => {
+        const restoredNodes = (restoredBank.orgChart ?? []) as OrgNode[];
+        setNodes(restoredNodes);
+        setRestoreConfirmationOpen(false);
+        queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bank.id) });
+        toast({
+          title: 'Chart restored',
+          description: 'The latest saved chart with photos has been restored. You can now import contacts safely.',
+        });
+      },
+      onError: () => toast({
+        title: 'No saved chart was found',
+        description: 'There is no earlier saved version with photos to restore.',
+        variant: 'destructive',
+      }),
+    });
   };
 
   const roots = nodes.filter(n => !n.parentId);
@@ -858,8 +882,17 @@ export function OrgChartSection({ bank }: { bank: any }) {
             <div className="ml-auto flex items-center gap-2">
               {editMode && contacts.length > 0 && (
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
-                  onClick={importFromContacts}>
+                  onClick={importFromContacts} disabled={updateBank.isPending || restorePhotoSnapshot.isPending}>
                   <Users className="w-3 h-3" /> Import Contacts
+                </Button>
+              )}
+              {editMode && (
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+                  onClick={() => setRestoreConfirmationOpen(true)} disabled={restorePhotoSnapshot.isPending || updateBank.isPending}>
+                  {restorePhotoSnapshot.isPending
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : <History className="w-3 h-3" />}
+                  Restore saved chart
                 </Button>
               )}
               {editMode && (
@@ -927,6 +960,24 @@ export function OrgChartSection({ bank }: { bank: any }) {
       {lightbox?.photoUrl && (
         <PhotoLightbox url={lightbox.photoUrl} name={lightbox.name} onClose={() => setLightbox(null)} />
       )}
+
+      <AlertDialog open={restoreConfirmationOpen} onOpenChange={setRestoreConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore the saved chart?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This replaces the current organization chart with the latest saved copy that contains profile photos.
+              Your contacts list is not changed, and you can safely import it again afterward.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={restorePhotoSnapshot.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={restoreLatestPhotoSnapshot} disabled={restorePhotoSnapshot.isPending}>
+              Restore chart
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

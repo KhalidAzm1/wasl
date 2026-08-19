@@ -22,3 +22,4 @@
 - [lastActivityAt in-process cache](last-activity-cache.md) — banks route caches MAX-date subquery result (5-min TTL); invalidated on every bank/meeting write. files table uses entity_id not bank_id.
 - [Meetings LEFT JOIN for bank name](meetings-bank-name-join.md) — GET /meetings LEFT JOINs banks; returns bankNameEn/bankNameAr so archived banks still show their name.
 - [Express router.use(requireAuth) intercepts all paths](express-router-auth-ordering.md) — any router with router.use(requireAuth) (no path) blocks ALL unauthenticated requests; public routes must be mounted BEFORE secured routers in the index.
+- [Org chart contact imports](org-chart-contact-imports.md) — imports must merge into manual charts, preserving hierarchy and profile images.

@@ -9,6 +9,7 @@ import {
   actionItemsTable,
   filesTable,
   bankProductTypesTable,
+  auditLogsTable,
 } from "@workspace/db";
 import {
   CreateBankBody,
@@ -112,10 +113,19 @@ async function getProductTypeIds(bankId: string): Promise<number[]> {
   return rows.map((row) => row.productTypeId);
 }
 
-/** Replaces stored logo/hero/responsible-photo paths with fresh Supabase signed URLs. */
-async function withSignedImageUrls<T extends { logoUrl: string | null; heroImageUrl: string | null; responsiblePersonPhoto?: string | null; responsiblePersons?: Array<{ name: string; storagePath?: string | null }> | null }>(
+/** Replaces stored image paths with fresh Supabase signed URLs. */
+async function withSignedImageUrls<T extends {
+  logoUrl: string | null;
+  heroImageUrl: string | null;
+  responsiblePersonPhoto?: string | null;
+  responsiblePersons?: Array<{ name: string; storagePath?: string | null }> | null;
+  orgChart?: Array<{ photoUrl?: string | null; photoStoragePath?: string | null }> | null;
+}>(
   bank: T,
-): Promise<T & { responsiblePersons: Array<{ name: string; storagePath: string | null; photoUrl: string | null }> }> {
+): Promise<T & {
+  responsiblePersons: Array<{ name: string; storagePath: string | null; photoUrl: string | null }>;
+  orgChart: Array<{ photoUrl: string | null; photoStoragePath: string | null }>;
+}> {
   const [logoUrl, heroImageUrl, responsiblePersonPhoto] = await Promise.all([
     resolveStoredUrl(bank.logoUrl),
     resolveStoredUrl(bank.heroImageUrl),
@@ -124,7 +134,21 @@ async function withSignedImageUrls<T extends { logoUrl: string | null; heroImage
   const rawPersons = bank.responsiblePersons ?? [];
   const resolvedPhotos = await Promise.all(rawPersons.map(p => resolveStoredUrl(p.storagePath ?? null)));
   const responsiblePersons = rawPersons.map((p, i) => ({ name: p.name, storagePath: p.storagePath ?? null, photoUrl: resolvedPhotos[i] }));
-  return { ...bank, logoUrl, heroImageUrl, responsiblePersonPhoto, responsiblePersons };
+  const rawOrgChart = bank.orgChart ?? [];
+  const resolvedOrgPhotos = await Promise.all(
+    rawOrgChart.map((node) => node.photoStoragePath
+      ? resolveStoredUrl(node.photoStoragePath)
+      : node.photoUrl ?? null),
+  );
+  const orgChart = rawOrgChart.map((node, i) => ({
+    ...node,
+    photoStoragePath: node.photoStoragePath ?? null,
+    photoUrl: resolvedOrgPhotos[i] ?? null,
+  }));
+  return { ...bank, logoUrl, heroImageUrl, responsiblePersonPhoto, responsiblePersons, orgChart } as T & {
+    responsiblePersons: Array<{ name: string; storagePath: string | null; photoUrl: string | null }>;
+    orgChart: Array<{ photoUrl: string | null; photoStoragePath: string | null }>;
+  };
 }
 
 async function syncProductTypes(bankId: string, productTypeIds: number[]): Promise<void> {
@@ -547,7 +571,7 @@ router.put("/banks/:id/responsible-person-photo", requireRole("super_admin", "ad
   if (!bank) { res.status(404).json({ error: "Bank not found" }); return; }
 
   const photoUrl = await getSignedUrl(storagePath).catch(() => null);
-  res.json({ photoUrl });
+  res.json({ photoUrl, storagePath });
 });
 
 /** PUT /banks/:id/responsible-persons — replace the ordered list of responsible persons (names only; photos handled separately) */
@@ -659,7 +683,80 @@ router.put("/banks/:id/org-chart-photo/:nodeId", requireRole("super_admin", "adm
     res.status(502).json({ error: "Uploaded but could not sign URL", detail: e?.message }); return;
   }
 
-  res.json({ photoUrl });
+  res.json({ photoUrl, storagePath });
+});
+
+/**
+ * Restores the most recent chart version in the audit trail that still contains
+ * profile photos. The action is explicit in the UI rather than automatic.
+ */
+router.post("/banks/:id/org-chart/restore-latest-photo-snapshot", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
+  const bankId = String(req.params.id);
+  const [existingBank] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
+  if (!existingBank) { res.status(404).json({ error: "Bank not found" }); return; }
+
+  const auditRows = await db
+    .select({ id: auditLogsTable.id, details: auditLogsTable.details })
+    .from(auditLogsTable)
+    .where(and(eq(auditLogsTable.entityType, "bank"), eq(auditLogsTable.entityId, bankId)))
+    .orderBy(sql`${auditLogsTable.createdAt} DESC`)
+    .limit(100);
+
+  const snapshot = auditRows.find((row) => {
+    const chart = (row.details as { orgChart?: unknown } | null)?.orgChart;
+    return Array.isArray(chart) && chart.some((node) =>
+      typeof node === "object" && node !== null && typeof (node as { photoUrl?: unknown }).photoUrl === "string",
+    );
+  });
+  const sourceChart = (snapshot?.details as { orgChart?: unknown } | null)?.orgChart;
+  if (!snapshot || !Array.isArray(sourceChart)) {
+    res.status(404).json({ error: "No saved organization chart with photos was found" });
+    return;
+  }
+
+  const storagePathFromLegacyUrl = (value: unknown): string | null => {
+    if (typeof value !== "string") return null;
+    const marker = "/object/sign/wasl-documents/";
+    try {
+      const path = new URL(value).pathname;
+      const markerIndex = path.indexOf(marker);
+      return markerIndex >= 0 ? decodeURIComponent(path.slice(markerIndex + marker.length)) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const restoredChart = sourceChart
+    .filter((node): node is Record<string, unknown> => typeof node === "object" && node !== null)
+    .map((node) => ({
+      ...node,
+      photoStoragePath: typeof node.photoStoragePath === "string"
+        ? node.photoStoragePath
+        : storagePathFromLegacyUrl(node.photoUrl),
+      // Legacy signed URLs expire. The response creates a fresh URL from the path.
+      photoUrl: null,
+    }));
+
+  const [bank] = await db
+    .update(banksTable)
+    .set({ orgChart: restoredChart as any, updatedBy: req.authUser?.name ?? null })
+    .where(eq(banksTable.id, bankId))
+    .returning();
+
+  await logAudit(req, {
+    action: "UPDATE",
+    entityType: "bank",
+    entityId: bankId,
+    entityLabel: bank.nameEn,
+    details: { source: "org-chart-photo-snapshot-recovery", snapshotAuditLogId: snapshot.id },
+  });
+  invalidateActivityCache();
+  eventBus.emit("bank_updated", { bankId });
+  res.json(
+    UpdateBankResponse.parse(
+      toPlain(await withSignedImageUrls({ ...bank, productTypeIds: await getProductTypeIds(bank.id) })),
+    ),
+  );
 });
 
 router.put("/banks/:id/hero", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {

@@ -751,6 +751,77 @@ export const useSetOrgChartNodePhoto = <TError = ErrorType<unknown>,
       return useMutation(getSetOrgChartNodePhotoMutationOptions(options));
     }
 
+export const getRestoreBankOrgChartPhotoSnapshotUrl = (id: string,) => {
+
+
+
+
+  return `/api/banks/${id}/org-chart/restore-latest-photo-snapshot`
+}
+
+/**
+ * @summary Restore the latest audited organization chart snapshot that contains profile photos
+ */
+export const restoreBankOrgChartPhotoSnapshot = async (id: string, options?: RequestInit): Promise<Bank> => {
+
+  return customFetch<Bank>(getRestoreBankOrgChartPhotoSnapshotUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreBankOrgChartPhotoSnapshotMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreBankOrgChartPhotoSnapshot>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreBankOrgChartPhotoSnapshot>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['restoreBankOrgChartPhotoSnapshot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreBankOrgChartPhotoSnapshot>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreBankOrgChartPhotoSnapshot(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreBankOrgChartPhotoSnapshotMutationResult = NonNullable<Awaited<ReturnType<typeof restoreBankOrgChartPhotoSnapshot>>>
+
+    export type RestoreBankOrgChartPhotoSnapshotMutationError = ErrorType<void>
+
+    /**
+ * @summary Restore the latest audited organization chart snapshot that contains profile photos
+ */
+export const useRestoreBankOrgChartPhotoSnapshot = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreBankOrgChartPhotoSnapshot>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreBankOrgChartPhotoSnapshot>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRestoreBankOrgChartPhotoSnapshotMutationOptions(options));
+    }
+
 export const getSetBankHeroImageUrl = (id: string,) => {
 
 

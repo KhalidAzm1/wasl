@@ -47,12 +47,12 @@ export const ListBanksResponseItem = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -103,12 +103,12 @@ export const CreateBankBody = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string(),
   "priorityImpact": zod.string(),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -149,12 +149,12 @@ export const CreateBankResponse = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -209,12 +209,12 @@ export const GetBankResponse = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -243,7 +243,6 @@ export const GetBankResponse = zod.object({
   "dateType": zod.string().nullish(),
   "dateValue": zod.string().nullish(),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
@@ -338,12 +337,12 @@ export const UpdateBankBody = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().optional(),
   "priorityImpact": zod.string().optional(),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -384,12 +383,12 @@ export const UpdateBankResponse = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -454,12 +453,12 @@ export const RestoreBankResponse = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -518,12 +517,12 @@ export const SetBankLogoResponse = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -557,7 +556,68 @@ export const SetOrgChartNodePhotoBody = zod.object({
 })
 
 export const SetOrgChartNodePhotoResponse = zod.object({
-  "photoUrl": zod.string()
+  "photoUrl": zod.string(),
+  "storagePath": zod.string().optional()
+})
+
+
+/**
+ * @summary Restore the latest audited organization chart snapshot that contains profile photos
+ */
+export const RestoreBankOrgChartPhotoSnapshotParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RestoreBankOrgChartPhotoSnapshotResponse = zod.object({
+  "id": zod.string(),
+  "nameEn": zod.string(),
+  "nameAr": zod.string(),
+  "category": zod.string().describe('Local Bank | Financing Entity'),
+  "status": zod.string(),
+  "logoUrl": zod.string().nullish(),
+  "heroImageUrl": zod.string().nullish(),
+  "referenceLink": zod.string().nullish(),
+  "contacts": zod.array(zod.object({
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "manager": zod.string().nullish(),
+  "managerPhone": zod.string().nullish(),
+  "starred": zod.boolean().optional()
+})).optional(),
+  "orgChart": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "title": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
+})).optional(),
+  "riskLevel": zod.string().describe('Low | Medium | High'),
+  "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
+  "responsiblePerson": zod.string().nullish(),
+  "relationshipManager": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "lastMeetingDate": zod.string().nullish(),
+  "lastMeetingSummary": zod.string().nullish(),
+  "nextMeetingDate": zod.string().nullish(),
+  "nextMeetingTopic": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "executiveSummary": zod.string().nullish(),
+  "descriptionNotes": zod.string().nullish(),
+  "productTypeIds": zod.array(zod.number()).optional().describe('Ids of assigned product types from the catalog'),
+  "isArchived": zod.boolean(),
+  "archivedAt": zod.string().nullish(),
+  "archivedBy": zod.string().nullish().describe('Display name of the user who archived this record'),
+  "updatedBy": zod.string().nullish().describe('Display name of the user who last updated this record'),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 })
 
 
@@ -599,12 +659,12 @@ export const SetBankHeroImageResponse = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
@@ -642,7 +702,6 @@ export const ListProductsResponseItem = zod.object({
   "dateType": zod.string().nullish(),
   "dateValue": zod.string().nullish(),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
@@ -664,7 +723,6 @@ export const CreateProductBody = zod.object({
   "dateType": zod.string().optional(),
   "dateValue": zod.string().optional(),
   "responsiblePerson": zod.string().optional(),
-  "responsiblePersonPhoto": zod.string().optional(),
   "priorityImpact": zod.string().optional(),
   "descriptionNotes": zod.string().optional(),
   "riskLevel": zod.string().optional()
@@ -680,7 +738,6 @@ export const CreateProductResponse = zod.object({
   "dateType": zod.string().nullish(),
   "dateValue": zod.string().nullish(),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
@@ -704,7 +761,6 @@ export const UpdateProductBody = zod.object({
   "dateType": zod.string().optional(),
   "dateValue": zod.string().optional(),
   "responsiblePerson": zod.string().optional(),
-  "responsiblePersonPhoto": zod.string().optional(),
   "priorityImpact": zod.string().optional(),
   "descriptionNotes": zod.string().optional(),
   "riskLevel": zod.string().optional()
@@ -720,7 +776,6 @@ export const UpdateProductResponse = zod.object({
   "dateType": zod.string().nullish(),
   "dateValue": zod.string().nullish(),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "priorityImpact": zod.string().nullish(),
   "descriptionNotes": zod.string().nullish(),
   "riskLevel": zod.string().nullish(),
@@ -1377,12 +1432,12 @@ export const GetArchiveResponse = zod.object({
   "email": zod.string().nullish(),
   "department": zod.string().nullish(),
   "parentId": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
+  "photoUrl": zod.string().nullish(),
+  "photoStoragePath": zod.string().nullish().describe('Durable storage path for the photo; the server resolves it to a signed photoUrl.')
 })).optional(),
   "riskLevel": zod.string().describe('Low | Medium | High'),
   "priorityImpact": zod.string().describe('HOT | Unclassified | etc'),
   "responsiblePerson": zod.string().nullish(),
-  "responsiblePersonPhoto": zod.string().nullish(),
   "relationshipManager": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),

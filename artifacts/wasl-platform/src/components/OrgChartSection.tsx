@@ -7,7 +7,7 @@ import React, {
   useState, useRef, useCallback, useEffect, useMemo,
 } from 'react';
 import {
-  DndContext, PointerSensor,
+  DndContext, PointerSensor, closestCenter,
   useSensor, useSensors,
   useDraggable, useDroppable,
   type DragStartEvent, type DragEndEvent, type DragOverEvent,
@@ -711,7 +711,7 @@ export function OrgChartSection({ bank }: { bank: any }) {
   const restorePhotoSnapshot = useRestoreBankOrgChartPhotoSnapshot();
   const [restoreConfirmationOpen, setRestoreConfirmationOpen] = useState(false);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   useEffect(() => {
     if (isFirst) {
@@ -917,9 +917,11 @@ export function OrgChartSection({ bank }: { bank: any }) {
         <CardContent className="p-0">
           <DndContext
             sensors={sensors}
+            collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragCancel={() => { setActiveId(null); setOverId(null); }}
           >
             <div className="overflow-x-auto rounded-b-xl" style={{ background: 'hsl(var(--muted) / 0.4)' }}>
               <div className="min-w-max px-6 py-6 sm:px-8 sm:py-7">

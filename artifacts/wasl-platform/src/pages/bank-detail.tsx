@@ -605,7 +605,7 @@ function EntityAttachmentsButton({ entityType, entityId, label }: { entityType: 
 type ResponsiblePersonEntry = { name: string; storagePath?: string | null; photoUrl?: string | null };
 
 function PersonAvatar({ person, size = 44 }: { person: ResponsiblePersonEntry; size?: number }) {
-  const initials = person.name.trim().split(/\s+/).filter(Boolean).slice(0, 2)
+  const initials = (person.name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2)
     .map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
   return person.photoUrl
     ? <img src={person.photoUrl} alt={person.name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }} />

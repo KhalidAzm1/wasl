@@ -643,7 +643,7 @@ function ResponsiblePersonCard({
       const r = await fetch(`${import.meta.env.BASE_URL}api/banks/${bankId}/responsible-persons`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bearer}` },
-        body: JSON.stringify({ persons: toSave.map(p => ({ name: p.name })) }),
+        body: JSON.stringify({ persons: toSave.map(p => ({ name: p.name, storagePath: p.storagePath ?? null })) }),
       });
       if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
       queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
@@ -669,8 +669,8 @@ function ResponsiblePersonCard({
         body: JSON.stringify({ dataUrl }),
       });
       if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
-      const { photoUrl } = await r.json();
-      setPersons(prev => prev.map((p, i) => i === idx ? { ...p, photoUrl } : p));
+      const { photoUrl, storagePath } = await r.json();
+      setPersons(prev => prev.map((p, i) => i === idx ? { ...p, photoUrl, storagePath } : p));
       queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
       toast({ title: 'Photo updated' });
     } catch (e: any) {

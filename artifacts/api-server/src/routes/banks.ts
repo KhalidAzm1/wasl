@@ -577,31 +577,19 @@ router.put("/banks/:id/responsible-person-photo", requireRole("super_admin", "ad
 /** PUT /banks/:id/responsible-persons — replace the ordered list of responsible persons (names only; photos handled separately) */
 router.put("/banks/:id/responsible-persons", requireRole("super_admin", "admin"), requireBankEditAccess, async (req, res): Promise<void> => {
   const bankId = String(req.params.id);
-  const { persons } = req.body as { persons?: Array<{ name: string }> };
+  const { persons } = req.body as { persons?: Array<{ name: string; storagePath?: string | null }> };
   if (!Array.isArray(persons)) { res.status(400).json({ error: "persons must be an array" }); return; }
 
-  const [existing] = await db.select({ id: banksTable.id, responsiblePersons: (banksTable as any).responsiblePersons }).from(banksTable).where(eq(banksTable.id, bankId));
+  const [existing] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
   if (!existing) { res.status(404).json({ error: "Bank not found" }); return; }
 
-  const existingPersons: Array<{ name: string | undefined; storagePath: string | null }> = (existing.responsiblePersons as any) ?? [];
-
-  // Build name-based map (skip nameless entries created by photo-upload-before-first-save)
-  const existingByName = new Map(
-    existingPersons
-      .filter(p => typeof p.name === 'string' && p.name.trim())
-      .map(p => [p.name!.trim().toLowerCase(), p.storagePath]),
-  );
-
-  // Filter out blank-name entries, then resolve storagePath:
-  //   1. By name match (handles renamed persons)
-  //   2. By index fallback (handles photo uploaded before first save — storagePath sits at same index without a name)
+  // Client now sends storagePath directly — use it as the source of truth.
+  // Filter out blank-name entries to avoid orphaned records.
   const newPersons = persons
     .filter(p => typeof p.name === 'string' && p.name.trim())
-    .map((p, i) => ({
+    .map(p => ({
       name: p.name.trim(),
-      storagePath:
-        existingByName.get(p.name.trim().toLowerCase())
-        ?? (existingPersons[i]?.storagePath ?? null),
+      storagePath: (typeof p.storagePath === 'string' && p.storagePath) ? p.storagePath : null,
     }));
 
   const [updated] = await db

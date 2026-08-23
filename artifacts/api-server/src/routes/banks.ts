@@ -583,20 +583,25 @@ router.put("/banks/:id/responsible-persons", requireRole("super_admin", "admin")
   const [existing] = await db.select({ id: banksTable.id, responsiblePersons: (banksTable as any).responsiblePersons }).from(banksTable).where(eq(banksTable.id, bankId));
   if (!existing) { res.status(404).json({ error: "Bank not found" }); return; }
 
-  const existingPersons: Array<{ name: string; storagePath: string | null }> = (existing.responsiblePersons as any) ?? [];
-  // Guard: skip entries with null/undefined name (can be created by photo upload before name is saved)
-  const existingMap = new Map(
+  const existingPersons: Array<{ name: string | undefined; storagePath: string | null }> = (existing.responsiblePersons as any) ?? [];
+
+  // Build name-based map (skip nameless entries created by photo-upload-before-first-save)
+  const existingByName = new Map(
     existingPersons
       .filter(p => typeof p.name === 'string' && p.name.trim())
-      .map(p => [p.name.trim().toLowerCase(), p.storagePath]),
+      .map(p => [p.name!.trim().toLowerCase(), p.storagePath]),
   );
 
-  // Filter out blank-name entries from the incoming list
+  // Filter out blank-name entries, then resolve storagePath:
+  //   1. By name match (handles renamed persons)
+  //   2. By index fallback (handles photo uploaded before first save — storagePath sits at same index without a name)
   const newPersons = persons
     .filter(p => typeof p.name === 'string' && p.name.trim())
-    .map(p => ({
+    .map((p, i) => ({
       name: p.name.trim(),
-      storagePath: existingMap.get(p.name.trim().toLowerCase()) ?? null,
+      storagePath:
+        existingByName.get(p.name.trim().toLowerCase())
+        ?? (existingPersons[i]?.storagePath ?? null),
     }));
 
   const [updated] = await db

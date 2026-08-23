@@ -584,12 +584,20 @@ router.put("/banks/:id/responsible-persons", requireRole("super_admin", "admin")
   if (!existing) { res.status(404).json({ error: "Bank not found" }); return; }
 
   const existingPersons: Array<{ name: string; storagePath: string | null }> = (existing.responsiblePersons as any) ?? [];
-  const existingMap = new Map(existingPersons.map(p => [p.name.trim().toLowerCase(), p.storagePath]));
+  // Guard: skip entries with null/undefined name (can be created by photo upload before name is saved)
+  const existingMap = new Map(
+    existingPersons
+      .filter(p => typeof p.name === 'string' && p.name.trim())
+      .map(p => [p.name.trim().toLowerCase(), p.storagePath]),
+  );
 
-  const newPersons = persons.map(p => ({
-    name: p.name.trim(),
-    storagePath: existingMap.get(p.name.trim().toLowerCase()) ?? null,
-  }));
+  // Filter out blank-name entries from the incoming list
+  const newPersons = persons
+    .filter(p => typeof p.name === 'string' && p.name.trim())
+    .map(p => ({
+      name: p.name.trim(),
+      storagePath: existingMap.get(p.name.trim().toLowerCase()) ?? null,
+    }));
 
   const [updated] = await db
     .update(banksTable)

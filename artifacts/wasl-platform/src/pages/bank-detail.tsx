@@ -638,10 +638,12 @@ function ResponsiblePersonCard({
     setSaving(true);
     try {
       const bearer = await getBearer();
+      // Filter out entries with blank names before saving
+      const toSave = list.filter(p => typeof p.name === 'string' && p.name.trim());
       const r = await fetch(`${import.meta.env.BASE_URL}api/banks/${bankId}/responsible-persons`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bearer}` },
-        body: JSON.stringify({ persons: list.map(p => ({ name: p.name })) }),
+        body: JSON.stringify({ persons: toSave.map(p => ({ name: p.name })) }),
       });
       if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
       queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
@@ -718,12 +720,16 @@ function ResponsiblePersonCard({
               <div key={i} className="flex items-center gap-3 p-2 rounded-lg border border-border bg-muted/30">
                 {/* Avatar + photo upload */}
                 <div className="relative group/av shrink-0">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-foreground/10 shadow cursor-pointer"
-                    onClick={() => fileRefs.current[i]?.click()}>
+                  <div
+                    className={`w-12 h-12 rounded-full overflow-hidden border-2 border-foreground/10 shadow ${p.name?.trim() ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+                    title={p.name?.trim() ? 'Upload photo' : 'Enter a name first'}
+                    onClick={() => { if (p.name?.trim()) fileRefs.current[i]?.click(); }}>
                     <PersonAvatar person={p} size={48} />
-                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
-                      {uploadingIdx === i ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
-                    </div>
+                    {p.name?.trim() && (
+                      <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center">
+                        {uploadingIdx === i ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
+                      </div>
+                    )}
                   </div>
                   <input ref={el => { fileRefs.current[i] = el; }} type="file" accept="image/*" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(i, f); e.target.value = ''; }} />

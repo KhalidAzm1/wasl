@@ -113,12 +113,46 @@ async function getProductTypeIds(bankId: string): Promise<number[]> {
   return rows.map((row) => row.productTypeId);
 }
 
+type StoredResponsiblePerson = { name?: unknown; storagePath?: unknown };
+
+function legacyResponsibleNames(value: unknown): string[] {
+  return typeof value === "string"
+    ? value.split(";").map((name) => name.trim()).filter(Boolean)
+    : [];
+}
+
+/**
+ * Converts legacy photo-only records into the current person shape. Older
+ * uploads stored just `storagePath`; their matching name remains available in
+ * the semicolon-separated legacy field in the same order.
+ */
+export function normalizeResponsiblePersons(value: unknown, legacyNameSource: unknown) {
+  const rawPersons = Array.isArray(value) ? value : [];
+  const legacyNames = legacyResponsibleNames(legacyNameSource);
+
+  return rawPersons.flatMap((person, index) => {
+    if (!person || typeof person !== "object" || Array.isArray(person)) return [];
+    const stored = person as StoredResponsiblePerson;
+    const explicitName = typeof stored.name === "string" ? stored.name.trim() : "";
+    const name = explicitName || legacyNames[index] || "";
+    if (!name) return [];
+
+    return [{
+      name,
+      storagePath: typeof stored.storagePath === "string" && stored.storagePath.trim()
+        ? stored.storagePath
+        : null,
+    }];
+  });
+}
+
 /** Replaces stored image paths with fresh Supabase signed URLs. */
 async function withSignedImageUrls<T extends {
   logoUrl: string | null;
   heroImageUrl: string | null;
+  responsiblePerson?: string | null;
   responsiblePersonPhoto?: string | null;
-  responsiblePersons?: Array<{ name: string; storagePath?: string | null }> | null;
+  responsiblePersons?: unknown;
   orgChart?: Array<{ photoUrl?: string | null; photoStoragePath?: string | null }> | null;
 }>(
   bank: T,
@@ -131,9 +165,12 @@ async function withSignedImageUrls<T extends {
     resolveStoredUrl(bank.heroImageUrl),
     resolveStoredUrl(bank.responsiblePersonPhoto ?? null),
   ]);
-  const rawPersons = bank.responsiblePersons ?? [];
-  const resolvedPhotos = await Promise.all(rawPersons.map(p => resolveStoredUrl(p.storagePath ?? null)));
-  const responsiblePersons = rawPersons.map((p, i) => ({ name: p.name, storagePath: p.storagePath ?? null, photoUrl: resolvedPhotos[i] }));
+  const storedPersons = normalizeResponsiblePersons(bank.responsiblePersons, bank.responsiblePerson);
+  const resolvedPhotos = await Promise.all(storedPersons.map((person) => resolveStoredUrl(person.storagePath)));
+  const responsiblePersons = storedPersons.map((person, i) => ({
+    ...person,
+    photoUrl: resolvedPhotos[i],
+  }));
   const rawOrgChart = bank.orgChart ?? [];
   const resolvedOrgPhotos = await Promise.all(
     rawOrgChart.map((node) => node.photoStoragePath
@@ -637,8 +674,24 @@ router.put("/banks/:id/responsible-person/:index/photo", requireRole("super_admi
   const imageError = validateImageDataUrl(parsed.data.dataUrl);
   if (imageError) { res.status(400).json({ error: imageError }); return; }
 
-  const [existing] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
+  const [existing] = await db.select({
+    id: banksTable.id,
+    responsiblePersons: banksTable.responsiblePersons,
+    responsiblePerson: banksTable.responsiblePerson,
+  }).from(banksTable).where(eq(banksTable.id, bankId));
   if (!existing) { res.status(404).json({ error: "Bank not found" }); return; }
+
+  const existingPersons: Array<StoredResponsiblePerson> = Array.isArray(existing.responsiblePersons)
+    ? existing.responsiblePersons
+    : [];
+  const currentName = existingPersons[idx]?.name;
+  const personName = (typeof currentName === "string" ? currentName.trim() : "")
+    || legacyResponsibleNames(existing.responsiblePerson)[idx]
+    || "";
+  if (!personName) {
+    res.status(400).json({ error: "Add the person's name before uploading a photo" });
+    return;
+  }
 
   let parsed2: { contentType: string; buffer: Buffer };
   try { parsed2 = parseDataUrl(parsed.data.dataUrl); } catch (e: any) { res.status(400).json({ error: e.message }); return; }
@@ -651,13 +704,10 @@ router.put("/banks/:id/responsible-person/:index/photo", requireRole("super_admi
   }
 
   try {
-    const [bankRow] = await db.select({ responsiblePersons: banksTable.responsiblePersons })
-      .from(banksTable).where(eq(banksTable.id, bankId));
-    const persons: Array<Record<string, unknown>> = Array.isArray(bankRow?.responsiblePersons)
-      ? (bankRow.responsiblePersons as Array<Record<string, unknown>>).map(p => ({ ...p as object }))
-      : [];
+    const persons: Array<Record<string, unknown>> = existingPersons
+      .map((person) => ({ ...person }));
     while (persons.length <= idx) persons.push({});
-    persons[idx] = { ...persons[idx], storagePath };
+    persons[idx] = { ...persons[idx], name: personName, storagePath };
     await db.update(banksTable)
       .set({ responsiblePersons: persons } as any)
       .where(eq(banksTable.id, bankId));

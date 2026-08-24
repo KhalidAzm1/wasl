@@ -14,6 +14,20 @@ export interface ImageUpload {
   dataUrl: string;
 }
 
+export interface ResponsiblePerson {
+  name: string;
+  /**
+     * Persistent object-storage path for the person's photo
+     * @nullable
+     */
+  storagePath?: string | null;
+  /**
+     * Fresh signed URL used to display the person's photo
+     * @nullable
+     */
+  photoUrl?: string | null;
+}
+
 export interface BankContact {
   name: string;
   /** @nullable */
@@ -74,6 +88,9 @@ export interface Bank {
   priorityImpact: string;
   /** @nullable */
   responsiblePerson?: string | null;
+  /** @nullable */
+  responsiblePersonPhoto?: string | null;
+  responsiblePersons?: ResponsiblePerson[];
   /** @nullable */
   relationshipManager?: string | null;
   /** @nullable */

@@ -7,6 +7,7 @@
  */
 import type { BankContact } from './bankContact';
 import type { OrgChartNode } from './orgChartNode';
+import type { ResponsiblePerson } from './responsiblePerson';
 
 export interface Bank {
   id: string;
@@ -29,6 +30,9 @@ export interface Bank {
   priorityImpact: string;
   /** @nullable */
   responsiblePerson?: string | null;
+  /** @nullable */
+  responsiblePersonPhoto?: string | null;
+  responsiblePersons?: ResponsiblePerson[];
   /** @nullable */
   relationshipManager?: string | null;
   /** @nullable */

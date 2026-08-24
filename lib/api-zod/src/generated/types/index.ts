@@ -47,6 +47,7 @@ export * from './productType';
 export * from './productTypeInput';
 export * from './productTypeUpdate';
 export * from './productUpdate';
+export * from './responsiblePerson';
 export * from './risk';
 export * from './riskInput';
 export * from './riskUpdate';

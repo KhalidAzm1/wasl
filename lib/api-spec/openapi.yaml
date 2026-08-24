@@ -834,6 +834,18 @@ components:
           type: string
           description: Base64-encoded data URL of the uploaded image (e.g. data:image/png;base64,...)
 
+    ResponsiblePerson:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        storagePath:
+          type: ["string", "null"]
+          description: Persistent object-storage path for the person's photo
+        photoUrl:
+          type: ["string", "null"]
+          description: Fresh signed URL used to display the person's photo
+
     Bank:
       type: object
       required: [id, nameEn, nameAr, category, status, riskLevel, priorityImpact, isArchived, createdAt, updatedAt]
@@ -855,6 +867,10 @@ components:
         riskLevel: { type: string, description: "Low | Medium | High" }
         priorityImpact: { type: string, description: "HOT | Unclassified | etc" }
         responsiblePerson: { type: ["string", "null"] }
+        responsiblePersonPhoto: { type: ["string", "null"] }
+        responsiblePersons:
+          type: array
+          items: { $ref: "#/components/schemas/ResponsiblePerson" }
         relationshipManager: { type: ["string", "null"] }
         email: { type: ["string", "null"] }
         website: { type: ["string", "null"] }

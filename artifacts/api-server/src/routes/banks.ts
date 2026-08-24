@@ -580,21 +580,46 @@ router.put("/banks/:id/responsible-persons", requireRole("super_admin", "admin")
   const { persons } = req.body as { persons?: Array<{ name: string; storagePath?: string | null }> };
   if (!Array.isArray(persons)) { res.status(400).json({ error: "persons must be an array" }); return; }
 
-  const [existing] = await db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.id, bankId));
+  const [existing] = await db
+    .select({ id: banksTable.id, responsiblePersons: banksTable.responsiblePersons })
+    .from(banksTable)
+    .where(eq(banksTable.id, bankId));
   if (!existing) { res.status(404).json({ error: "Bank not found" }); return; }
 
-  // Client now sends storagePath directly — use it as the source of truth.
-  // Filter out blank-name entries to avoid orphaned records.
-  const newPersons = persons
-    .filter(p => typeof p.name === 'string' && p.name.trim())
-    .map(p => ({
-      name: p.name.trim(),
-      storagePath: (typeof p.storagePath === 'string' && p.storagePath) ? p.storagePath : null,
-    }));
+  const existingPersons: Array<{ name?: string; storagePath?: string | null }> =
+    Array.isArray(existing.responsiblePersons) ? existing.responsiblePersons : [];
+  const existingByName = new Map(
+    existingPersons
+      .filter((person) => typeof person.name === "string" && person.name.trim())
+      .map((person) => [person.name!.trim().toLocaleLowerCase(), person.storagePath ?? null]),
+  );
+  const ownedPathPrefix = `responsible-person/${bankId}/`;
+
+  // Preserve paths that the server already knows about. This keeps uploads from
+  // disappearing for both the older names-only client and the newer client that
+  // returns the uploaded storagePath with its save request.
+  const newPersons = persons.flatMap((person, index) => {
+    if (typeof person.name !== "string" || !person.name.trim()) return [];
+
+    const requestedPath = typeof person.storagePath === "string" && person.storagePath.startsWith(ownedPathPrefix)
+      ? person.storagePath
+      : null;
+    const matchedPath = existingByName.get(person.name.trim().toLocaleLowerCase()) ?? null;
+    const indexPath = existingPersons[index]?.storagePath ?? null;
+
+    return [{
+      name: person.name.trim(),
+      storagePath: requestedPath ?? matchedPath ?? indexPath,
+    }];
+  });
 
   const [updated] = await db
     .update(banksTable)
-    .set({ responsiblePerson: newPersons.map(p => p.name).join('; ') || null, updatedBy: req.authUser?.name ?? null } as any)
+    .set({
+      responsiblePerson: newPersons.map(p => p.name).join('; ') || null,
+      responsiblePersonPhoto: newPersons[0]?.storagePath ?? null,
+      updatedBy: req.authUser?.name ?? null,
+    } as any)
     .where(eq(banksTable.id, bankId))
     .returning();
   // Also store structured data

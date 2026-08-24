@@ -23,3 +23,4 @@
 - [Meetings LEFT JOIN for bank name](meetings-bank-name-join.md) — GET /meetings LEFT JOINs banks; returns bankNameEn/bankNameAr so archived banks still show their name.
 - [Express router.use(requireAuth) intercepts all paths](express-router-auth-ordering.md) — any router with router.use(requireAuth) (no path) blocks ALL unauthenticated requests; public routes must be mounted BEFORE secured routers in the index.
 - [Org chart contact imports](org-chart-contact-imports.md) — imports must merge into manual charts, preserving hierarchy and profile images.
+- [Responsible-person photo persistence](responsible-person-photo-persistence.md) — preserve stored file paths during metadata-only saves across mixed client versions.

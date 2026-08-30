@@ -1,0 +1,88 @@
+Bank Onboarding and Progress Tracking
+For each bank, the platform shall provide two main tracks:
+Technical Track
+The Technical Track shall consist of five sequential phases:
+Kick-Off
+Analysis
+Development and Integration
+Testing
+Rollout
+Commercial and Agreements Track
+The Commercial and Agreements Track shall include the following default activities:
+Non-Disclosure Agreement (NDA)
+Commercial Agreement
+The platform shall also provide an “Add Agreement Activity” button, allowing authorized users to create and add additional agreement activities based on the bank’s requirements.
+ 
+Bank and Product Roadmap Dashboard
+The platform shall provide a centralized roadmap dashboard displaying all onboarded banks and their associated products.
+For each bank, the dashboard shall:
+Display the bank’s name.
+List all associated products, such as E1, E2, and S3.
+Present a separate roadmap for each product across the following phases:
+Kick-Off
+Analysis
+Development and Integration
+Testing
+Rollout
+Display the planned timeframe for each phase and the overall product.
+Show the product’s current phase and the number of days spent in that phase.
+Automatically highlight products that exceed the planned phase duration as delayed or stuck.
+Display the number of delay days against the planned timeline.
+Example: Wachovia Bank – E1 – Analysis – 40 days in the current phase – Delayed by 10 days.
+ 
+Daily Update Monitoring and Bank Ownership
+Each bank shall be assigned a designated Project Manager or Account Manager.
+The system shall allow administrators to define and update the manager assigned to each bank.
+A daily progress update shall be required for every bank and its associated products.
+If no update is submitted by the configured daily cut-off time, the system shall automatically notify:
+Abdelrahman Alyousef
+Ziyad Alnaimi
+Majid Alomran
+Ali Alslman 
+The notification shall identify the bank, its assigned manager, the affected products, and the date of the latest submitted update.
+The bank-to-manager assignments shall be configured once the Project Manager and Account Manager list is provided.
+ 
+Microsoft Teams Integration
+The platform shall integrate with Microsoft Teams to allow authorized users to submit progress updates through Teams messages.
+Project Managers shall be able to update the Technical Track for their assigned banks and products, including:
+Kick-Off
+Analysis
+Development and Integration
+Testing
+Rollout
+Authorized Legal Team members shall be able to update the Commercial and Agreements Track, including the NDA, Commercial Agreement, and any additional agreement activities.
+The system shall validate the sender’s identity and permissions before applying any update.
+After processing the message, the system shall send a confirmation or failure notification to the sender through Teams.
+The required message content, format, and update commands shall be defined at a later stage.
+ 
+CEO Requests
+Each bank shall have a dedicated section titled “CEO Requests.”
+This section shall allow authorized Project Managers and Legal Team members to submit requests requiring the CEO’s support, direction, or intervention.
+Each request shall include:
+Bank and associated product
+Request title and description
+Required action
+Requester’s name and department
+Priority
+Submission date
+Current status
+Examples may include requesting senior management intervention to engage the other party and accelerate the finalization of an agreement.
+The system shall maintain a history of all requests and their status updates for each bank.
+ 
+Stage-Level Progress Updates
+Each phase within the Technical Track shall contain a dedicated “Updates” section:
+Kick-Off
+Analysis
+Development and Integration
+Testing
+Rollout
+The assigned Project Manager shall be able to submit progress updates under the relevant phase for each bank and product.
+Each update shall record:
+Update details
+Submitted by
+Submission date and time
+Related bank, product, and phase
+Updates may be submitted directly through the platform or through the Microsoft Teams integration.
+The system shall maintain a chronological update history and display the most recent update on the roadmap dashboard.
+Stage-level updates shall be considered when determining whether the required daily update has been submitted.
+ 

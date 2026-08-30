@@ -20,3 +20,10 @@ uri = "file://meeting-notes-system-overview.md"
 type = "text"
 title = "نوت اجتماع — منصة وصل"
 description = "ملخص كامل لإمكانيات النظام مرتّب للعرض في الاجتماع"
+
+[[outputs]]
+id = "kTq_DFjZtYBhv5raiGD4C"
+uri = "file://export/wasl-documentation.zip"
+type = "unspecified"
+title = "وثائق منصة وصل"
+description = "ملف ZIP مستقل يحتوي على ملفات التوثيق الـ26 فقط، بدون كود المنصة أو ملفات التشغيل."

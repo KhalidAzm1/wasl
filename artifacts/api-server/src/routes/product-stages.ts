@@ -205,7 +205,7 @@ router.post("/products/:productId/stages/advance", requireRole("super_admin", "a
     return { product, current, next, history } as const;
   });
 
-  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  if ("error" in result) { res.status(result.status ?? 500).json({ error: result.error }); return; }
   await logAudit(req, {
     action: "UPDATE",
     entityType: "product_phase",

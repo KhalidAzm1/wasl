@@ -20,7 +20,7 @@ import { and, eq, asc, isNull } from "drizzle-orm";
 import { invalidateActivityCache } from "./banks";
 import { eventBus } from "../lib/event-bus";
 import {
-  db, banksTable, productsTable, productPhaseHistoryTable,
+  db, banksTable, productsTable, productStagesTable, productPhaseHistoryTable,
   implementationStagesTable,
   implementationSubStagesTable,
   implementationSettingsTable,
@@ -121,19 +121,24 @@ async function seedBankStages(bankId: string, trackType: ImplementationTrackType
   const byLabel = new Map(
     v1Rows.map((r) => [IMPLEMENTATION_STAGE_LABELS[r.stage] ?? r.stage, r])
   );
+  const priorProductStages = productId && trackType === "technical"
+    ? await db.select().from(productStagesTable).where(eq(productStagesTable.productId, productId))
+    : [];
+  const productStageByName = new Map(priorProductStages.map((stage) => [stage.name, stage]));
 
   await db.insert(implementationStagesTable).values(
     names.map((name, idx) => {
       const prior = byLabel.get(name);
+      const priorProductStage = productStageByName.get(name);
       return {
         bankId,
         productId: productId ?? null,
         trackType,
         name,
         displayOrder: idx,
-        status: prior?.status ?? "not_started",
-        completed: prior?.completed ?? false,
-        completedAt: prior?.completedAt ?? null,
+        status: priorProductStage?.completed ? "completed" : priorProductStage?.isCurrent ? "in_progress" : prior?.status ?? "not_started",
+        completed: priorProductStage?.completed ?? prior?.completed ?? false,
+        completedAt: priorProductStage?.completedAt?.toISOString().split("T")[0] ?? prior?.completedAt ?? null,
         owner: prior?.owner ?? null,
         notes: prior?.notes ?? null,
       };

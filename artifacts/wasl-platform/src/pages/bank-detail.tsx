@@ -14,7 +14,8 @@ import {
   useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
   type StageV2, type BankStagesViewV2, type PatchStageBodyV2, type ImplementationTrackType,
   useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
-  getProductStagesQueryKey,
+  useProductPhaseHistory, useAdvanceProductStage,
+  getProductStagesQueryKey, getProductPhaseHistoryQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -316,10 +317,14 @@ function ContactsCard({ bank }: { bank: any }) {
 function ProductStagesSection({ product, bankId }: { product: any; bankId: string }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { role } = useAuth();
+  const canManage = ['super_admin', 'admin', 'manager'].includes(role ?? '');
   const { data: stages = [], isLoading } = useProductStages(product.id);
+  const { data: phaseHistory = [] } = useProductPhaseHistory(product.id);
   const addStage = useAddProductStage();
   const patchStage = usePatchProductStage();
   const deleteStage = useDeleteProductStage();
+  const advanceStage = useAdvanceProductStage();
 
   const [expanded, setExpanded] = useState(false);
   const [addingName, setAddingName] = useState('');
@@ -329,6 +334,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: getProductStagesQueryKey(product.id) });
+    queryClient.invalidateQueries({ queryKey: getProductPhaseHistoryQueryKey(product.id) });
     queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
     queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
   };
@@ -365,6 +371,18 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
 
   const completed = stages.filter((s: any) => s.completed).length;
   const total = stages.length;
+  const currentStage = stages.find((stage: any) => stage.isCurrent) ?? stages.find((stage: any) => !stage.completed);
+  const currentIndex = stages.findIndex((stage: any) => stage.id === currentStage?.id);
+
+  const handleAdvance = () => {
+    advanceStage.mutate({ productId: product.id }, {
+      onSuccess: () => {
+        invalidateAll();
+        toast({ title: 'Phase updated', description: `${product.productCode ?? 'Product'} moved to the next phase.` });
+      },
+      onError: (e: any) => toast({ title: 'Phase update failed', description: e?.message, variant: 'destructive' }),
+    });
+  };
 
   return (
     <div className="border-t border-foreground/10 mt-3 pt-3">
@@ -383,11 +401,32 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
         <div className="mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
           {isLoading && <div className="text-xs text-foreground/30 py-2 text-center">Loading...</div>}
 
+          {currentStage && (
+            <div className="rounded-lg border border-primary/25 bg-primary/5 p-2.5 mb-3">
+              <div className="text-[10px] uppercase tracking-wider text-foreground/40">Current phase</div>
+              <div className="mt-0.5 text-sm font-semibold text-primary">{currentStage.name}</div>
+              <div className="flex gap-1 mt-2" aria-label="Product roadmap">
+                {stages.map((stage: any, index: number) => (
+                  <div key={stage.id} className="flex-1" title={stage.name}>
+                    <div className={cn('h-1.5 rounded-full', index < currentIndex ? 'bg-emerald-500' : index === currentIndex ? 'bg-primary' : 'bg-foreground/10')} />
+                  </div>
+                ))}
+              </div>
+              {canManage && currentIndex >= 0 && currentIndex < stages.length - 1 && (
+                <Button size="sm" className="h-7 text-xs mt-2.5 w-full" onClick={handleAdvance} disabled={advanceStage.isPending}>
+                  {advanceStage.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <SkipForward className="w-3 h-3 mr-1" />}
+                  Move to next phase
+                </Button>
+              )}
+            </div>
+          )}
+
           {stages.map((stage: any) => (
             <div key={stage.id} className="flex items-center gap-2 group">
               {/* Checkbox */}
               <button
                 onClick={() => handleToggle(stage)}
+                disabled={!canManage}
                 className="shrink-0 w-4 h-4 rounded border border-foreground/30 flex items-center justify-center hover:border-primary transition-colors"
                 style={{ background: stage.completed ? 'hsl(var(--primary))' : 'transparent' }}
               >
@@ -407,8 +446,8 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
               ) : (
                 <span
                   className={cn('flex-1 text-xs leading-snug', stage.completed ? 'line-through text-foreground/40' : 'text-foreground/80')}
-                  onDoubleClick={() => { setEditingId(stage.id); setEditingName(stage.name); }}
-                  title="Double-click to edit"
+                  onDoubleClick={() => { if (canManage) { setEditingId(stage.id); setEditingName(stage.name); } }}
+                  title={canManage ? "Double-click to edit" : undefined}
                 >
                   {stage.name}
                 </span>
@@ -417,13 +456,13 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
               {/* Actions (file + delete) */}
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <EntityAttachmentsButton entityType="product_stage" entityId={stage.id} label={stage.name} />
-                <button
+                {canManage && <button
                   onClick={() => handleDelete(stage)}
                   className="w-5 h-5 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors"
                   title="Delete stage"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </button>}
               </div>
             </div>
           ))}
@@ -433,7 +472,7 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
           )}
 
           {/* Add stage row */}
-          {isAdding ? (
+          {canManage && (isAdding ? (
             <div className="flex gap-1 mt-1">
               <input
                 autoFocus
@@ -464,6 +503,22 @@ function ProductStagesSection({ product, bankId }: { product: any; bankId: strin
             >
               <Plus className="w-3 h-3" /> Add stage
             </button>
+          ))}
+
+          {phaseHistory.length > 0 && (
+            <div className="border-t border-foreground/10 mt-3 pt-2">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-foreground/40 mb-1.5">Phase history</div>
+              {phaseHistory.slice(0, 5).map((item: any) => (
+                <div key={item.id} className="text-[11px] text-foreground/55 py-1">
+                  <span className="font-medium text-foreground/75">{item.fromStageName}</span>
+                  <ChevronRight className="inline w-3 h-3 mx-1" />
+                  <span className="font-medium text-foreground/75">{item.toStageName}</span>
+                  <span className="block text-[10px] text-foreground/35">
+                    {item.changedByName || 'Authorized user'} · {formatDateTime(item.createdAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

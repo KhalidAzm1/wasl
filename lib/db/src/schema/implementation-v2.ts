@@ -6,6 +6,7 @@ import { banksTable } from "./banks";
 export const implementationStagesTable = pgTable("implementation_stages", {
   id:           serial("id").primaryKey(),
   bankId:       text("bank_id").notNull().references(() => banksTable.id, { onDelete: "cascade" }),
+  trackType:    text("track_type").notNull().default("business"),
   name:         text("name").notNull(),
   displayOrder: integer("display_order").notNull().default(0),
   percentage:   numeric("percentage", { precision: 5, scale: 2 }),
@@ -47,6 +48,7 @@ export type ImplementationSettingRow  = typeof implementationSettingsTable.$infe
 
 export type ImplementationStatusV2 = "not_started" | "in_progress" | "completed" | "skipped" | "blocked";
 export type PercentageMode = "dynamic" | "fixed";
+export type ImplementationTrackType = "business" | "technical";
 
 export const DEFAULT_STAGE_NAMES = [
   "Initial Engagement",
@@ -59,4 +61,12 @@ export const DEFAULT_STAGE_NAMES = [
   "Penetration Testing & Vulnerability Assessment (PT-AV)",
   "Go-Live Preparation",
   "Production Go-Live",
+];
+
+export const TECHNICAL_STAGE_NAMES = [
+  "Kick-Off",
+  "Analysis",
+  "Development and Integration",
+  "Testing",
+  "Rollout",
 ];

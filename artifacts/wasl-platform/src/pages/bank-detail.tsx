@@ -2284,7 +2284,7 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
           <span className="font-semibold text-sm leading-snug">
             {isBlocked ? <span className="text-red-400">⛔ Blocked</span> : currentStageName ?? (pct === 100 ? '✓ All Complete' : 'Not Started')}
           </span>
-          {product && pct < 100 && (
+          {product && totalCount > 0 && pct < 100 && (
             <Button size="sm" className="h-7 text-xs mt-2" onClick={handleAdvanceProduct} disabled={advanceProduct.isPending}>
               {advanceProduct.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <SkipForward className="w-3 h-3 mr-1" />}
               Move to next phase

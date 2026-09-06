@@ -314,11 +314,11 @@ function ContactsCard({ bank }: { bank: any }) {
 }
 
 // ── Product Stages Section ────────────────────────────────────────────────────
-function ProductStagesSection({ product, bankId }: { product: any; bankId: string }) {
+function ProductStagesSection({ product, bankId, readOnly = false }: { product: any; bankId: string; readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { role } = useAuth();
-  const canManage = ['super_admin', 'admin', 'manager'].includes(role ?? '');
+  const canManage = !readOnly && ['super_admin', 'admin', 'manager'].includes(role ?? '');
   const { data: stages = [], isLoading } = useProductStages(product.id);
   const { data: phaseHistory = [] } = useProductPhaseHistory(product.id);
   const addStage = useAddProductStage();
@@ -1385,7 +1385,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                 </div>
               </div>
 
-              <ProductStagesSection product={p} bankId={bankId} />
+              <ProductStagesSection product={p} bankId={bankId} readOnly />
             </CardContent>
           </Card>
         ))}
@@ -2051,8 +2051,75 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
 // ── ImplementationProgressTab (v2) ────────────────────────────────────────
 
 function ImplementationProgressTab({ bankId }: { bankId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: bank } = useGetBank(bankId, { query: { queryKey: getGetBankQueryKey(bankId) } });
+  const updateProduct = useUpdateProduct();
+  const products = bank?.products ?? [];
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const selectedProduct = products.find((product: any) => product.id === selectedProductId) ?? products[0] ?? null;
+
+  useEffect(() => {
+    if (!selectedProductId && products.length > 0) setSelectedProductId(products[0].id);
+  }, [selectedProductId, products]);
+
+  const setProductTrack = (trackType: 'business' | 'technical') => {
+    if (!selectedProduct) return;
+    updateProduct.mutate({ id: selectedProduct.id, data: { trackType } } as any, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+        queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+        toast({ title: 'Product track updated', description: `${selectedProduct.productCode} is now on the ${trackType} track.` });
+      },
+      onError: (error: any) => toast({ title: 'Could not update product track', description: error?.message, variant: 'destructive' }),
+    });
+  };
+
   return (
-    <Tabs defaultValue="business" className="space-y-6">
+    <div className="space-y-8">
+      <Card className="border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <LayoutGrid className="w-4 h-4 text-primary" /> Product Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {products.length === 0 ? (
+            <p className="text-sm text-foreground/40">Add a product first to create its progress track.</p>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs font-semibold text-foreground/50 block mb-1.5">Select product</label>
+                <select
+                  value={selectedProduct?.id ?? ''}
+                  onChange={(event) => setSelectedProductId(Number(event.target.value))}
+                  className="w-full h-10 rounded-lg border border-foreground/15 bg-background px-3 text-sm"
+                >
+                  {products.map((product: any) => <option key={product.id} value={product.id}>{product.productCode}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-foreground/50 block mb-1.5">Product track</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['business', 'technical'] as const).map((trackType) => (
+                    <Button
+                      key={trackType}
+                      variant={(selectedProduct.trackType ?? 'technical') === trackType ? 'default' : 'outline'}
+                      onClick={() => setProductTrack(trackType)}
+                      disabled={updateProduct.isPending}
+                    >
+                      {trackType === 'business' ? 'Business Track' : 'Technical Track'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <ProductStagesSection product={selectedProduct} bankId={bankId} />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="business" className="space-y-6">
       <TabsList className="grid w-full max-w-md grid-cols-2">
         <TabsTrigger value="business">Business Track</TabsTrigger>
         <TabsTrigger value="technical">Technical Track</TabsTrigger>
@@ -2063,7 +2130,8 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
       <TabsContent value="technical">
         <TrackProgress bankId={bankId} track="technical" />
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }
 

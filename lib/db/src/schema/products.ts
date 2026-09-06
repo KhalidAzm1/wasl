@@ -12,6 +12,7 @@ export const productsTable = pgTable("products", {
   categoryStage: text("category_stage").notNull(),
   status: text("status").notNull(),
   progressPercent: real("progress_percent").notNull().default(0),
+  trackType: text("track_type").notNull().default("technical"),
   dateType: text("date_type"),
   dateValue: text("date_value"),
   responsiblePerson: text("responsible_person"),

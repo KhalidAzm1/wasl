@@ -50,6 +50,13 @@
       "when": 1788714000000,
       "tag": "0006_product_phase_progression",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788717600000,
+      "tag": "0007_product_track_type",
+      "breakpoints": true
     }
   ]
 }

@@ -137,6 +137,7 @@ export interface Product {
   categoryStage: string;
   status: string;
   progressPercent: number;
+  trackType: 'business' | 'technical';
   /** @nullable */
   dateType?: string | null;
   /** @nullable */
@@ -323,6 +324,7 @@ export interface ProductInput {
   categoryStage: string;
   status: string;
   progressPercent: number;
+  trackType?: 'business' | 'technical';
   dateType?: string;
   dateValue?: string;
   responsiblePerson?: string;
@@ -336,6 +338,7 @@ export interface ProductUpdate {
   categoryStage?: string;
   status?: string;
   progressPercent?: number;
+  trackType?: 'business' | 'technical';
   dateType?: string;
   dateValue?: string;
   responsiblePerson?: string;

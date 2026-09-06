@@ -9,6 +9,8 @@ import {
   actionItemsTable,
   filesTable,
   bankProductTypesTable,
+  implementationStagesTable,
+  TECHNICAL_STAGE_NAMES,
 } from "@workspace/db";
 import {
   CreateBankBody,
@@ -249,6 +251,14 @@ router.post("/banks", requireRole("super_admin", "admin"), requireBankEditAccess
     .insert(banksTable)
     .values({ id, ...bankInput, updatedBy: req.authUser?.name ?? null })
     .returning();
+  await db.insert(implementationStagesTable).values(
+    TECHNICAL_STAGE_NAMES.map((name, displayOrder) => ({
+      bankId: bank.id,
+      trackType: "technical",
+      name,
+      displayOrder,
+    })),
+  ).onConflictDoNothing();
   if (productTypeIds && productTypeIds.length > 0) {
     await syncProductTypes(bank.id, productTypeIds);
   }

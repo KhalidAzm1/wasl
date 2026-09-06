@@ -16,6 +16,7 @@ import {
   db,
   banksTable,
   implementationStagesTable,
+  TECHNICAL_STAGE_NAMES,
   risksTable,
   meetingsTable,
   actionItemsTable,
@@ -707,6 +708,15 @@ async function executeFunction(name: string, args: Record<string, any>, allBanks
       contacts: [],
       isArchived: false,
     });
+
+    await db.insert(implementationStagesTable).values(
+      TECHNICAL_STAGE_NAMES.map((stageName, displayOrder) => ({
+        bankId: newId,
+        trackType: "technical",
+        name: stageName,
+        displayOrder,
+      })),
+    ).onConflictDoNothing();
 
     return {
       success: true,

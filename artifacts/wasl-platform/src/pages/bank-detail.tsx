@@ -12,7 +12,7 @@ import {
   useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey,
   useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
   useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
-  type StageV2, type BankStagesViewV2, type PatchStageBodyV2,
+  type StageV2, type BankStagesViewV2, type PatchStageBodyV2, type ImplementationTrackType,
   useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
   getProductStagesQueryKey,
 } from '@workspace/api-client-react';
@@ -1427,12 +1427,29 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
 // ── ImplementationProgressTab (v2) ────────────────────────────────────────
 
 function ImplementationProgressTab({ bankId }: { bankId: string }) {
+  return (
+    <Tabs defaultValue="business" className="space-y-6">
+      <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsTrigger value="business">Business Track</TabsTrigger>
+        <TabsTrigger value="technical">Technical Track</TabsTrigger>
+      </TabsList>
+      <TabsContent value="business">
+        <TrackProgress bankId={bankId} track="business" />
+      </TabsContent>
+      <TabsContent value="technical">
+        <TrackProgress bankId={bankId} track="technical" />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function TrackProgress({ bankId, track }: { bankId: string; track: ImplementationTrackType }) {
   const { toast } = useToast();
-  const { data, isLoading } = useGetBankStagesV2(bankId);
-  const patchStage = usePatchStageV2(bankId);
-  const addStage = useAddStageV2(bankId);
-  const deleteStage = useDeleteStageV2(bankId);
-  const reorderStages = useReorderStagesV2(bankId);
+  const { data, isLoading } = useGetBankStagesV2(bankId, track);
+  const patchStage = usePatchStageV2(bankId, track);
+  const addStage = useAddStageV2(bankId, track);
+  const deleteStage = useDeleteStageV2(bankId, track);
+  const reorderStages = useReorderStagesV2(bankId, track);
 
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
   const [newStageName, setNewStageName] = useState('');
@@ -1541,7 +1558,7 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
   if (isLoading) return (
     <div className="flex items-center justify-center py-16 gap-3 text-foreground/40">
       <Loader2 className="w-5 h-5 animate-spin" />
-      <span>Loading implementation progress…</span>
+      <span>Loading {track} track…</span>
     </div>
   );
 
@@ -1596,7 +1613,7 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
 
       {/* Timeline strip */}
       <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 overflow-x-auto">
-        <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold mb-4">Implementation Timeline</p>
+        <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold mb-4">{track === 'technical' ? 'Technical' : 'Business'} Timeline</p>
         <div className="flex items-center min-w-max gap-0">
           {displayStages.map((s, idx) => {
             const cfgKey = (s.skipped ? 'skipped' : s.status) as StatusKey;

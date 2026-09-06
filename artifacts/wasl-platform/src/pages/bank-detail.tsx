@@ -2057,11 +2057,16 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
   const updateProduct = useUpdateProduct();
   const products = bank?.products ?? [];
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [activeTrack, setActiveTrack] = useState<ImplementationTrackType>('technical');
   const selectedProduct = products.find((product: any) => product.id === selectedProductId) ?? products[0] ?? null;
 
   useEffect(() => {
     if (!selectedProductId && products.length > 0) setSelectedProductId(products[0].id);
   }, [selectedProductId, products]);
+
+  useEffect(() => {
+    if (selectedProduct) setActiveTrack(selectedProduct.trackType ?? 'technical');
+  }, [selectedProduct?.id, selectedProduct?.trackType]);
 
   const setProductTrack = (trackType: 'business' | 'technical') => {
     if (!selectedProduct) return;
@@ -2076,72 +2081,59 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
   };
 
   return (
-    <div>
-      <Card className="border-primary/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <LayoutGrid className="w-4 h-4 text-primary" /> Product Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {products.length === 0 ? (
-            <p className="text-sm text-foreground/40">Add a product first to create its progress track.</p>
-          ) : (
-            <>
-              <div>
-                <label className="text-xs font-semibold text-foreground/50 block mb-1.5">Select product</label>
-                <select
-                  value={selectedProduct?.id ?? ''}
-                  onChange={(event) => setSelectedProductId(Number(event.target.value))}
-                  className="w-full h-10 rounded-lg border border-foreground/15 bg-background px-3 text-sm"
-                >
-                  {products.map((product: any) => <option key={product.id} value={product.id}>{product.productCode}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-foreground/50 block mb-1.5">Product track</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['business', 'technical'] as const).map((trackType) => (
-                    <Button
-                      key={trackType}
-                      variant={(selectedProduct.trackType ?? 'technical') === trackType ? 'default' : 'outline'}
-                      onClick={() => setProductTrack(trackType)}
-                      disabled={updateProduct.isPending}
-                    >
-                      {trackType === 'business' ? 'Business Track' : 'Technical Track'}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <ProductStagesSection product={selectedProduct} bankId={bankId} />
-            </>
-          )}
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div>
+        <label className="text-xs font-semibold text-foreground/50 block mb-1.5">Select product</label>
+        <select
+          value={selectedProduct?.id ?? ''}
+          onChange={(event) => setSelectedProductId(Number(event.target.value))}
+          className="w-full h-10 rounded-lg border border-foreground/15 bg-background px-3 text-sm"
+        >
+          {products.map((product: any) => <option key={product.id} value={product.id}>{product.productCode}</option>)}
+        </select>
+      </div>
 
-      <Tabs defaultValue="business" className="space-y-6">
+      <Tabs value={activeTrack} onValueChange={(value) => { const track = value as ImplementationTrackType; setActiveTrack(track); setProductTrack(track); }} className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="business">Business Track</TabsTrigger>
           <TabsTrigger value="technical">Technical Track</TabsTrigger>
         </TabsList>
         <TabsContent value="business">
-          <TrackProgress bankId={bankId} track="business" />
+          <TrackProgress bankId={bankId} track="business" product={selectedProduct} />
         </TabsContent>
         <TabsContent value="technical">
-          <TrackProgress bankId={bankId} track="technical" />
+          <TrackProgress bankId={bankId} track="technical" product={selectedProduct} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function TrackProgress({ bankId, track }: { bankId: string; track: ImplementationTrackType }) {
+function TrackProgress({ bankId, track, product }: { bankId: string; track: ImplementationTrackType; product?: any }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useGetBankStagesV2(bankId, track);
+  const { data: productStages = [] } = useProductStages(product?.id ?? 0, { enabled: !!product });
+  const advanceProduct = useAdvanceProductStage();
   const patchStage = usePatchStageV2(bankId, track);
   const addStage = useAddStageV2(bankId, track);
   const deleteStage = useDeleteStageV2(bankId, track);
   const reorderStages = useReorderStagesV2(bankId, track);
+
+  const currentProductStage = productStages.find(stage => stage.isCurrent) ?? productStages.find(stage => !stage.completed);
+  const canAdvanceProduct = !!currentProductStage && productStages.findIndex(stage => stage.id === currentProductStage.id) < productStages.length - 1;
+
+  const handleAdvanceProduct = () => {
+    if (!product) return;
+    advanceProduct.mutate({ productId: product.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
+        queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+        toast({ title: 'Phase updated', description: `${product.productCode} moved to the next phase.` });
+      },
+      onError: (error: any) => toast({ title: 'Phase update failed', description: error?.message, variant: 'destructive' }),
+    });
+  };
 
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
   const [newStageName, setNewStageName] = useState('');
@@ -2292,8 +2284,14 @@ function TrackProgress({ bankId, track }: { bankId: string; track: Implementatio
         <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 flex flex-col justify-center gap-1">
           <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Current Stage</span>
           <span className="font-semibold text-sm leading-snug">
-            {isBlocked ? <span className="text-red-400">⛔ Blocked</span> : currentStageName ?? (pct === 100 ? '✓ All Complete' : 'Not Started')}
+            {currentProductStage?.name ?? (isBlocked ? <span className="text-red-400">⛔ Blocked</span> : currentStageName ?? (pct === 100 ? '✓ All Complete' : 'Not Started'))}
           </span>
+          {product && canAdvanceProduct && (
+            <Button size="sm" className="h-7 text-xs mt-2" onClick={handleAdvanceProduct} disabled={advanceProduct.isPending}>
+              {advanceProduct.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <SkipForward className="w-3 h-3 mr-1" />}
+              Move to next phase
+            </Button>
+          )}
         </div>
 
         <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 flex flex-col justify-center gap-1">

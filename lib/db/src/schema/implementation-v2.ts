@@ -1,11 +1,13 @@
 import { pgTable, serial, text, boolean, integer, numeric, timestamp } from "drizzle-orm/pg-core";
 import { banksTable } from "./banks";
+import { productsTable } from "./products";
 
 // ── Tables ────────────────────────────────────────────────────────────────────
 
 export const implementationStagesTable = pgTable("implementation_stages", {
   id:           serial("id").primaryKey(),
   bankId:       text("bank_id").notNull().references(() => banksTable.id, { onDelete: "cascade" }),
+  productId:    integer("product_id").references(() => productsTable.id, { onDelete: "cascade" }),
   trackType:    text("track_type").notNull().default("business"),
   name:         text("name").notNull(),
   displayOrder: integer("display_order").notNull().default(0),

@@ -16,11 +16,11 @@
  *   GET    /api/v2/implementation/summary
  */
 import { Router, type IRouter } from "express";
-import { and, eq, asc } from "drizzle-orm";
+import { and, eq, asc, isNull } from "drizzle-orm";
 import { invalidateActivityCache } from "./banks";
 import { eventBus } from "../lib/event-bus";
 import {
-  db, banksTable,
+  db, banksTable, productsTable, productPhaseHistoryTable,
   implementationStagesTable,
   implementationSubStagesTable,
   implementationSettingsTable,
@@ -108,11 +108,11 @@ function computeDerivedV2(stages: Stage[], mode: "dynamic" | "fixed") {
 }
 
 /** Seed a bank's stages from the admin template, backfilling any existing v1 progress */
-async function seedBankStages(bankId: string, trackType: ImplementationTrackType = "business"): Promise<void> {
+async function seedBankStages(bankId: string, trackType: ImplementationTrackType = "business", productId?: number): Promise<void> {
   const names = trackType === "technical" ? TECHNICAL_STAGE_NAMES : await getDefaultStageNames();
 
   // Load any existing v1 progress rows so we can pre-populate status/completed/etc.
-  const v1Rows = trackType === "business" ? await db
+  const v1Rows = trackType === "business" && !productId ? await db
     .select()
     .from(bankImplementationProgressTable)
     .where(eq(bankImplementationProgressTable.bankId, bankId)) : [];
@@ -127,6 +127,7 @@ async function seedBankStages(bankId: string, trackType: ImplementationTrackType
       const prior = byLabel.get(name);
       return {
         bankId,
+        productId: productId ?? null,
         trackType,
         name,
         displayOrder: idx,
@@ -146,7 +147,7 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
   const [activeBanks, allStages, mode] = await Promise.all([
     db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.isArchived, false)),
     db.select().from(implementationStagesTable)
-      .where(eq(implementationStagesTable.trackType, "business"))
+      .where(and(eq(implementationStagesTable.trackType, "business"), isNull(implementationStagesTable.productId)))
       .orderBy(asc(implementationStagesTable.displayOrder)),
     getPercentageMode(),
   ]);
@@ -163,7 +164,7 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
   // Reload all stages after seeding (cheap because seeding is rare after first run)
   const finalStages = unseeded.length > 0
     ? await db.select().from(implementationStagesTable)
-      .where(eq(implementationStagesTable.trackType, "business"))
+      .where(and(eq(implementationStagesTable.trackType, "business"), isNull(implementationStagesTable.productId)))
       .orderBy(asc(implementationStagesTable.displayOrder))
     : allStages;
 
@@ -192,18 +193,24 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
 router.get("/v2/banks/:bankId/stages", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
   const bankId = req.params.bankId as string;
   const trackType: ImplementationTrackType = req.query.track === "technical" ? "technical" : "business";
+  const productId = req.query.productId ? Number(req.query.productId) : undefined;
   const [bank] = await db.select({ id: banksTable.id }).from(banksTable)
     .where(and(eq(banksTable.id, bankId), eq(banksTable.isArchived, false)));
   if (!bank) { res.status(404).json({ error: "Bank not found" }); return; }
+  if (productId) {
+    const [product] = await db.select({ id: productsTable.id }).from(productsTable)
+      .where(and(eq(productsTable.id, productId), eq(productsTable.bankId, bankId)));
+    if (!product) { res.status(404).json({ error: "Product not found for bank" }); return; }
+  }
 
   let stages = await db.select().from(implementationStagesTable)
-    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType)))
+    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType), productId ? eq(implementationStagesTable.productId, productId) : isNull(implementationStagesTable.productId)))
     .orderBy(asc(implementationStagesTable.displayOrder));
 
   if (stages.length === 0) {
-    await seedBankStages(bankId, trackType);
+    await seedBankStages(bankId, trackType, productId);
     stages = await db.select().from(implementationStagesTable)
-      .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType)))
+      .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType), productId ? eq(implementationStagesTable.productId, productId) : isNull(implementationStagesTable.productId)))
       .orderBy(asc(implementationStagesTable.displayOrder));
   }
 
@@ -211,10 +218,64 @@ router.get("/v2/banks/:bankId/stages", requirePermission("dashboard_access"), as
   res.json(computeDerivedV2(stages, mode));
 });
 
+router.post("/v2/banks/:bankId/stages/advance", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
+  const bankId = req.params.bankId as string;
+  const trackType: ImplementationTrackType = req.query.track === "technical" ? "technical" : "business";
+  const productId = Number(req.query.productId);
+  if (!Number.isInteger(productId) || productId <= 0) { res.status(400).json({ error: "productId is required" }); return; }
+
+  let stages = await db.select().from(implementationStagesTable)
+    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.productId, productId), eq(implementationStagesTable.trackType, trackType)))
+    .orderBy(asc(implementationStagesTable.displayOrder));
+  if (stages.length === 0) {
+    await seedBankStages(bankId, trackType, productId);
+    stages = await db.select().from(implementationStagesTable)
+      .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.productId, productId), eq(implementationStagesTable.trackType, trackType)))
+      .orderBy(asc(implementationStagesTable.displayOrder));
+  }
+
+  const currentIndex = stages.findIndex((stage) => stage.status === "in_progress") >= 0
+    ? stages.findIndex((stage) => stage.status === "in_progress")
+    : stages.findIndex((stage) => !stage.completed && !stage.skipped);
+  if (currentIndex < 0) { res.status(409).json({ error: "All phases are already complete" }); return; }
+
+  const current = stages[currentIndex];
+  const next = stages.slice(currentIndex + 1).find((stage) => !stage.skipped);
+  await db.transaction(async (tx) => {
+    await tx.update(implementationStagesTable).set({ status: "completed", completed: true, completedAt: new Date().toISOString().split("T")[0], updatedAt: new Date() })
+      .where(eq(implementationStagesTable.id, current.id));
+    if (next) {
+      await tx.update(implementationStagesTable).set({ status: "in_progress", completed: false, updatedAt: new Date() })
+        .where(eq(implementationStagesTable.id, next.id));
+    }
+    const completedCount = stages.filter((stage, index) => stage.completed || index === currentIndex).length;
+    await tx.update(productsTable).set({
+      categoryStage: next?.name ?? current.name,
+      progressPercent: completedCount / stages.filter((stage) => !stage.skipped).length,
+      trackType,
+      updatedAt: new Date(),
+    }).where(and(eq(productsTable.id, productId), eq(productsTable.bankId, bankId)));
+    await tx.insert(productPhaseHistoryTable).values({
+      productId,
+      fromStageName: current.name,
+      toStageName: next?.name ?? "Completed",
+      changedById: req.authUser?.id ?? null,
+      changedByName: req.authUser?.name ?? null,
+    });
+  });
+
+  const updated = await db.select().from(implementationStagesTable)
+    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.productId, productId), eq(implementationStagesTable.trackType, trackType)))
+    .orderBy(asc(implementationStagesTable.displayOrder));
+  const mode = await getPercentageMode();
+  res.json(computeDerivedV2(updated, mode));
+});
+
 /** POST /api/v2/banks/:bankId/stages */
 router.post("/v2/banks/:bankId/stages", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const bankId = req.params.bankId as string;
   const trackType: ImplementationTrackType = req.query.track === "technical" ? "technical" : "business";
+  const productId = req.query.productId ? Number(req.query.productId) : undefined;
   const [bank] = await db.select({ id: banksTable.id }).from(banksTable)
     .where(and(eq(banksTable.id, bankId), eq(banksTable.isArchived, false)));
   if (!bank) { res.status(404).json({ error: "Bank not found" }); return; }
@@ -223,16 +284,16 @@ router.post("/v2/banks/:bankId/stages", requireRole("super_admin", "admin"), asy
   if (!name?.trim()) { res.status(400).json({ error: "name is required" }); return; }
 
   const existing = await db.select({ ord: implementationStagesTable.displayOrder })
-    .from(implementationStagesTable).where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType)))
+    .from(implementationStagesTable).where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType), productId ? eq(implementationStagesTable.productId, productId) : isNull(implementationStagesTable.productId)))
     .orderBy(asc(implementationStagesTable.displayOrder));
   const maxOrder = existing.length > 0 ? Math.max(...existing.map((r) => r.ord)) + 1 : 0;
 
-  await db.insert(implementationStagesTable).values({ bankId, trackType, name: name.trim(), displayOrder: maxOrder });
+  await db.insert(implementationStagesTable).values({ bankId, productId: productId ?? null, trackType, name: name.trim(), displayOrder: maxOrder });
 
   await logAudit(req, { action: "CREATE", entityType: "impl_stage_v2", entityId: bankId, entityLabel: name.trim(), details: { bankId } });
 
   const stages = await db.select().from(implementationStagesTable)
-    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType))).orderBy(asc(implementationStagesTable.displayOrder));
+    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType), productId ? eq(implementationStagesTable.productId, productId) : isNull(implementationStagesTable.productId))).orderBy(asc(implementationStagesTable.displayOrder));
   const mode = await getPercentageMode();
   res.status(201).json(computeDerivedV2(stages, mode));
 });
@@ -241,6 +302,7 @@ router.post("/v2/banks/:bankId/stages", requireRole("super_admin", "admin"), asy
 router.post("/v2/banks/:bankId/stages/reorder", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const bankId = req.params.bankId as string;
   const trackType: ImplementationTrackType = req.query.track === "technical" ? "technical" : "business";
+  const productId = req.query.productId ? Number(req.query.productId) : undefined;
   const { orderedIds } = req.body as { orderedIds?: number[] };
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
     res.status(400).json({ error: "orderedIds must be a non-empty array" }); return;
@@ -251,14 +313,14 @@ router.post("/v2/banks/:bankId/stages/reorder", requireRole("super_admin", "admi
     orderedIds.map((id, idx) =>
       db.update(implementationStagesTable)
         .set({ displayOrder: idx, updatedAt: new Date() })
-        .where(and(eq(implementationStagesTable.id, id), eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType)))
+        .where(and(eq(implementationStagesTable.id, id), eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType), productId ? eq(implementationStagesTable.productId, productId) : isNull(implementationStagesTable.productId)))
     )
   );
 
   await logAudit(req, { action: "UPDATE", entityType: "impl_stage_v2", entityId: bankId, entityLabel: "stages reordered", details: { orderedIds } });
 
   const stages = await db.select().from(implementationStagesTable)
-    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType))).orderBy(asc(implementationStagesTable.displayOrder));
+    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.trackType, trackType), productId ? eq(implementationStagesTable.productId, productId) : isNull(implementationStagesTable.productId))).orderBy(asc(implementationStagesTable.displayOrder));
   const mode = await getPercentageMode();
   res.json(computeDerivedV2(stages, mode));
 });
@@ -303,7 +365,7 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
   eventBus.emit("bank_updated", { bankId: existing.bankId });
 
   const stages = await db.select().from(implementationStagesTable)
-    .where(and(eq(implementationStagesTable.bankId, existing.bankId), eq(implementationStagesTable.trackType, existing.trackType))).orderBy(asc(implementationStagesTable.displayOrder));
+    .where(and(eq(implementationStagesTable.bankId, existing.bankId), eq(implementationStagesTable.trackType, existing.trackType), existing.productId ? eq(implementationStagesTable.productId, existing.productId) : isNull(implementationStagesTable.productId))).orderBy(asc(implementationStagesTable.displayOrder));
   const mode = await getPercentageMode();
   res.json(computeDerivedV2(stages, mode));
 });
@@ -322,7 +384,7 @@ router.delete("/v2/stages/:stageId", requireRole("super_admin", "admin"), async 
   eventBus.emit("bank_updated", { bankId: existing.bankId });
 
   const stages = await db.select().from(implementationStagesTable)
-    .where(and(eq(implementationStagesTable.bankId, existing.bankId), eq(implementationStagesTable.trackType, existing.trackType))).orderBy(asc(implementationStagesTable.displayOrder));
+    .where(and(eq(implementationStagesTable.bankId, existing.bankId), eq(implementationStagesTable.trackType, existing.trackType), existing.productId ? eq(implementationStagesTable.productId, existing.productId) : isNull(implementationStagesTable.productId))).orderBy(asc(implementationStagesTable.displayOrder));
   const mode = await getPercentageMode();
   res.json(computeDerivedV2(stages, mode));
 });

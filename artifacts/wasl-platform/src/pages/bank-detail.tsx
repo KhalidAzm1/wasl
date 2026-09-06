@@ -11,6 +11,7 @@ import {
   useCreateDocument, useUploadDocument, useDeleteDocument,
   useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey,
   useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
+  useAdvanceImplementationStage,
   useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
   type StageV2, type BankStagesViewV2, type PatchStageBodyV2, type ImplementationTrackType,
   useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
@@ -2112,20 +2113,17 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
 function TrackProgress({ bankId, track, product }: { bankId: string; track: ImplementationTrackType; product?: any }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data, isLoading } = useGetBankStagesV2(bankId, track);
-  const { data: productStages = [] } = useProductStages(product?.id ?? 0, { enabled: !!product });
-  const advanceProduct = useAdvanceProductStage();
-  const patchStage = usePatchStageV2(bankId, track);
-  const addStage = useAddStageV2(bankId, track);
-  const deleteStage = useDeleteStageV2(bankId, track);
-  const reorderStages = useReorderStagesV2(bankId, track);
-
-  const currentProductStage = productStages.find(stage => stage.isCurrent) ?? productStages.find(stage => !stage.completed);
-  const canAdvanceProduct = !!currentProductStage && productStages.findIndex(stage => stage.id === currentProductStage.id) < productStages.length - 1;
+  const productId = product?.id as number | undefined;
+  const { data, isLoading } = useGetBankStagesV2(bankId, track, productId);
+  const advanceProduct = useAdvanceImplementationStage(bankId, track, productId);
+  const patchStage = usePatchStageV2(bankId, track, productId);
+  const addStage = useAddStageV2(bankId, track, productId);
+  const deleteStage = useDeleteStageV2(bankId, track, productId);
+  const reorderStages = useReorderStagesV2(bankId, track, productId);
 
   const handleAdvanceProduct = () => {
     if (!product) return;
-    advanceProduct.mutate({ productId: product.id }, {
+    advanceProduct.mutate({}, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetBankQueryKey(bankId) });
         queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
@@ -2284,9 +2282,9 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
         <div className="p-5 rounded-2xl bg-foreground/5 border border-foreground/10 flex flex-col justify-center gap-1">
           <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Current Stage</span>
           <span className="font-semibold text-sm leading-snug">
-            {currentProductStage?.name ?? (isBlocked ? <span className="text-red-400">⛔ Blocked</span> : currentStageName ?? (pct === 100 ? '✓ All Complete' : 'Not Started'))}
+            {isBlocked ? <span className="text-red-400">⛔ Blocked</span> : currentStageName ?? (pct === 100 ? '✓ All Complete' : 'Not Started')}
           </span>
-          {product && canAdvanceProduct && (
+          {product && pct < 100 && (
             <Button size="sm" className="h-7 text-xs mt-2" onClick={handleAdvanceProduct} disabled={advanceProduct.isPending}>
               {advanceProduct.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <SkipForward className="w-3 h-3 mr-1" />}
               Move to next phase

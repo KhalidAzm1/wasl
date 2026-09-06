@@ -12,6 +12,7 @@ import type { ErrorType } from "./custom-fetch";
 export interface StageV2 {
   id: number;
   bankId: string;
+  productId: number | null;
   trackType: "business" | "technical";
   name: string;
   displayOrder: number;
@@ -94,14 +95,15 @@ export interface PatchSubStageBody {
 // ── Query keys ────────────────────────────────────────────────────────────────
 
 export type ImplementationTrackType = "business" | "technical";
-export const getBankStagesV2QueryKey = (bankId: string, track: ImplementationTrackType = "business"): QueryKey => [`/api/v2/banks/${bankId}/stages`, track];
+export const getBankStagesV2QueryKey = (bankId: string, track: ImplementationTrackType = "business", productId?: number): QueryKey => [`/api/v2/banks/${bankId}/stages`, track, productId ?? null];
 export const getSubStagesV2QueryKey = (stageId: number): QueryKey => [`/api/v2/stages/${stageId}/sub-stages`];
 export const getImplSummaryV2QueryKey = (): QueryKey => ["/api/v2/implementation/summary"];
 export const getImplSettingsV2QueryKey = (): QueryKey => ["/api/v2/admin/implementation-settings"];
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
-const fetchBankStages = (bankId: string, track: ImplementationTrackType) => customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/stages?track=${track}`);
+const productParam = (productId?: number) => productId ? `&productId=${productId}` : "";
+const fetchBankStages = (bankId: string, track: ImplementationTrackType, productId?: number) => customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/stages?track=${track}${productParam(productId)}`);
 const fetchSubStages = (stageId: number) => customFetch<SubStageV2[]>(`/api/v2/stages/${stageId}/sub-stages`);
 const fetchImplSummaryV2 = () => customFetch<BankSummaryV2[]>("/api/v2/implementation/summary");
 const fetchImplSettings = () => customFetch<ImplementationSettingsV2>("/api/v2/admin/implementation-settings");
@@ -111,10 +113,11 @@ const fetchImplSettings = () => customFetch<ImplementationSettingsV2>("/api/v2/a
 export function useGetBankStagesV2(
   bankId: string,
   track: ImplementationTrackType = "business",
+  productId?: number,
   options?: { query?: Partial<UseQueryOptions<BankStagesViewV2, ErrorType<unknown>>> }
 ): UseQueryResult<BankStagesViewV2, ErrorType<unknown>> & { queryKey: QueryKey } {
-  const qk = getBankStagesV2QueryKey(bankId, track);
-  const q = useQuery({ queryKey: qk, queryFn: () => fetchBankStages(bankId, track), enabled: !!bankId, ...options?.query });
+  const qk = getBankStagesV2QueryKey(bankId, track, productId);
+  const q = useQuery({ queryKey: qk, queryFn: () => fetchBankStages(bankId, track, productId), enabled: !!bankId && (productId === undefined || !!productId), ...options?.query });
   return { ...q, queryKey: qk };
 }
 
@@ -138,9 +141,9 @@ export function useGetImplSettingsV2() {
 
 type MutFn<TArgs, TResult = BankStagesViewV2> = (args: TArgs) => Promise<TResult>;
 
-function useBankStagesMutation<TArgs>(bankId: string, track: ImplementationTrackType, fn: MutFn<TArgs>): UseMutationResult<BankStagesViewV2, ErrorType<unknown>, TArgs> {
+function useBankStagesMutation<TArgs>(bankId: string, track: ImplementationTrackType, productId: number | undefined, fn: MutFn<TArgs>): UseMutationResult<BankStagesViewV2, ErrorType<unknown>, TArgs> {
   const qc = useQueryClient();
-  const qk = getBankStagesV2QueryKey(bankId, track);
+  const qk = getBankStagesV2QueryKey(bankId, track, productId);
   return useMutation<BankStagesViewV2, ErrorType<unknown>, TArgs>({
     mutationFn: fn,
     onSuccess: (data) => { qc.setQueryData(qk, data); },
@@ -149,27 +152,33 @@ function useBankStagesMutation<TArgs>(bankId: string, track: ImplementationTrack
 
 // ── Mutation hooks ────────────────────────────────────────────────────────────
 
-export function useAddStageV2(bankId: string, track: ImplementationTrackType = "business") {
-  return useBankStagesMutation(bankId, track, ({ name }: { name: string }) =>
-    customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/stages?track=${track}`, { method: "POST", body: JSON.stringify({ name }) })
+export function useAddStageV2(bankId: string, track: ImplementationTrackType = "business", productId?: number) {
+  return useBankStagesMutation(bankId, track, productId, ({ name }: { name: string }) =>
+    customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/stages?track=${track}${productParam(productId)}`, { method: "POST", body: JSON.stringify({ name }) })
   );
 }
 
-export function useReorderStagesV2(bankId: string, track: ImplementationTrackType = "business") {
-  return useBankStagesMutation(bankId, track, ({ orderedIds }: { orderedIds: number[] }) =>
-    customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/stages/reorder?track=${track}`, { method: "POST", body: JSON.stringify({ orderedIds }) })
+export function useReorderStagesV2(bankId: string, track: ImplementationTrackType = "business", productId?: number) {
+  return useBankStagesMutation(bankId, track, productId, ({ orderedIds }: { orderedIds: number[] }) =>
+    customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/stages/reorder?track=${track}${productParam(productId)}`, { method: "POST", body: JSON.stringify({ orderedIds }) })
   );
 }
 
-export function usePatchStageV2(bankId: string, track: ImplementationTrackType = "business") {
-  return useBankStagesMutation<{ stageId: number; data: PatchStageBodyV2 }>(bankId, track, ({ stageId, data }) =>
+export function usePatchStageV2(bankId: string, track: ImplementationTrackType = "business", productId?: number) {
+  return useBankStagesMutation<{ stageId: number; data: PatchStageBodyV2 }>(bankId, track, productId, ({ stageId, data }) =>
     customFetch<BankStagesViewV2>(`/api/v2/stages/${stageId}`, { method: "PATCH", body: JSON.stringify(data) })
   );
 }
 
-export function useDeleteStageV2(bankId: string, track: ImplementationTrackType = "business") {
-  return useBankStagesMutation<{ stageId: number }>(bankId, track, ({ stageId }) =>
+export function useDeleteStageV2(bankId: string, track: ImplementationTrackType = "business", productId?: number) {
+  return useBankStagesMutation<{ stageId: number }>(bankId, track, productId, ({ stageId }) =>
     customFetch<BankStagesViewV2>(`/api/v2/stages/${stageId}`, { method: "DELETE" })
+  );
+}
+
+export function useAdvanceImplementationStage(bankId: string, track: ImplementationTrackType, productId?: number) {
+  return useBankStagesMutation<Record<string, never>>(bankId, track, productId, () =>
+    customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/stages/advance?track=${track}${productParam(productId)}`, { method: "POST" })
   );
 }
 

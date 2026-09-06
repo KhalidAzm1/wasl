@@ -14,6 +14,7 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission, requireRole } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
+import { z } from "zod/v4";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
@@ -63,7 +64,9 @@ router.patch("/products/:id", requireRole("super_admin", "admin", "manager"), as
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const parsed = UpdateProductBody.safeParse(req.body);
+  const parsed = UpdateProductBody.extend({
+    trackType: z.enum(["business", "technical"]).optional(),
+  }).safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;

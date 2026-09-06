@@ -2076,7 +2076,7 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
   };
 
   return (
-    <div className="space-y-8">
+    <div>
       <Card className="border-primary/20">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -2119,18 +2119,6 @@ function ImplementationProgressTab({ bankId }: { bankId: string }) {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="business" className="space-y-6">
-      <TabsList className="grid w-full max-w-md grid-cols-2">
-        <TabsTrigger value="business">Business Track</TabsTrigger>
-        <TabsTrigger value="technical">Technical Track</TabsTrigger>
-      </TabsList>
-      <TabsContent value="business">
-        <TrackProgress bankId={bankId} track="business" />
-      </TabsContent>
-      <TabsContent value="technical">
-        <TrackProgress bankId={bankId} track="technical" />
-      </TabsContent>
-      </Tabs>
     </div>
   );
 }

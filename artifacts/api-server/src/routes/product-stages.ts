@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
-import { db, productStagesTable, productsTable } from "@workspace/db";
-import { requireAuth, requirePermission } from "../middlewares/auth";
+import { eq, asc, desc } from "drizzle-orm";
+import { db, productStagesTable, productPhaseHistoryTable, productsTable, TECHNICAL_STAGE_NAMES } from "@workspace/db";
+import { requireAuth, requirePermission, requireRole } from "../middlewares/auth";
+import { logAudit } from "../lib/audit";
 import { z } from "zod/v4";
 
 const router: IRouter = Router();
@@ -31,13 +32,36 @@ router.get("/products/:productId/stages", async (req, res): Promise<void> => {
   const productId = Number(req.params.productId);
   if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
 
-  const stages = await db
+  let stages = await db
     .select()
     .from(productStagesTable)
     .where(eq(productStagesTable.productId, productId))
     .orderBy(asc(productStagesTable.displayOrder), asc(productStagesTable.createdAt));
 
+  if (stages.length === 0) {
+    await db.insert(productStagesTable).values(
+      TECHNICAL_STAGE_NAMES.map((name, displayOrder) => ({
+        productId,
+        name,
+        displayOrder,
+        isCurrent: displayOrder === 0,
+      })),
+    );
+    stages = await db.select().from(productStagesTable)
+      .where(eq(productStagesTable.productId, productId))
+      .orderBy(asc(productStagesTable.displayOrder), asc(productStagesTable.createdAt));
+  }
+
   res.json(stages);
+});
+
+router.get("/products/:productId/phase-history", async (req, res): Promise<void> => {
+  const productId = Number(req.params.productId);
+  if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
+  const history = await db.select().from(productPhaseHistoryTable)
+    .where(eq(productPhaseHistoryTable.productId, productId))
+    .orderBy(desc(productPhaseHistoryTable.createdAt));
+  res.json(history);
 });
 
 // ── Create a stage ────────────────────────────────────────────────────────────
@@ -47,7 +71,7 @@ const CreateStageBody = z.object({
   notes: z.string().optional(),
 });
 
-router.post("/products/:productId/stages", async (req, res): Promise<void> => {
+router.post("/products/:productId/stages", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
   const productId = Number(req.params.productId);
   if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
 
@@ -65,7 +89,7 @@ router.post("/products/:productId/stages", async (req, res): Promise<void> => {
 
   const [stage] = await db
     .insert(productStagesTable)
-    .values({ productId, name: parsed.data.name, notes: parsed.data.notes, displayOrder: maxOrder + 1 })
+    .values({ productId, name: parsed.data.name, notes: parsed.data.notes, displayOrder: maxOrder + 1, isCurrent: existing.length === 0 })
     .returning();
 
   res.status(201).json(stage);
@@ -79,7 +103,7 @@ const UpdateStageBody = z.object({
   notes: z.string().optional(),
 });
 
-router.patch("/product-stages/:id", async (req, res): Promise<void> => {
+router.patch("/product-stages/:id", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -110,7 +134,7 @@ router.patch("/product-stages/:id", async (req, res): Promise<void> => {
 
 // ── Delete a stage ────────────────────────────────────────────────────────────
 
-router.delete("/product-stages/:id", async (req, res): Promise<void> => {
+router.delete("/product-stages/:id", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -123,6 +147,76 @@ router.delete("/product-stages/:id", async (req, res): Promise<void> => {
 
   await syncProgress(stage.productId);
   res.json({ ok: true });
+});
+
+router.post("/products/:productId/stages/advance", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
+  const productId = Number(req.params.productId);
+  if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
+
+  const result = await db.transaction(async (tx) => {
+    const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, productId));
+    if (!product) return { error: "Product not found", status: 404 } as const;
+
+    const stages = await tx.select().from(productStagesTable)
+      .where(eq(productStagesTable.productId, productId))
+      .orderBy(asc(productStagesTable.displayOrder), asc(productStagesTable.createdAt));
+    if (stages.length === 0) return { error: "Product has no phases", status: 409 } as const;
+
+    const currentIndex = stages.findIndex((stage) => stage.isCurrent) >= 0
+      ? stages.findIndex((stage) => stage.isCurrent)
+      : stages.findIndex((stage) => !stage.completed);
+    if (currentIndex < 0 || currentIndex >= stages.length - 1) {
+      return { error: "Product is already in its final phase", status: 409 } as const;
+    }
+
+    const current = stages[currentIndex];
+    const next = stages[currentIndex + 1];
+    for (let index = 0; index <= currentIndex; index += 1) {
+      await tx.update(productStagesTable).set({
+        completed: true,
+        completedAt: stages[index].completedAt ?? new Date(),
+        isCurrent: false,
+        updatedAt: new Date(),
+      }).where(eq(productStagesTable.id, stages[index].id));
+    }
+    await tx.update(productStagesTable).set({
+      completed: false,
+      completedAt: null,
+      isCurrent: true,
+      updatedAt: new Date(),
+    }).where(eq(productStagesTable.id, next.id));
+
+    const completedCount = currentIndex + 1;
+    await tx.update(productsTable).set({
+      categoryStage: next.name,
+      progressPercent: completedCount / stages.length,
+      updatedAt: new Date(),
+    }).where(eq(productsTable.id, productId));
+
+    const [history] = await tx.insert(productPhaseHistoryTable).values({
+      productId,
+      fromStageId: current.id,
+      fromStageName: current.name,
+      toStageId: next.id,
+      toStageName: next.name,
+      changedById: req.authUser?.id ?? null,
+      changedByName: req.authUser?.name ?? null,
+    }).returning();
+    return { product, current, next, history } as const;
+  });
+
+  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  await logAudit(req, {
+    action: "UPDATE",
+    entityType: "product_phase",
+    entityId: result.product.id,
+    entityLabel: result.product.productCode,
+    details: { from: result.current.name, to: result.next.name },
+  });
+  const stages = await db.select().from(productStagesTable)
+    .where(eq(productStagesTable.productId, productId))
+    .orderBy(asc(productStagesTable.displayOrder), asc(productStagesTable.createdAt));
+  res.json({ stages, history: result.history });
 });
 
 export default router;

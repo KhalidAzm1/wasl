@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, productsTable } from "@workspace/db";
+import { db, productsTable, productStagesTable, TECHNICAL_STAGE_NAMES } from "@workspace/db";
 import {
   ListProductsQueryParams,
   ListProductsResponse,
@@ -12,7 +12,7 @@ import {
   DeleteProductParams,
 } from "@workspace/api-zod";
 import { toPlain } from "../lib/serialize";
-import { requireAuth, requirePermission } from "../middlewares/auth";
+import { requireAuth, requirePermission, requireRole } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -33,13 +33,21 @@ router.get("/products", async (req, res): Promise<void> => {
   res.json(ListProductsResponse.parse(toPlain(rows)));
 });
 
-router.post("/products", async (req, res): Promise<void> => {
+router.post("/products", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
   const [row] = await db.insert(productsTable).values(parsed.data).returning();
+  await db.insert(productStagesTable).values(
+    TECHNICAL_STAGE_NAMES.map((name, displayOrder) => ({
+      productId: row.id,
+      name,
+      displayOrder,
+      isCurrent: displayOrder === 0,
+    })),
+  );
   await logAudit(req, {
     action: "CREATE",
     entityType: "product",
@@ -49,7 +57,7 @@ router.post("/products", async (req, res): Promise<void> => {
   res.status(201).json(CreateProductResponse.parse(toPlain(row)));
 });
 
-router.patch("/products/:id", async (req, res): Promise<void> => {
+router.patch("/products/:id", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
   const params = UpdateProductParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -79,7 +87,7 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
   res.json(UpdateProductResponse.parse(toPlain(row)));
 });
 
-router.delete("/products/:id", async (req, res): Promise<void> => {
+router.delete("/products/:id", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
   const params = DeleteProductParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

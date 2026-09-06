@@ -326,7 +326,7 @@ function ProductStagesSection({ product, bankId, readOnly = false }: { product: 
   const deleteStage = useDeleteProductStage();
   const advanceStage = useAdvanceProductStage();
 
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!readOnly);
   const [addingName, setAddingName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);

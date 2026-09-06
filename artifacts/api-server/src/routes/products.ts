@@ -14,7 +14,6 @@ import {
 import { toPlain } from "../lib/serialize";
 import { requireAuth, requirePermission, requireRole } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
-import { z } from "zod/v4";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
@@ -64,16 +63,23 @@ router.patch("/products/:id", requireRole("super_admin", "admin", "manager"), as
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const parsed = UpdateProductBody.extend({
-    trackType: z.enum(["business", "technical"]).optional(),
-  }).safeParse(req.body);
+  const parsed = UpdateProductBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const requestedTrack = req.body?.trackType;
+  if (requestedTrack !== undefined && requestedTrack !== "business" && requestedTrack !== "technical") {
+    res.status(400).json({ error: "trackType must be business or technical" });
+    return;
+  }
+  const updates = {
+    ...parsed.data,
+    ...(requestedTrack ? { trackType: requestedTrack as "business" | "technical" } : {}),
+  };
   const [row] = await db
     .update(productsTable)
-    .set(parsed.data)
+    .set(updates)
     .where(eq(productsTable.id, params.data.id))
     .returning();
   if (!row) {
@@ -85,7 +91,7 @@ router.patch("/products/:id", requireRole("super_admin", "admin", "manager"), as
     entityType: "product",
     entityId: String(row.id),
     entityLabel: row.productCode,
-    details: parsed.data,
+    details: updates,
   });
   res.json(UpdateProductResponse.parse(toPlain(row)));
 });

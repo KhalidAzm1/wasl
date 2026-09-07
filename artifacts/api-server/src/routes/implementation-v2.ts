@@ -67,19 +67,29 @@ function computeDerivedV2(stages: Stage[], mode: "dynamic" | "fixed") {
   const denominator = mode === "dynamic" ? nonSkipped.length : stages.length;
   const equalShare = denominator > 0 ? 100 / denominator : 0;
 
-  const stagesOut = stages.map((s) => ({
+  const stagesOut = stages.map((s) => {
+    const endDate = s.completedAt ?? (s.startedAt && s.status === "in_progress" ? new Date().toISOString().split("T")[0] : null);
+    const actualDays = s.startedAt && endDate
+      ? Math.max(0, Math.floor((new Date(`${endDate}T00:00:00Z`).getTime() - new Date(`${s.startedAt}T00:00:00Z`).getTime()) / 86_400_000))
+      : null;
+    return ({
     ...s,
     percentage: s.skipped ? 0 : equalShare,
     completedAt: s.completedAt ?? null,
+    startedAt: s.startedAt ?? null,
+    plannedDays: s.plannedDays ?? null,
+    actualDays,
+    varianceDays: actualDays !== null && s.plannedDays !== null ? actualDays - s.plannedDays : null,
     owner: s.owner ?? null,
     notes: s.notes ?? null,
     updatedAt: s.updatedAt instanceof Date ? s.updatedAt.toISOString() : s.updatedAt,
     createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
     daysInProgress:
       s.status === "in_progress"
-        ? Math.floor((Date.now() - new Date(s.updatedAt).getTime()) / 86_400_000)
+        ? actualDays
         : null,
-  }));
+    });
+  });
 
   const completedCount = nonSkipped.filter((s) => s.completed).length;
   // Dynamic: denominator = non-skipped count  → skipped stages excluded entirely
@@ -247,10 +257,11 @@ router.post("/v2/banks/:bankId/stages/advance", requireRole("super_admin", "admi
   const current = stages[currentIndex];
   const next = stages.slice(currentIndex + 1).find((stage) => !stage.skipped);
   await db.transaction(async (tx) => {
-    await tx.update(implementationStagesTable).set({ status: "completed", completed: true, completedAt: new Date().toISOString().split("T")[0], updatedAt: new Date() })
+    const today = new Date().toISOString().split("T")[0];
+    await tx.update(implementationStagesTable).set({ status: "completed", completed: true, startedAt: current.startedAt ?? today, completedAt: today, updatedAt: new Date() })
       .where(eq(implementationStagesTable.id, current.id));
     if (next) {
-      await tx.update(implementationStagesTable).set({ status: "in_progress", completed: false, updatedAt: new Date() })
+      await tx.update(implementationStagesTable).set({ status: "in_progress", completed: false, startedAt: next.startedAt ?? today, completedAt: null, updatedAt: new Date() })
         .where(eq(implementationStagesTable.id, next.id));
     }
     const completedCount = stages.filter((stage, index) => stage.completed || index === currentIndex).length;
@@ -336,13 +347,19 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
   if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
 
   const VALID_STATUSES = new Set(["not_started", "in_progress", "completed", "skipped", "blocked"]);
-  const { name, status, skipped, completed, completedAt, owner, notes } = req.body as Record<string, any>;
+  const { name, status, skipped, completed, startedAt, completedAt, plannedDays, owner, notes } = req.body as Record<string, any>;
 
   if (status !== undefined && !VALID_STATUSES.has(status)) {
     res.status(400).json({ error: `Invalid status '${status}'` }); return;
   }
   if (completedAt && !/^\d{4}-\d{2}-\d{2}$/.test(completedAt)) {
     res.status(400).json({ error: "completedAt must be YYYY-MM-DD" }); return;
+  }
+  if (startedAt && !/^\d{4}-\d{2}-\d{2}$/.test(startedAt)) {
+    res.status(400).json({ error: "startedAt must be YYYY-MM-DD" }); return;
+  }
+  if (plannedDays !== undefined && plannedDays !== null && (!Number.isInteger(Number(plannedDays)) || Number(plannedDays) < 0)) {
+    res.status(400).json({ error: "plannedDays must be a non-negative whole number" }); return;
   }
 
   const [existing] = await db.select().from(implementationStagesTable).where(eq(implementationStagesTable.id, stageId));
@@ -351,6 +368,7 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
   const update: Record<string, unknown> = { updatedAt: new Date() };
   if (name !== undefined) update.name = String(name).trim();
   if (status !== undefined) update.status = status;
+  if (status === "in_progress" && !startedAt && !existing.startedAt) update.startedAt = new Date().toISOString().split("T")[0];
   if (skipped !== undefined) {
     update.skipped = Boolean(skipped);
     if (skipped) { update.status = "skipped"; } // force status sync
@@ -358,9 +376,12 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
   if (completed !== undefined) {
     update.completed = Boolean(completed);
     if (completed && !completedAt) update.completedAt = new Date().toISOString().split("T")[0];
+    if (completed && !startedAt && !existing.startedAt) update.startedAt = new Date().toISOString().split("T")[0];
     if (completed) update.status = "completed";
   }
+  if (startedAt !== undefined) update.startedAt = startedAt;
   if (completedAt !== undefined) update.completedAt = completedAt;
+  if (plannedDays !== undefined) update.plannedDays = plannedDays === null ? null : Number(plannedDays);
   if (owner !== undefined) update.owner = owner;
   if (notes !== undefined) update.notes = notes;
 

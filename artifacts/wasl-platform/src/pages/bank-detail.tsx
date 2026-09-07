@@ -1993,8 +1993,32 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
           )}
         </div>
 
-        {/* Date + Owner row */}
+        {/* Timeline + Owner row */}
         <div className="flex flex-wrap gap-2 pl-10">
+          <div className="space-y-1">
+            <label className="block text-[10px] text-foreground/40">Planned days</label>
+            <Input
+              type="number" min={0} step={1}
+              defaultValue={s.plannedDays ?? ''}
+              key={`planned-${s.id}-${s.plannedDays}`}
+              disabled={isUpdating || s.skipped}
+              className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-28 disabled:opacity-50"
+              onBlur={(e) => { const v = e.target.value === '' ? null : Number(e.target.value); if (v !== s.plannedDays) onPatch(s.id, { plannedDays: v }); }}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-[10px] text-foreground/40">Start date</label>
+            <Input
+              type="date"
+              defaultValue={s.startedAt ?? ''}
+              key={`start-${s.id}-${s.startedAt}`}
+              disabled={isUpdating || s.skipped}
+              className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-36 disabled:opacity-50"
+              onBlur={(e) => { const v = e.target.value || null; if (v !== (s.startedAt ?? null)) onPatch(s.id, { startedAt: v }); }}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-[10px] text-foreground/40">Completion date</label>
           <Input
             type="date"
             defaultValue={s.completedAt ?? ''}
@@ -2003,6 +2027,13 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
             className="h-8 text-xs bg-background/50 border-foreground/10 rounded-lg w-36 disabled:opacity-50"
             onBlur={(e) => { const v = e.target.value || null; if (v !== (s.completedAt ?? null)) onPatch(s.id, { completedAt: v }); }}
           />
+          </div>
+          <div className="flex items-end gap-1.5 pb-1 text-[11px]">
+            <span className="rounded-lg border border-foreground/10 px-2 py-1.5 text-foreground/50">Actual: {s.actualDays === null ? '—' : `${s.actualDays}d`}</span>
+            <span className={cn('rounded-lg border px-2 py-1.5', s.varianceDays === null || s.varianceDays === 0 ? 'border-foreground/10 text-foreground/50' : s.varianceDays > 0 ? 'border-red-500/20 text-red-500' : 'border-emerald-500/20 text-emerald-500')}>
+              Variance: {s.varianceDays === null ? '—' : `${s.varianceDays > 0 ? '+' : ''}${s.varianceDays}d`}
+            </span>
+          </div>
           <Input
             key={`owner-${s.id}-${s.updatedAt}`}
             placeholder="Owner / responsible…"

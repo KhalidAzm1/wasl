@@ -20,7 +20,11 @@ export interface StageV2 {
   status: "not_started" | "in_progress" | "completed" | "skipped" | "blocked";
   skipped: boolean;
   completed: boolean;
+  startedAt: string | null;
   completedAt: string | null;
+  plannedDays: number | null;
+  actualDays: number | null;
+  varianceDays: number | null;
   owner: string | null;
   notes: string | null;
   daysInProgress: number | null;
@@ -77,7 +81,9 @@ export interface PatchStageBodyV2 {
   status?: string;
   skipped?: boolean;
   completed?: boolean;
+  startedAt?: string | null;
   completedAt?: string | null;
+  plannedDays?: number | null;
   owner?: string | null;
   notes?: string | null;
 }

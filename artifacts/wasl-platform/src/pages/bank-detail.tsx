@@ -21,6 +21,7 @@ import {
   useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
   useProductPhaseHistory, useAdvanceProductStage,
   getProductStagesQueryKey, getProductPhaseHistoryQueryKey,
+  useGetLookups, useUpdateLookups, getGetLookupsQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -1331,6 +1332,65 @@ function ProductTrackProgressSummary({ bankId, productId }: { bankId: string; pr
   );
 }
 
+type ProductLookupKey = 'products' | 'stages' | 'statuses' | 'responsiblePersons';
+
+function CreatableProductSelect({ label, value, options, onChange, onAdd, adding }: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+  onAdd: (value: string) => void;
+  adding?: boolean;
+}) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newValue, setNewValue] = useState('');
+  const values = Array.from(new Set([value, ...options].map((item) => item?.trim()).filter(Boolean)));
+
+  const submitNewValue = () => {
+    const next = newValue.trim();
+    if (!next) return;
+    onAdd(next);
+    setNewValue('');
+    setShowAdd(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-semibold text-foreground/60">{label}</label>
+      <select
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        value={value}
+        onChange={(event) => {
+          if (event.target.value === '__add_new__') setShowAdd(true);
+          else onChange(event.target.value);
+        }}
+      >
+        <option value="" disabled>Select {label}</option>
+        {values.map((option) => <option key={option} value={option}>{option}</option>)}
+        <option value="__add_new__">+ Add new option</option>
+      </select>
+      {showAdd && (
+        <div className="flex gap-2">
+          <Input
+            autoFocus
+            placeholder={`New ${label}`}
+            value={newValue}
+            onChange={(event) => setNewValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                submitNewValue();
+              }
+            }}
+          />
+          <Button type="button" size="sm" onClick={submitNewValue} disabled={!newValue.trim() || adding}>Add</Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => { setShowAdd(false); setNewValue(''); }}>Cancel</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -1339,7 +1399,27 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const lookups = useGetLookups();
+  const updateLookups = useUpdateLookups();
   const [deleteProductId, setDeleteProductId] = useState<number | null>(null);
+
+  const lookupOptions = (key: ProductLookupKey, productField: string) => Array.from(new Set([
+    ...(lookups.data?.[key] ?? []),
+    ...products.map((product) => product[productField]).filter(Boolean),
+  ])).sort((a, b) => a.localeCompare(b));
+
+  const addLookupOption = (key: ProductLookupKey, value: string, editingField: string) => {
+    const current = lookups.data?.[key] ?? [];
+    const next = Array.from(new Set([...current, value])).sort((a, b) => a.localeCompare(b));
+    updateLookups.mutate({ data: { [key]: next } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() });
+        setEditing((previous: any) => ({ ...previous, [editingField]: value }));
+        toast({ title: 'Option added' });
+      },
+      onError: () => toast({ title: 'Could not add option', variant: 'destructive' }),
+    });
+  };
 
   const handleSave = () => {
     if (createProduct.isPending || updateProduct.isPending) return;
@@ -1424,10 +1504,10 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
         <DialogContent dir="ltr">
           <DialogHeader><DialogTitle>{editing?.id ? 'Edit Product' : 'Add Product'}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
-            <Input placeholder="Product Code" value={editing?.productCode || ''} onChange={e => setEditing({...editing, productCode: e.target.value})} />
-            <Input placeholder="Stage / Category" value={editing?.categoryStage || ''} onChange={e => setEditing({...editing, categoryStage: e.target.value})} />
-            <Input placeholder="Status" value={editing?.status || ''} onChange={e => setEditing({...editing, status: e.target.value})} />
-            <Input placeholder="Responsible Person" value={editing?.responsiblePerson || ''} onChange={e => setEditing({...editing, responsiblePerson: e.target.value})} />
+            <CreatableProductSelect label="Product Code" value={editing?.productCode || ''} options={lookupOptions('products', 'productCode')} onChange={value => setEditing({...editing, productCode: value})} onAdd={value => addLookupOption('products', value, 'productCode')} adding={updateLookups.isPending} />
+            <CreatableProductSelect label="Stage / Category" value={editing?.categoryStage || ''} options={lookupOptions('stages', 'categoryStage')} onChange={value => setEditing({...editing, categoryStage: value})} onAdd={value => addLookupOption('stages', value, 'categoryStage')} adding={updateLookups.isPending} />
+            <CreatableProductSelect label="Status" value={editing?.status || ''} options={lookupOptions('statuses', 'status')} onChange={value => setEditing({...editing, status: value})} onAdd={value => addLookupOption('statuses', value, 'status')} adding={updateLookups.isPending} />
+            <CreatableProductSelect label="Responsible Person" value={editing?.responsiblePerson || ''} options={lookupOptions('responsiblePersons', 'responsiblePerson')} onChange={value => setEditing({...editing, responsiblePerson: value})} onAdd={value => addLookupOption('responsiblePersons', value, 'responsiblePerson')} adding={updateLookups.isPending} />
             <p className="text-xs text-foreground/40">Progress % is calculated automatically from stages</p>
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>Save</Button></DialogFooter>

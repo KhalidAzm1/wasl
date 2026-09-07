@@ -78,6 +78,16 @@ export interface BankSummaryV2 {
   agreementUpdatedAt: string | null;
   agreementActivitiesTotal: number;
   agreementActivitiesCompleted: number;
+  legalStatuses: Array<{
+    productId: number;
+    productCode: string;
+    ndaStatus: string | null;
+    ndaOwner: string | null;
+    ndaUpdatedAt: string | null;
+    agreementStatus: string | null;
+    agreementOwner: string | null;
+    agreementUpdatedAt: string | null;
+  }>;
 }
 
 export interface ImplementationSettingsV2 {

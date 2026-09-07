@@ -166,13 +166,14 @@ async function seedBankStages(bankId: string, trackType: ImplementationTrackType
 // ── Dashboard summary (v2) ────────────────────────────────────────────────────
 
 router.get("/v2/implementation/summary", requirePermission("dashboard_access"), async (_req, res): Promise<void> => {
-  const [activeBanks, allStages, allBusinessStages, mode] = await Promise.all([
+  const [activeBanks, allStages, allBusinessStages, allProducts, mode] = await Promise.all([
     db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.isArchived, false)),
     db.select().from(implementationStagesTable)
       .where(and(eq(implementationStagesTable.trackType, "business"), isNull(implementationStagesTable.productId)))
       .orderBy(asc(implementationStagesTable.displayOrder)),
     db.select().from(implementationStagesTable)
       .where(eq(implementationStagesTable.trackType, "business")),
+    db.select({ id: productsTable.id, bankId: productsTable.bankId, productCode: productsTable.productCode }).from(productsTable),
     getPercentageMode(),
   ]);
 
@@ -236,12 +237,27 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
       agreementActivitiesTotal: customAgreementActivities.length,
       agreementActivitiesCompleted: customAgreementActivities.filter((stage) => stage.completed).length,
     };
+    const legalStatuses = allProducts.filter((product) => product.bankId === id).map((product) => {
+      const productStages = allBusinessStages.filter((stage) => stage.productId === product.id);
+      const ndaStage = productStages.find((stage) => stage.name.trim().toLowerCase() === "nda");
+      const agreementStage = productStages.find((stage) => stage.name.trim().toLowerCase() === "agreement");
+      return {
+        productId: product.id,
+        productCode: product.productCode,
+        ndaStatus: ndaStage?.status ?? null,
+        ndaOwner: ndaStage?.owner ?? null,
+        ndaUpdatedAt: ndaStage ? (ndaStage.updatedAt instanceof Date ? ndaStage.updatedAt.toISOString() : ndaStage.updatedAt) : null,
+        agreementStatus: agreementStage?.status ?? null,
+        agreementOwner: agreementStage?.owner ?? null,
+        agreementUpdatedAt: agreementStage ? (agreementStage.updatedAt instanceof Date ? agreementStage.updatedAt.toISOString() : agreementStage.updatedAt) : null,
+      };
+    });
     if (stages.length === 0) {
       // Should not happen after seeding, but guard defensively
-      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode, ...ndaSummary, ...agreementSummary, ...agreementActivitiesSummary };
+      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode, ...ndaSummary, ...agreementSummary, ...agreementActivitiesSummary, legalStatuses };
     }
     const { stages: _, ...derived } = computeDerivedV2(stages, mode);
-    return { bankId: id, ...derived, ...ndaSummary, ...agreementSummary, ...agreementActivitiesSummary };
+    return { bankId: id, ...derived, ...ndaSummary, ...agreementSummary, ...agreementActivitiesSummary, legalStatuses };
   });
 
   res.json(summary);

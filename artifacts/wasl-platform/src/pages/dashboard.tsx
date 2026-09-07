@@ -815,16 +815,16 @@ function CompactBankCard({
     completed: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
     on_hold: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
   };
-  const NdaBadge = () => implProgress?.ndaStatus ? (
-    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', ndaStyles[implProgress.ndaStatus] ?? ndaStyles.not_started)} title={implProgress.ndaUpdatedAt ? `Last updated: ${formatDateTime(implProgress.ndaUpdatedAt)}${implProgress.ndaOwner ? ` · ${implProgress.ndaOwner}` : ''}` : undefined}>
-      NDA: {ndaLabels[implProgress.ndaStatus] ?? implProgress.ndaStatus}
+  const NdaBadge = () => <>{(implProgress?.legalStatuses ?? []).filter((item) => item.ndaStatus).map((item) => (
+    <span key={`nda-${item.productId}`} className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', ndaStyles[item.ndaStatus!] ?? ndaStyles.not_started)} title={item.ndaUpdatedAt ? `Last updated: ${formatDateTime(item.ndaUpdatedAt)}${item.ndaOwner ? ` · ${item.ndaOwner}` : ''}` : undefined}>
+      {item.productCode} · NDA: {ndaLabels[item.ndaStatus!] ?? item.ndaStatus}
     </span>
-  ) : null;
-  const AgreementBadge = () => implProgress?.agreementStatus ? (
-    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', ndaStyles[implProgress.agreementStatus] ?? ndaStyles.not_started)} title={implProgress.agreementUpdatedAt ? `Last updated: ${formatDateTime(implProgress.agreementUpdatedAt)}${implProgress.agreementOwner ? ` · ${implProgress.agreementOwner}` : ''}` : undefined}>
-      Agreement: {ndaLabels[implProgress.agreementStatus] ?? implProgress.agreementStatus}
+  ))}</>;
+  const AgreementBadge = () => <>{(implProgress?.legalStatuses ?? []).filter((item) => item.agreementStatus).map((item) => (
+    <span key={`agreement-${item.productId}`} className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', ndaStyles[item.agreementStatus!] ?? ndaStyles.not_started)} title={item.agreementUpdatedAt ? `Last updated: ${formatDateTime(item.agreementUpdatedAt)}${item.agreementOwner ? ` · ${item.agreementOwner}` : ''}` : undefined}>
+      {item.productCode} · Agreement: {ndaLabels[item.agreementStatus!] ?? item.agreementStatus}
     </span>
-  ) : null;
+  ))}</>;
   const CustomAgreementsBadge = () => (implProgress?.agreementActivitiesTotal ?? 0) > 0 ? (
     <span className="inline-flex items-center rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-500 whitespace-nowrap">
       Activities: {implProgress!.agreementActivitiesCompleted}/{implProgress!.agreementActivitiesTotal}

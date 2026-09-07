@@ -3,6 +3,7 @@ import { db, lookupsTable } from "@workspace/db";
 import { GetLookupsResponse, UpdateLookupsBody, UpdateLookupsResponse } from "@workspace/api-zod";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { logAudit } from "../lib/audit";
+import { getSupabaseAdmin } from "@workspace/supabase";
 
 const router: IRouter = Router();
 router.use(requireAuth, requirePermission("dashboard_access"));
@@ -18,11 +19,22 @@ const KEYS = [
 async function readLookups() {
   const rows = await db.select().from(lookupsTable);
   const map = new Map(rows.map((r) => [r.key, r.values]));
+  const configuredPeople = map.get("responsiblePersons") ?? [];
+  let activeUserNames: string[] = [];
+  const { data: profiles, error } = await getSupabaseAdmin()
+    .from("profiles")
+    .select("name")
+    .is("deleted_at", null);
+  if (!error && profiles) {
+    activeUserNames = profiles
+      .map((profile) => typeof profile.name === "string" ? profile.name.trim() : "")
+      .filter(Boolean);
+  }
   return {
     statuses: map.get("statuses") ?? [],
     stages: map.get("stages") ?? [],
     products: map.get("products") ?? [],
-    responsiblePersons: map.get("responsiblePersons") ?? [],
+    responsiblePersons: Array.from(new Set([...configuredPeople, ...activeUserNames])).sort((a, b) => a.localeCompare(b)),
     categories: map.get("categories") ?? [],
   };
 }

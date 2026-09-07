@@ -1333,6 +1333,13 @@ function ProductTrackProgressSummary({ bankId, productId }: { bankId: string; pr
 }
 
 type ProductLookupKey = 'products' | 'stages' | 'statuses' | 'responsiblePersons';
+const PRODUCT_STATUSES = ['Not Started', 'In Progress', 'Active - Integration In Progress', 'Delayed', 'On Hold', 'Completed'];
+
+function normalizeProductStatus(status: unknown): string {
+  const value = typeof status === 'string' ? status.trim() : '';
+  if (value.toLowerCase() === 'complete') return 'Completed';
+  return value.length > 1 ? value : '';
+}
 
 function CreatableProductSelect({ label, value, options, onChange, onAdd, adding }: {
   label: string;
@@ -1344,7 +1351,7 @@ function CreatableProductSelect({ label, value, options, onChange, onAdd, adding
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newValue, setNewValue] = useState('');
-  const values = Array.from(new Set([value, ...options].map((item) => item?.trim()).filter(Boolean)));
+  const values = Array.from(new Set([value, ...options].map((item) => item?.trim()).filter((item): item is string => Boolean(item && item.length > 1))));
 
   const submitNewValue = () => {
     const next = newValue.trim();
@@ -1406,7 +1413,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
   const lookupOptions = (key: ProductLookupKey, productField: string) => Array.from(new Set([
     ...(lookups.data?.[key] ?? []),
     ...products.map((product) => product[productField]).filter(Boolean),
-  ])).sort((a, b) => a.localeCompare(b));
+  ].map((item) => typeof item === 'string' ? item.trim() : '').filter((item) => item.length > 1))).sort((a, b) => a.localeCompare(b));
 
   const addLookupOption = (key: ProductLookupKey, value: string, editingField: string) => {
     const current = lookups.data?.[key] ?? [];
@@ -1478,7 +1485,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                 <Badge variant="outline">{p.productCode}</Badge>
                 <div className="flex gap-1">
                   <EntityAttachmentsButton entityType="product" entityId={p.id} label={p.productCode} />
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground/50" onClick={() => { analytics.productOpened({ bank_id: bankId, product_id: p.id, product_code: p.productCode, category_stage: p.categoryStage }); setEditing({ ...p, progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground/50" onClick={() => { analytics.productOpened({ bank_id: bankId, product_id: p.id, product_code: p.productCode, category_stage: p.categoryStage }); setEditing({ ...p, status: normalizeProductStatus(p.status), progressPercent: p.progressPercent * 100 }); setIsOpen(true); }}><Edit className="w-3 h-3" /></Button>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 dark:text-red-400/50" onClick={() => setDeleteProductId(p.id)}><Trash2 className="w-3 h-3" /></Button>
                 </div>
               </div>
@@ -1506,7 +1513,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
           <div className="space-y-4 py-4">
             <CreatableProductSelect label="Product Code" value={editing?.productCode || ''} options={lookupOptions('products', 'productCode')} onChange={value => setEditing({...editing, productCode: value})} onAdd={value => addLookupOption('products', value, 'productCode')} adding={updateLookups.isPending} />
             <CreatableProductSelect label="Stage / Category" value={editing?.categoryStage || ''} options={lookupOptions('stages', 'categoryStage')} onChange={value => setEditing({...editing, categoryStage: value})} onAdd={value => addLookupOption('stages', value, 'categoryStage')} adding={updateLookups.isPending} />
-            <CreatableProductSelect label="Status" value={editing?.status || ''} options={lookupOptions('statuses', 'status')} onChange={value => setEditing({...editing, status: value})} onAdd={value => addLookupOption('statuses', value, 'status')} adding={updateLookups.isPending} />
+            <CreatableProductSelect label="Status" value={normalizeProductStatus(editing?.status)} options={Array.from(new Set([...PRODUCT_STATUSES, ...lookupOptions('statuses', 'status').map(normalizeProductStatus)])).filter(Boolean)} onChange={value => setEditing({...editing, status: value})} onAdd={value => addLookupOption('statuses', value, 'status')} adding={updateLookups.isPending} />
             <CreatableProductSelect label="Responsible Person" value={editing?.responsiblePerson || ''} options={lookupOptions('responsiblePersons', 'responsiblePerson')} onChange={value => setEditing({...editing, responsiblePerson: value})} onAdd={value => addLookupOption('responsiblePersons', value, 'responsiblePerson')} adding={updateLookups.isPending} />
             <p className="text-xs text-foreground/40">Progress % is calculated automatically from stages</p>
           </div>

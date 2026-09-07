@@ -11,7 +11,6 @@ import {
   useCreateDocument, useUploadDocument, useDeleteDocument,
   useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey,
   useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
-  useAddAgreementActivity,
   useAdvanceImplementationStage,
   useNdaStatusHistory,
   useAgreementStatusHistory,
@@ -1298,6 +1297,39 @@ export default function BankDetail() {
 }
 
 
+function ProductTrackProgressSummary({ bankId, productId }: { bankId: string; productId: number }) {
+  const business = useGetBankStagesV2(bankId, 'business', productId);
+  const technical = useGetBankStagesV2(bankId, 'technical', productId);
+  const rows = [
+    { label: 'Business Track', data: business.data, loading: business.isLoading, color: 'bg-violet-500' },
+    { label: 'Technical Track', data: technical.data, loading: technical.isLoading, color: 'bg-blue-500' },
+  ];
+
+  return (
+    <div className="mt-auto pt-4 space-y-3 border-t border-foreground/10">
+      {rows.map((row) => {
+        const pct = row.data?.completionPercentage ?? 0;
+        const state = row.loading ? 'Loading…' : row.data?.currentStageName ?? (pct === 100 ? 'Completed' : 'Not Started');
+        return (
+          <div key={row.label} className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-foreground/70">{row.label}</span>
+              <span className="font-mono font-bold">{Math.round(pct)}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-foreground/10 overflow-hidden">
+              <div className={cn('h-full rounded-full transition-all duration-500', row.color)} style={{ width: `${pct}%` }} />
+            </div>
+            <div className="flex justify-between gap-2 text-[10px] text-foreground/40">
+              <span className="truncate">{state}</span>
+              <span>{row.data ? `${row.data.completedStages}/${row.data.totalStages} stages` : '—'}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -1380,17 +1412,7 @@ function ProductsTab({ bankId, products }: { bankId: string, products: any[] }) 
                 <span className="truncate">{p.responsiblePerson || 'Unassigned'}</span>
               </div>
 
-              <div className="mt-auto pt-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-foreground/60">Progress</span>
-                  <span className="font-mono">{formatPercentage(p.progressPercent)}</span>
-                </div>
-                <div className="w-full bg-foreground/10 rounded-full h-2 overflow-hidden">
-                  <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${p.progressPercent * 100}%` }} />
-                </div>
-              </div>
-
-              <ProductStagesSection product={p} bankId={bankId} readOnly />
+              <ProductTrackProgressSummary bankId={bankId} productId={p.id} />
             </CardContent>
           </Card>
         ))}
@@ -2220,7 +2242,6 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
   const advanceProduct = useAdvanceImplementationStage(bankId, track, productId);
   const patchStage = usePatchStageV2(bankId, track, productId);
   const addStage = useAddStageV2(bankId, track, productId);
-  const addAgreementActivity = useAddAgreementActivity(bankId, productId);
   const deleteStage = useDeleteStageV2(bankId, track, productId);
   const reorderStages = useReorderStagesV2(bankId, track, productId);
 
@@ -2239,9 +2260,6 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
   const [newStageName, setNewStageName] = useState('');
   const [addingStage, setAddingStage] = useState(false);
-  const [addingAgreementActivity, setAddingAgreementActivity] = useState(false);
-  const [agreementActivityName, setAgreementActivityName] = useState('');
-  const [agreementActivityOwner, setAgreementActivityOwner] = useState('');
 
   // Optimistic list order for DnD
   const [localOrder, setLocalOrder] = useState<number[] | null>(null);
@@ -2343,19 +2361,6 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
     });
   };
 
-  const handleAddAgreementActivity = () => {
-    const name = agreementActivityName.trim();
-    if (!name || !productId) return;
-    addAgreementActivity.mutate({ name, owner: agreementActivityOwner.trim() || null }, {
-      onSuccess: () => {
-        setAgreementActivityName('');
-        setAgreementActivityOwner('');
-        setAddingAgreementActivity(false);
-        toast({ title: 'Agreement activity added' });
-      },
-      onError: (error: any) => toast({ title: 'Could not add agreement activity', description: error?.message, variant: 'destructive' }),
-    });
-  };
 
   if (isLoading) return (
     <div className="flex items-center justify-center py-16 gap-3 text-foreground/40">
@@ -2456,11 +2461,6 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
         <div className="flex items-center justify-between">
           <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Stage Details</p>
           <div className="flex flex-wrap gap-2">
-            {track === 'business' && productId && (
-              <Button variant="outline" size="sm" className="h-7 px-3 text-xs border-violet-500/30 text-violet-500" onClick={() => setAddingAgreementActivity(true)}>
-                <Plus className="w-3 h-3 mr-1" /> Add Agreement Activity
-              </Button>
-            )}
             <Button variant="outline" size="sm" className="h-7 px-3 text-xs" onClick={() => setAddingStage(true)}>
               <Plus className="w-3 h-3 mr-1" /> Add Stage
             </Button>
@@ -2484,14 +2484,6 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
           </SortableContext>
         </DndContext>
 
-        {track === 'business' && addingAgreementActivity && (
-          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] p-3 rounded-2xl border border-violet-500/20 bg-violet-500/5">
-            <Input autoFocus placeholder="Agreement activity name…" value={agreementActivityName} onChange={(e) => setAgreementActivityName(e.target.value)} className="h-9 text-sm" />
-            <Input placeholder="Owner / responsible…" value={agreementActivityOwner} onChange={(e) => setAgreementActivityOwner(e.target.value)} className="h-9 text-sm" />
-            <Button size="sm" className="h-9" disabled={!agreementActivityName.trim() || addAgreementActivity.isPending} onClick={handleAddAgreementActivity}>{addAgreementActivity.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}</Button>
-            <Button size="sm" variant="ghost" className="h-9" onClick={() => { setAddingAgreementActivity(false); setAgreementActivityName(''); setAgreementActivityOwner(''); }}>Cancel</Button>
-          </div>
-        )}
 
         {/* Add stage inline form */}
         {addingStage && (

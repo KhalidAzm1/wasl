@@ -61,7 +61,10 @@ async function getPercentageMode(): Promise<"dynamic" | "fixed"> {
 async function getDefaultStageNames(): Promise<string[]> {
   const s = await getAllSettings();
   if (!s["default_stages"]) return DEFAULT_STAGE_NAMES;
-  try { return JSON.parse(s["default_stages"]); } catch { return DEFAULT_STAGE_NAMES; }
+  try {
+    const parsed = JSON.parse(s["default_stages"]);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_STAGE_NAMES;
+  } catch { return DEFAULT_STAGE_NAMES; }
 }
 
 /** Compute effective percentage & derived rollup from a set of stages */

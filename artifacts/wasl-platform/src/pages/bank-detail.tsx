@@ -13,6 +13,8 @@ import {
   useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
   useAdvanceImplementationStage,
   useNdaStatusHistory,
+  useAgreementStatusHistory,
+  useAgreementComments, useAddAgreementComment,
   useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
   type StageV2, type BankStagesViewV2, type PatchStageBodyV2, type ImplementationTrackType,
   useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
@@ -1877,8 +1879,14 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
   const [subsOpen, setSubsOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const isNda = s.name.trim().toLowerCase() === 'nda' && s.trackType === 'business';
+  const isAgreement = s.name.trim().toLowerCase() === 'agreement' && s.trackType === 'business';
   const [ndaHistoryOpen, setNdaHistoryOpen] = useState(false);
+  const [agreementHistoryOpen, setAgreementHistoryOpen] = useState(false);
+  const [agreementComment, setAgreementComment] = useState('');
   const { data: ndaHistory = [] } = useNdaStatusHistory(s.id, isNda && ndaHistoryOpen);
+  const { data: agreementHistory = [] } = useAgreementStatusHistory(s.id, isAgreement && agreementHistoryOpen);
+  const { data: agreementComments = [] } = useAgreementComments(s.id, isAgreement && agreementHistoryOpen);
+  const addAgreementComment = useAddAgreementComment(s.id);
   const renameRef = useRef<HTMLInputElement>(null);
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -2065,6 +2073,11 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
               <Clock className="w-3 h-3 mr-1" />NDA History
             </Button>
           )}
+          {isAgreement && (
+            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-foreground/40 shrink-0" onClick={() => setAgreementHistoryOpen(p => !p)}>
+              <Clock className="w-3 h-3 mr-1" />Agreement Activity
+            </Button>
+          )}
         </div>
 
         {isNda && (
@@ -2076,6 +2089,33 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
         {isNda && ndaHistoryOpen && (
           <div className="ml-10 rounded-xl border border-foreground/10 bg-background/40 p-3 space-y-2">
             {ndaHistory.length === 0 ? <p className="text-xs text-foreground/40">No NDA status changes yet.</p> : ndaHistory.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-foreground/5 pb-2 last:border-0 last:pb-0">
+                <span>{(item.fromStatus ?? 'Created').replaceAll('_', ' ')} → {item.toStatus.replaceAll('_', ' ')}</span>
+                <span className="text-foreground/40">{item.changedByName ?? 'System'} · {formatDateTime(item.changedAt)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {isAgreement && (
+          <div className="pl-10 text-[11px] text-foreground/50">
+            Commercial Agreement · Last updated: {formatDateTime(s.updatedAt)}{s.owner ? ` · Owner: ${s.owner}` : ''}
+          </div>
+        )}
+
+        {isAgreement && agreementHistoryOpen && (
+          <div className="ml-10 rounded-xl border border-foreground/10 bg-background/40 p-3 space-y-2">
+            <div className="flex gap-2 pb-2 border-b border-foreground/10">
+              <Input value={agreementComment} onChange={(e) => setAgreementComment(e.target.value)} placeholder="Add comment or progress update…" className="h-8 text-xs" />
+              <Button size="sm" className="h-8 text-xs" disabled={!agreementComment.trim() || addAgreementComment.isPending} onClick={() => addAgreementComment.mutate({ body: agreementComment.trim() }, { onSuccess: () => setAgreementComment('') })}>Add</Button>
+            </div>
+            {agreementComments.map((comment) => (
+              <div key={`comment-${comment.id}`} className="rounded-lg bg-foreground/5 p-2 text-xs">
+                <p>{comment.body}</p>
+                <p className="mt-1 text-[10px] text-foreground/40">{comment.authorName ?? 'System'} · {formatDateTime(comment.createdAt)}</p>
+              </div>
+            ))}
+            {agreementHistory.length === 0 ? <p className="text-xs text-foreground/40">No agreement status changes yet.</p> : agreementHistory.map((item) => (
               <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-foreground/5 pb-2 last:border-0 last:pb-0">
                 <span>{(item.fromStatus ?? 'Created').replaceAll('_', ' ')} → {item.toStatus.replaceAll('_', ' ')}</span>
                 <span className="text-foreground/40">{item.changedByName ?? 'System'} · {formatDateTime(item.changedAt)}</span>

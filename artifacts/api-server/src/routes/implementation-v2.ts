@@ -25,6 +25,8 @@ import {
   implementationSubStagesTable,
   implementationSettingsTable,
   ndaStatusHistoryTable,
+  agreementStatusHistoryTable,
+  agreementCommentsTable,
   bankImplementationProgressTable,
   IMPLEMENTATION_STAGE_LABELS,
   DEFAULT_STAGE_NAMES,
@@ -179,6 +181,15 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
       ndaByBank.set(stage.bankId, stage);
     }
   }
+  const agreementByBank = new Map<string, Stage>();
+  for (const stage of allBusinessStages.filter((s) => s.name.trim().toLowerCase() === "agreement")) {
+    const current = agreementByBank.get(stage.bankId);
+    const stageIsProduct = stage.productId !== null;
+    const currentIsProduct = current?.productId !== null;
+    if (!current || (stageIsProduct && !currentIsProduct) || (stageIsProduct === currentIsProduct && new Date(stage.updatedAt).getTime() > new Date(current.updatedAt).getTime())) {
+      agreementByBank.set(stage.bankId, stage);
+    }
+  }
 
   // Build a set of bank IDs that already have v2 rows
   const seededBankIds = new Set(allStages.map((s) => s.bankId));
@@ -205,17 +216,23 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
   const summary = activeBanks.map(({ id }) => {
     const stages = byBank.get(id) ?? [];
     const nda = ndaByBank.get(id);
+    const agreement = agreementByBank.get(id);
     const ndaSummary = {
       ndaStatus: nda?.status ?? null,
       ndaOwner: nda?.owner ?? null,
       ndaUpdatedAt: nda ? (nda.updatedAt instanceof Date ? nda.updatedAt.toISOString() : nda.updatedAt) : null,
     };
+    const agreementSummary = {
+      agreementStatus: agreement?.status ?? null,
+      agreementOwner: agreement?.owner ?? null,
+      agreementUpdatedAt: agreement ? (agreement.updatedAt instanceof Date ? agreement.updatedAt.toISOString() : agreement.updatedAt) : null,
+    };
     if (stages.length === 0) {
       // Should not happen after seeding, but guard defensively
-      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode, ...ndaSummary };
+      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode, ...ndaSummary, ...agreementSummary };
     }
     const { stages: _, ...derived } = computeDerivedV2(stages, mode);
-    return { bankId: id, ...derived, ...ndaSummary };
+    return { bankId: id, ...derived, ...ndaSummary, ...agreementSummary };
   });
 
   res.json(summary);
@@ -282,11 +299,17 @@ router.post("/v2/banks/:bankId/stages/advance", requireRole("super_admin", "admi
     if (current.name.trim().toLowerCase() === "nda") {
       await tx.insert(ndaStatusHistoryTable).values({ stageId: current.id, fromStatus: current.status, toStatus: "completed", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
     }
+    if (current.name.trim().toLowerCase() === "agreement") {
+      await tx.insert(agreementStatusHistoryTable).values({ stageId: current.id, fromStatus: current.status, toStatus: "completed", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
+    }
     if (next) {
       await tx.update(implementationStagesTable).set({ status: "in_progress", completed: false, startedAt: next.startedAt ?? today, completedAt: null, updatedAt: new Date() })
         .where(eq(implementationStagesTable.id, next.id));
       if (next.name.trim().toLowerCase() === "nda") {
         await tx.insert(ndaStatusHistoryTable).values({ stageId: next.id, fromStatus: next.status, toStatus: "in_progress", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
+      }
+      if (next.name.trim().toLowerCase() === "agreement") {
+        await tx.insert(agreementStatusHistoryTable).values({ stageId: next.id, fromStatus: next.status, toStatus: "in_progress", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
       }
     }
     const completedCount = stages.filter((stage, index) => stage.completed || index === currentIndex).length;
@@ -421,6 +444,15 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
         changedByName: req.authUser?.name ?? null,
       });
     }
+    if (existing.name.trim().toLowerCase() === "agreement" && status !== undefined && status !== existing.status) {
+      await tx.insert(agreementStatusHistoryTable).values({
+        stageId,
+        fromStatus: existing.status,
+        toStatus: status,
+        changedById: req.authUser?.id ?? null,
+        changedByName: req.authUser?.name ?? null,
+      });
+    }
   });
   await logAudit(req, { action: "UPDATE", entityType: "impl_stage_v2", entityId: `${existing.bankId}:${stageId}`, entityLabel: existing.name, details: update });
   invalidateActivityCache();
@@ -439,6 +471,36 @@ router.get("/v2/stages/:stageId/nda-history", requirePermission("dashboard_acces
     .where(eq(ndaStatusHistoryTable.stageId, stageId))
     .orderBy(asc(ndaStatusHistoryTable.changedAt));
   res.json(history);
+});
+
+router.get("/v2/stages/:stageId/agreement-history", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+  const stageId = parseInt(req.params.stageId as string, 10);
+  if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
+  const history = await db.select().from(agreementStatusHistoryTable)
+    .where(eq(agreementStatusHistoryTable.stageId, stageId))
+    .orderBy(asc(agreementStatusHistoryTable.changedAt));
+  res.json(history);
+});
+
+router.get("/v2/stages/:stageId/agreement-comments", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+  const stageId = parseInt(req.params.stageId as string, 10);
+  if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
+  const comments = await db.select().from(agreementCommentsTable)
+    .where(eq(agreementCommentsTable.stageId, stageId))
+    .orderBy(asc(agreementCommentsTable.createdAt));
+  res.json(comments);
+});
+
+router.post("/v2/stages/:stageId/agreement-comments", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
+  const stageId = parseInt(req.params.stageId as string, 10);
+  const body = String(req.body?.body ?? "").trim();
+  if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
+  if (!body) { res.status(400).json({ error: "Comment is required" }); return; }
+  const [stage] = await db.select().from(implementationStagesTable).where(eq(implementationStagesTable.id, stageId));
+  if (!stage || stage.name.trim().toLowerCase() !== "agreement") { res.status(404).json({ error: "Agreement stage not found" }); return; }
+  const [created] = await db.insert(agreementCommentsTable).values({ stageId, body, authorId: req.authUser?.id ?? null, authorName: req.authUser?.name ?? null }).returning();
+  await logAudit(req, { action: "CREATE", entityType: "agreement_comment", entityId: String(created.id), entityLabel: stage.name, details: { stageId } });
+  res.status(201).json(created);
 });
 
 /** DELETE /api/v2/stages/:stageId */

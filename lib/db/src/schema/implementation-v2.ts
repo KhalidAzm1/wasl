@@ -44,13 +44,24 @@ export const implementationSettingsTable = pgTable("implementation_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
+export const ndaStatusHistoryTable = pgTable("nda_status_history", {
+  id:            serial("id").primaryKey(),
+  stageId:       integer("stage_id").notNull().references(() => implementationStagesTable.id, { onDelete: "cascade" }),
+  fromStatus:    text("from_status"),
+  toStatus:      text("to_status").notNull(),
+  changedById:   text("changed_by_id"),
+  changedByName: text("changed_by_name"),
+  changedAt:     timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ImplementationStageV2     = typeof implementationStagesTable.$inferSelect;
 export type ImplementationSubStage    = typeof implementationSubStagesTable.$inferSelect;
 export type ImplementationSettingRow  = typeof implementationSettingsTable.$inferSelect;
+export type NdaStatusHistory          = typeof ndaStatusHistoryTable.$inferSelect;
 
-export type ImplementationStatusV2 = "not_started" | "in_progress" | "completed" | "skipped" | "blocked";
+export type ImplementationStatusV2 = "not_started" | "in_progress" | "under_review" | "completed" | "on_hold" | "skipped" | "blocked";
 export type PercentageMode = "dynamic" | "fixed";
 export type ImplementationTrackType = "business" | "technical";
 

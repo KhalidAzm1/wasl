@@ -24,6 +24,7 @@ import {
   implementationStagesTable,
   implementationSubStagesTable,
   implementationSettingsTable,
+  ndaStatusHistoryTable,
   bankImplementationProgressTable,
   IMPLEMENTATION_STAGE_LABELS,
   DEFAULT_STAGE_NAMES,
@@ -101,7 +102,7 @@ function computeDerivedV2(stages: Stage[], mode: "dynamic" | "fixed") {
 
   const currentStage =
     stagesOut.find((s) => s.status === "in_progress" && !s.skipped) ??
-    stagesOut.find((s) => s.status === "not_started" && !s.skipped);
+    stagesOut.find((s) => !s.completed && !s.skipped);
 
   return {
     stages: stagesOut,
@@ -260,9 +261,15 @@ router.post("/v2/banks/:bankId/stages/advance", requireRole("super_admin", "admi
     const today = new Date().toISOString().split("T")[0];
     await tx.update(implementationStagesTable).set({ status: "completed", completed: true, startedAt: current.startedAt ?? today, completedAt: today, updatedAt: new Date() })
       .where(eq(implementationStagesTable.id, current.id));
+    if (current.name.trim().toLowerCase() === "nda") {
+      await tx.insert(ndaStatusHistoryTable).values({ stageId: current.id, fromStatus: current.status, toStatus: "completed", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
+    }
     if (next) {
       await tx.update(implementationStagesTable).set({ status: "in_progress", completed: false, startedAt: next.startedAt ?? today, completedAt: null, updatedAt: new Date() })
         .where(eq(implementationStagesTable.id, next.id));
+      if (next.name.trim().toLowerCase() === "nda") {
+        await tx.insert(ndaStatusHistoryTable).values({ stageId: next.id, fromStatus: next.status, toStatus: "in_progress", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
+      }
     }
     const completedCount = stages.filter((stage, index) => stage.completed || index === currentIndex).length;
     await tx.update(productsTable).set({
@@ -346,7 +353,7 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
   const stageId = parseInt(req.params.stageId as string, 10);
   if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
 
-  const VALID_STATUSES = new Set(["not_started", "in_progress", "completed", "skipped", "blocked"]);
+  const VALID_STATUSES = new Set(["not_started", "in_progress", "under_review", "completed", "on_hold", "skipped", "blocked"]);
   const { name, status, skipped, completed, startedAt, completedAt, plannedDays, owner, notes } = req.body as Record<string, any>;
 
   if (status !== undefined && !VALID_STATUSES.has(status)) {
@@ -385,7 +392,18 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
   if (owner !== undefined) update.owner = owner;
   if (notes !== undefined) update.notes = notes;
 
-  await db.update(implementationStagesTable).set(update as any).where(eq(implementationStagesTable.id, stageId));
+  await db.transaction(async (tx) => {
+    await tx.update(implementationStagesTable).set(update as any).where(eq(implementationStagesTable.id, stageId));
+    if (existing.name.trim().toLowerCase() === "nda" && status !== undefined && status !== existing.status) {
+      await tx.insert(ndaStatusHistoryTable).values({
+        stageId,
+        fromStatus: existing.status,
+        toStatus: status,
+        changedById: req.authUser?.id ?? null,
+        changedByName: req.authUser?.name ?? null,
+      });
+    }
+  });
   await logAudit(req, { action: "UPDATE", entityType: "impl_stage_v2", entityId: `${existing.bankId}:${stageId}`, entityLabel: existing.name, details: update });
   invalidateActivityCache();
   eventBus.emit("bank_updated", { bankId: existing.bankId });
@@ -394,6 +412,15 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (
     .where(and(eq(implementationStagesTable.bankId, existing.bankId), eq(implementationStagesTable.trackType, existing.trackType), existing.productId ? eq(implementationStagesTable.productId, existing.productId) : isNull(implementationStagesTable.productId))).orderBy(asc(implementationStagesTable.displayOrder));
   const mode = await getPercentageMode();
   res.json(computeDerivedV2(stages, mode));
+});
+
+router.get("/v2/stages/:stageId/nda-history", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+  const stageId = parseInt(req.params.stageId as string, 10);
+  if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
+  const history = await db.select().from(ndaStatusHistoryTable)
+    .where(eq(ndaStatusHistoryTable.stageId, stageId))
+    .orderBy(asc(ndaStatusHistoryTable.changedAt));
+  res.json(history);
 });
 
 /** DELETE /api/v2/stages/:stageId */

@@ -17,7 +17,7 @@ export interface StageV2 {
   name: string;
   displayOrder: number;
   percentage: number;
-  status: "not_started" | "in_progress" | "completed" | "skipped" | "blocked";
+  status: "not_started" | "in_progress" | "under_review" | "completed" | "on_hold" | "skipped" | "blocked";
   skipped: boolean;
   completed: boolean;
   startedAt: string | null;
@@ -88,6 +88,16 @@ export interface PatchStageBodyV2 {
   notes?: string | null;
 }
 
+export interface NdaStatusHistoryV2 {
+  id: number;
+  stageId: number;
+  fromStatus: string | null;
+  toStatus: string;
+  changedById: string | null;
+  changedByName: string | null;
+  changedAt: string;
+}
+
 export interface PatchSubStageBody {
   name?: string;
   status?: string;
@@ -105,6 +115,7 @@ export const getBankStagesV2QueryKey = (bankId: string, track: ImplementationTra
 export const getSubStagesV2QueryKey = (stageId: number): QueryKey => [`/api/v2/stages/${stageId}/sub-stages`];
 export const getImplSummaryV2QueryKey = (): QueryKey => ["/api/v2/implementation/summary"];
 export const getImplSettingsV2QueryKey = (): QueryKey => ["/api/v2/admin/implementation-settings"];
+export const getNdaStatusHistoryQueryKey = (stageId: number): QueryKey => ["/api/v2/stages", stageId, "nda-history"];
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
@@ -113,8 +124,13 @@ const fetchBankStages = (bankId: string, track: ImplementationTrackType, product
 const fetchSubStages = (stageId: number) => customFetch<SubStageV2[]>(`/api/v2/stages/${stageId}/sub-stages`);
 const fetchImplSummaryV2 = () => customFetch<BankSummaryV2[]>("/api/v2/implementation/summary");
 const fetchImplSettings = () => customFetch<ImplementationSettingsV2>("/api/v2/admin/implementation-settings");
+const fetchNdaStatusHistory = (stageId: number) => customFetch<NdaStatusHistoryV2[]>("/api/v2/stages/" + stageId + "/nda-history");
 
 // ── Query hooks ───────────────────────────────────────────────────────────────
+
+export function useNdaStatusHistory(stageId: number, enabled = true) {
+  return useQuery({ queryKey: getNdaStatusHistoryQueryKey(stageId), queryFn: () => fetchNdaStatusHistory(stageId), enabled });
+}
 
 export function useGetBankStagesV2(
   bankId: string,
@@ -152,7 +168,11 @@ function useBankStagesMutation<TArgs>(bankId: string, track: ImplementationTrack
   const qk = getBankStagesV2QueryKey(bankId, track, productId);
   return useMutation<BankStagesViewV2, ErrorType<unknown>, TArgs>({
     mutationFn: fn,
-    onSuccess: (data) => { qc.setQueryData(qk, data); },
+    onSuccess: (data, args) => {
+      qc.setQueryData(qk, data);
+      const stageId = (args as { stageId?: number }).stageId;
+      if (stageId) qc.invalidateQueries({ queryKey: getNdaStatusHistoryQueryKey(stageId) });
+    },
   });
 }
 

@@ -12,6 +12,7 @@ import {
   useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey,
   useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
   useAdvanceImplementationStage,
+  useNdaStatusHistory,
   useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
   type StageV2, type BankStagesViewV2, type PatchStageBodyV2, type ImplementationTrackType,
   useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
@@ -1779,6 +1780,8 @@ const STATUS_CONFIG_V2 = {
   not_started: { label: 'Not Started', color: 'text-foreground/40', ring: 'border-foreground/20', rowBg: 'bg-foreground/5 border-foreground/10' },
   in_progress:  { label: 'In Progress', color: 'text-blue-500',      ring: 'border-blue-400',      rowBg: 'bg-blue-500/5 border-blue-500/20' },
   completed:    { label: 'Completed',   color: 'text-emerald-500',   ring: 'border-emerald-400',   rowBg: 'bg-emerald-500/5 border-emerald-500/20' },
+  under_review: { label: 'Under Review', color: 'text-amber-500',     ring: 'border-amber-400',     rowBg: 'bg-amber-500/5 border-amber-500/20' },
+  on_hold:      { label: 'On Hold',      color: 'text-orange-500',    ring: 'border-orange-400',    rowBg: 'bg-orange-500/5 border-orange-500/20' },
   blocked:      { label: 'Blocked',     color: 'text-red-500',       ring: 'border-red-400',       rowBg: 'bg-red-500/5 border-red-500/20' },
   skipped:      { label: 'Skipped',     color: 'text-foreground/25', ring: 'border-foreground/10', rowBg: 'bg-foreground/3 border-foreground/5' },
 } as const;
@@ -1873,6 +1876,9 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
   const [notesOpen, setNotesOpen] = useState(false);
   const [subsOpen, setSubsOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const isNda = s.name.trim().toLowerCase() === 'nda' && s.trackType === 'business';
+  const [ndaHistoryOpen, setNdaHistoryOpen] = useState(false);
+  const { data: ndaHistory = [] } = useNdaStatusHistory(s.id, isNda && ndaHistoryOpen);
   const renameRef = useRef<HTMLInputElement>(null);
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -1967,8 +1973,9 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
         <div className="flex flex-wrap gap-1.5 pl-10">
           {statusButton('Not Started', 'not_started', <Circle className="w-3 h-3" />, 'text-foreground/50')}
           {statusButton('In Progress', 'in_progress', <Loader2 className={cn('w-3 h-3', s.status === 'in_progress' && !s.skipped ? 'animate-spin' : '')} />, 'text-blue-500')}
+          {isNda && statusButton('Under Review', 'under_review', <FileText className="w-3 h-3" />, 'text-amber-500')}
           {statusButton('Completed',   'completed',   <CheckCircle2 className="w-3 h-3" />, 'text-emerald-500')}
-          {statusButton('Blocked',     'blocked',     <Ban className="w-3 h-3" />, 'text-red-500')}
+          {isNda ? statusButton('On Hold', 'on_hold', <Ban className="w-3 h-3" />, 'text-orange-500') : statusButton('Blocked', 'blocked', <Ban className="w-3 h-3" />, 'text-red-500')}
 
           {/* Skip / Restore toggle */}
           {s.skipped ? (
@@ -2053,7 +2060,29 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
             <CheckSquare className="w-3 h-3 mr-1" />Sub-stages
             {subsOpen ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
           </Button>
+          {isNda && (
+            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-foreground/40 shrink-0" onClick={() => setNdaHistoryOpen(p => !p)}>
+              <Clock className="w-3 h-3 mr-1" />NDA History
+            </Button>
+          )}
         </div>
+
+        {isNda && (
+          <div className="pl-10 text-[11px] text-foreground/50">
+            Last updated: {formatDateTime(s.updatedAt)}{s.owner ? ` · Owner: ${s.owner}` : ''}
+          </div>
+        )}
+
+        {isNda && ndaHistoryOpen && (
+          <div className="ml-10 rounded-xl border border-foreground/10 bg-background/40 p-3 space-y-2">
+            {ndaHistory.length === 0 ? <p className="text-xs text-foreground/40">No NDA status changes yet.</p> : ndaHistory.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-foreground/5 pb-2 last:border-0 last:pb-0">
+                <span>{(item.fromStatus ?? 'Created').replaceAll('_', ' ')} → {item.toStatus.replaceAll('_', ' ')}</span>
+                <span className="text-foreground/40">{item.changedByName ?? 'System'} · {formatDateTime(item.changedAt)}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Notes */}
         {notesOpen && (

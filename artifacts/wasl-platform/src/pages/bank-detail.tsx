@@ -2455,7 +2455,7 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
                     'w-9 h-9 rounded-full flex items-center justify-center border-2 text-xs font-bold transition-all',
                     s.status === 'in_progress' && !s.skipped ? 'scale-110 shadow-[0_0_12px_0_rgba(59,130,246,0.5)]' : '',
                     cfg.ring,
-                    s.skipped ? 'bg-foreground/5' : s.completed ? 'bg-emerald-500/20' : s.status === 'in_progress' ? 'bg-blue-500/20' : s.status === 'blocked' ? 'bg-red-500/20' : 'bg-foreground/5',
+                    s.skipped ? 'bg-foreground/5' : s.completed ? 'bg-emerald-500/20' : s.status === 'in_progress' ? 'bg-blue-500/20' : s.status === 'on_hold' ? 'bg-amber-500/20' : 'bg-foreground/5',
                   )}>
                     {s.skipped ? <SkipForward className="w-3.5 h-3.5 text-foreground/25" /> : s.completed ? <span className="text-emerald-500">✓</span> : <span className={cfg.color}>{idx + 1}</span>}
                   </div>

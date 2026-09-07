@@ -27,6 +27,7 @@ import {
   ndaStatusHistoryTable,
   agreementStatusHistoryTable,
   agreementCommentsTable,
+  implementationStageStatusHistoryTable,
   bankImplementationProgressTable,
   IMPLEMENTATION_STAGE_LABELS,
   DEFAULT_STAGE_NAMES,
@@ -118,7 +119,7 @@ function computeDerivedV2(stages: Stage[], mode: "dynamic" | "fixed") {
     totalStages: stages.length,
     currentStageId: currentStage?.id ?? null,
     currentStageName: currentStage?.name ?? null,
-    isBlocked: stages.some((s) => s.status === "blocked" && !s.skipped),
+    isBlocked: false,
     percentageMode: mode,
   };
 }
@@ -321,6 +322,9 @@ router.post("/v2/banks/:bankId/stages/advance", requireRole("super_admin", "admi
     const today = new Date().toISOString().split("T")[0];
     await tx.update(implementationStagesTable).set({ status: "completed", completed: true, startedAt: current.startedAt ?? today, completedAt: today, updatedAt: new Date() })
       .where(eq(implementationStagesTable.id, current.id));
+    if (current.status !== "completed") {
+      await tx.insert(implementationStageStatusHistoryTable).values({ stageId: current.id, fromStatus: current.status, toStatus: "completed", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
+    }
     if (current.name.trim().toLowerCase() === "nda") {
       await tx.insert(ndaStatusHistoryTable).values({ stageId: current.id, fromStatus: current.status, toStatus: "completed", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
     }
@@ -330,6 +334,9 @@ router.post("/v2/banks/:bankId/stages/advance", requireRole("super_admin", "admi
     if (next) {
       await tx.update(implementationStagesTable).set({ status: "in_progress", completed: false, startedAt: next.startedAt ?? today, completedAt: null, updatedAt: new Date() })
         .where(eq(implementationStagesTable.id, next.id));
+      if (next.status !== "in_progress") {
+        await tx.insert(implementationStageStatusHistoryTable).values({ stageId: next.id, fromStatus: next.status, toStatus: "in_progress", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
+      }
       if (next.name.trim().toLowerCase() === "nda") {
         await tx.insert(ndaStatusHistoryTable).values({ stageId: next.id, fromStatus: next.status, toStatus: "in_progress", changedById: req.authUser?.id ?? null, changedByName: req.authUser?.name ?? null });
       }
@@ -441,7 +448,7 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin", "manager
   const stageId = parseInt(req.params.stageId as string, 10);
   if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
 
-  const VALID_STATUSES = new Set(["not_started", "in_progress", "under_review", "completed", "on_hold", "skipped", "blocked"]);
+  const VALID_STATUSES = new Set(["not_started", "in_progress", "under_review", "completed", "on_hold", "skipped"]);
   const { name, status, skipped, completed, startedAt, completedAt, plannedDays, owner, notes } = req.body as Record<string, any>;
 
   if (status !== undefined && !VALID_STATUSES.has(status)) {
@@ -482,6 +489,15 @@ router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin", "manager
 
   await db.transaction(async (tx) => {
     await tx.update(implementationStagesTable).set(update as any).where(eq(implementationStagesTable.id, stageId));
+    if (status !== undefined && status !== existing.status) {
+      await tx.insert(implementationStageStatusHistoryTable).values({
+        stageId,
+        fromStatus: existing.status,
+        toStatus: status,
+        changedById: req.authUser?.id ?? null,
+        changedByName: req.authUser?.name ?? null,
+      });
+    }
     if (existing.name.trim().toLowerCase() === "nda" && status !== undefined && status !== existing.status) {
       await tx.insert(ndaStatusHistoryTable).values({
         stageId,
@@ -517,6 +533,15 @@ router.get("/v2/stages/:stageId/nda-history", requirePermission("dashboard_acces
   const history = await db.select().from(ndaStatusHistoryTable)
     .where(eq(ndaStatusHistoryTable.stageId, stageId))
     .orderBy(asc(ndaStatusHistoryTable.changedAt));
+  res.json(history);
+});
+
+router.get("/v2/stages/:stageId/status-history", requirePermission("dashboard_access"), async (req, res): Promise<void> => {
+  const stageId = parseInt(req.params.stageId as string, 10);
+  if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
+  const history = await db.select().from(implementationStageStatusHistoryTable)
+    .where(eq(implementationStageStatusHistoryTable.stageId, stageId))
+    .orderBy(asc(implementationStageStatusHistoryTable.changedAt));
   res.json(history);
 });
 
@@ -602,7 +627,7 @@ router.patch("/v2/sub-stages/:subStageId", requireRole("super_admin", "admin"), 
   const subId = parseInt(req.params.subStageId as string, 10);
   if (isNaN(subId)) { res.status(400).json({ error: "Invalid subStageId" }); return; }
 
-  const VALID = new Set(["not_started", "in_progress", "completed", "skipped", "blocked"]);
+  const VALID = new Set(["not_started", "in_progress", "completed", "on_hold", "skipped"]);
   const { name, status, skipped, completed, completedAt, owner, notes } = req.body as Record<string, any>;
   if (status !== undefined && !VALID.has(status)) { res.status(400).json({ error: `Invalid status '${status}'` }); return; }
 

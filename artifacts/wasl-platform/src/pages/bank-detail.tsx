@@ -15,6 +15,7 @@ import {
   useNdaStatusHistory,
   useAgreementStatusHistory,
   useAgreementComments, useAddAgreementComment,
+  useStageStatusHistory,
   useGetSubStagesV2, useAddSubStageV2, usePatchSubStageV2, useDeleteSubStageV2,
   type StageV2, type BankStagesViewV2, type PatchStageBodyV2, type ImplementationTrackType,
   useProductStages, useAddProductStage, usePatchProductStage, useDeleteProductStage,
@@ -1807,7 +1808,7 @@ const STATUS_CONFIG_V2 = {
   completed:    { label: 'Completed',   color: 'text-emerald-500',   ring: 'border-emerald-400',   rowBg: 'bg-emerald-500/5 border-emerald-500/20' },
   under_review: { label: 'Under Review', color: 'text-amber-500',     ring: 'border-amber-400',     rowBg: 'bg-amber-500/5 border-amber-500/20' },
   on_hold:      { label: 'On Hold',      color: 'text-orange-500',    ring: 'border-orange-400',    rowBg: 'bg-orange-500/5 border-orange-500/20' },
-  blocked:      { label: 'Blocked',     color: 'text-red-500',       ring: 'border-red-400',       rowBg: 'bg-red-500/5 border-red-500/20' },
+  blocked:      { label: 'On Hold',     color: 'text-orange-500',    ring: 'border-orange-400',    rowBg: 'bg-orange-500/5 border-orange-500/20' },
   skipped:      { label: 'Skipped',     color: 'text-foreground/25', ring: 'border-foreground/10', rowBg: 'bg-foreground/3 border-foreground/5' },
 } as const;
 
@@ -1905,10 +1906,12 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
   const isAgreement = s.name.trim().toLowerCase() === 'agreement' && s.trackType === 'business';
   const [ndaHistoryOpen, setNdaHistoryOpen] = useState(false);
   const [agreementHistoryOpen, setAgreementHistoryOpen] = useState(false);
+  const [statusHistoryOpen, setStatusHistoryOpen] = useState(false);
   const [agreementComment, setAgreementComment] = useState('');
   const { data: ndaHistory = [] } = useNdaStatusHistory(s.id, isNda && ndaHistoryOpen);
   const { data: agreementHistory = [] } = useAgreementStatusHistory(s.id, isAgreement && agreementHistoryOpen);
   const { data: agreementComments = [] } = useAgreementComments(s.id, isAgreement && agreementHistoryOpen);
+  const { data: statusHistory = [] } = useStageStatusHistory(s.id, statusHistoryOpen);
   const addAgreementComment = useAddAgreementComment(s.id);
   const renameRef = useRef<HTMLInputElement>(null);
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -2007,7 +2010,7 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
           {statusButton('In Progress', 'in_progress', <Loader2 className={cn('w-3 h-3', s.status === 'in_progress' && !s.skipped ? 'animate-spin' : '')} />, 'text-blue-500')}
           {isNda && statusButton('Under Review', 'under_review', <FileText className="w-3 h-3" />, 'text-amber-500')}
           {statusButton('Completed',   'completed',   <CheckCircle2 className="w-3 h-3" />, 'text-emerald-500')}
-          {isNda ? statusButton('On Hold', 'on_hold', <Ban className="w-3 h-3" />, 'text-orange-500') : statusButton('Blocked', 'blocked', <Ban className="w-3 h-3" />, 'text-red-500')}
+          {statusButton('On Hold', 'on_hold', <Ban className="w-3 h-3" />, 'text-orange-500')}
 
           {/* Skip / Restore toggle */}
           {s.skipped ? (
@@ -2102,7 +2105,21 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
               <Clock className="w-3 h-3 mr-1" />Agreement Activity
             </Button>
           )}
+          <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-foreground/40 shrink-0" onClick={() => setStatusHistoryOpen(p => !p)}>
+            <Clock className="w-3 h-3 mr-1" />Update History
+          </Button>
         </div>
+
+        {statusHistoryOpen && (
+          <div className="ml-10 rounded-xl border border-foreground/10 bg-background/40 p-3 space-y-2">
+            {statusHistory.length === 0 ? <p className="text-xs text-foreground/40">No status changes yet.</p> : statusHistory.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-foreground/5 pb-2 last:border-0 last:pb-0">
+                <span>{(item.fromStatus ?? 'Created').replaceAll('_', ' ')} → {item.toStatus.replaceAll('_', ' ')}</span>
+                <span className="text-foreground/40">{item.changedByName ?? 'System'} · {formatDateTime(item.changedAt)}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {isNda && (
           <div className="pl-10 text-[11px] text-foreground/50">

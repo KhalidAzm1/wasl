@@ -74,6 +74,16 @@ export const agreementCommentsTable = pgTable("agreement_comments", {
   createdAt:  timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const implementationStageStatusHistoryTable = pgTable("implementation_stage_status_history", {
+  id:            serial("id").primaryKey(),
+  stageId:       integer("stage_id").notNull().references(() => implementationStagesTable.id, { onDelete: "cascade" }),
+  fromStatus:    text("from_status"),
+  toStatus:      text("to_status").notNull(),
+  changedById:   text("changed_by_id"),
+  changedByName: text("changed_by_name"),
+  changedAt:     timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ImplementationStageV2     = typeof implementationStagesTable.$inferSelect;
@@ -82,8 +92,9 @@ export type ImplementationSettingRow  = typeof implementationSettingsTable.$infe
 export type NdaStatusHistory          = typeof ndaStatusHistoryTable.$inferSelect;
 export type AgreementStatusHistory    = typeof agreementStatusHistoryTable.$inferSelect;
 export type AgreementComment          = typeof agreementCommentsTable.$inferSelect;
+export type ImplementationStageStatusHistory = typeof implementationStageStatusHistoryTable.$inferSelect;
 
-export type ImplementationStatusV2 = "not_started" | "in_progress" | "under_review" | "completed" | "on_hold" | "skipped" | "blocked";
+export type ImplementationStatusV2 = "not_started" | "in_progress" | "under_review" | "completed" | "on_hold" | "skipped";
 export type PercentageMode = "dynamic" | "fixed";
 export type ImplementationTrackType = "business" | "technical";
 

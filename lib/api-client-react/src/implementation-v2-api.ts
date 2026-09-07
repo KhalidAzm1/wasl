@@ -18,7 +18,7 @@ export interface StageV2 {
   name: string;
   displayOrder: number;
   percentage: number;
-  status: "not_started" | "in_progress" | "under_review" | "completed" | "on_hold" | "skipped" | "blocked";
+  status: "not_started" | "in_progress" | "under_review" | "completed" | "on_hold" | "skipped";
   skipped: boolean;
   completed: boolean;
   startedAt: string | null;
@@ -38,7 +38,7 @@ export interface SubStageV2 {
   stageId: number;
   name: string;
   displayOrder: number;
-  status: "not_started" | "in_progress" | "completed" | "skipped" | "blocked";
+  status: "not_started" | "in_progress" | "completed" | "on_hold" | "skipped";
   skipped: boolean;
   completed: boolean;
   completedAt: string | null;
@@ -117,6 +117,7 @@ export interface NdaStatusHistoryV2 {
   changedAt: string;
 }
 export type AgreementStatusHistoryV2 = NdaStatusHistoryV2;
+export type StageStatusHistoryV2 = NdaStatusHistoryV2;
 export interface AgreementCommentV2 { id: number; stageId: number; body: string; authorId: string | null; authorName: string | null; createdAt: string; }
 
 export interface PatchSubStageBody {
@@ -138,6 +139,7 @@ export const getImplSummaryV2QueryKey = (): QueryKey => ["/api/v2/implementation
 export const getImplSettingsV2QueryKey = (): QueryKey => ["/api/v2/admin/implementation-settings"];
 export const getNdaStatusHistoryQueryKey = (stageId: number): QueryKey => ["/api/v2/stages", stageId, "nda-history"];
 export const getAgreementStatusHistoryQueryKey = (stageId: number): QueryKey => ["/api/v2/stages", stageId, "agreement-history"];
+export const getStageStatusHistoryQueryKey = (stageId: number): QueryKey => ["/api/v2/stages", stageId, "status-history"];
 export const getAgreementCommentsQueryKey = (stageId: number): QueryKey => ["/api/v2/stages", stageId, "agreement-comments"];
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
@@ -149,6 +151,7 @@ const fetchImplSummaryV2 = () => customFetch<BankSummaryV2[]>("/api/v2/implement
 const fetchImplSettings = () => customFetch<ImplementationSettingsV2>("/api/v2/admin/implementation-settings");
 const fetchNdaStatusHistory = (stageId: number) => customFetch<NdaStatusHistoryV2[]>("/api/v2/stages/" + stageId + "/nda-history");
 const fetchAgreementStatusHistory = (stageId: number) => customFetch<AgreementStatusHistoryV2[]>("/api/v2/stages/" + stageId + "/agreement-history");
+const fetchStageStatusHistory = (stageId: number) => customFetch<StageStatusHistoryV2[]>("/api/v2/stages/" + stageId + "/status-history");
 const fetchAgreementComments = (stageId: number) => customFetch<AgreementCommentV2[]>("/api/v2/stages/" + stageId + "/agreement-comments");
 
 // ── Query hooks ───────────────────────────────────────────────────────────────
@@ -158,6 +161,9 @@ export function useNdaStatusHistory(stageId: number, enabled = true) {
 }
 export function useAgreementStatusHistory(stageId: number, enabled = true) {
   return useQuery({ queryKey: getAgreementStatusHistoryQueryKey(stageId), queryFn: () => fetchAgreementStatusHistory(stageId), enabled });
+}
+export function useStageStatusHistory(stageId: number, enabled = true) {
+  return useQuery({ queryKey: getStageStatusHistoryQueryKey(stageId), queryFn: () => fetchStageStatusHistory(stageId), enabled });
 }
 export function useAgreementComments(stageId: number, enabled = true) {
   return useQuery({ queryKey: getAgreementCommentsQueryKey(stageId), queryFn: () => fetchAgreementComments(stageId), enabled });
@@ -212,6 +218,7 @@ function useBankStagesMutation<TArgs>(bankId: string, track: ImplementationTrack
       const stageId = (args as { stageId?: number }).stageId;
       if (stageId) qc.invalidateQueries({ queryKey: getNdaStatusHistoryQueryKey(stageId) });
       if (stageId) qc.invalidateQueries({ queryKey: getAgreementStatusHistoryQueryKey(stageId) });
+      if (stageId) qc.invalidateQueries({ queryKey: getStageStatusHistoryQueryKey(stageId) });
     },
   });
 }

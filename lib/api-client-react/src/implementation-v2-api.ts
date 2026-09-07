@@ -69,6 +69,9 @@ export interface BankSummaryV2 {
   currentStageName: string | null;
   isBlocked: boolean;
   percentageMode: "dynamic" | "fixed";
+  ndaStatus: string | null;
+  ndaOwner: string | null;
+  ndaUpdatedAt: string | null;
 }
 
 export interface ImplementationSettingsV2 {
@@ -170,6 +173,7 @@ function useBankStagesMutation<TArgs>(bankId: string, track: ImplementationTrack
     mutationFn: fn,
     onSuccess: (data, args) => {
       qc.setQueryData(qk, data);
+      qc.invalidateQueries({ queryKey: getImplSummaryV2QueryKey() });
       const stageId = (args as { stageId?: number }).stageId;
       if (stageId) qc.invalidateQueries({ queryKey: getNdaStatusHistoryQueryKey(stageId) });
     },

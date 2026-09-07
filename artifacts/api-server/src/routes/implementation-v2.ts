@@ -160,13 +160,25 @@ async function seedBankStages(bankId: string, trackType: ImplementationTrackType
 // ── Dashboard summary (v2) ────────────────────────────────────────────────────
 
 router.get("/v2/implementation/summary", requirePermission("dashboard_access"), async (_req, res): Promise<void> => {
-  const [activeBanks, allStages, mode] = await Promise.all([
+  const [activeBanks, allStages, allBusinessStages, mode] = await Promise.all([
     db.select({ id: banksTable.id }).from(banksTable).where(eq(banksTable.isArchived, false)),
     db.select().from(implementationStagesTable)
       .where(and(eq(implementationStagesTable.trackType, "business"), isNull(implementationStagesTable.productId)))
       .orderBy(asc(implementationStagesTable.displayOrder)),
+    db.select().from(implementationStagesTable)
+      .where(eq(implementationStagesTable.trackType, "business")),
     getPercentageMode(),
   ]);
+
+  const ndaByBank = new Map<string, Stage>();
+  for (const stage of allBusinessStages.filter((s) => s.name.trim().toLowerCase() === "nda")) {
+    const current = ndaByBank.get(stage.bankId);
+    const stageIsProduct = stage.productId !== null;
+    const currentIsProduct = current?.productId !== null;
+    if (!current || (stageIsProduct && !currentIsProduct) || (stageIsProduct === currentIsProduct && new Date(stage.updatedAt).getTime() > new Date(current.updatedAt).getTime())) {
+      ndaByBank.set(stage.bankId, stage);
+    }
+  }
 
   // Build a set of bank IDs that already have v2 rows
   const seededBankIds = new Set(allStages.map((s) => s.bankId));
@@ -192,12 +204,18 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
 
   const summary = activeBanks.map(({ id }) => {
     const stages = byBank.get(id) ?? [];
+    const nda = ndaByBank.get(id);
+    const ndaSummary = {
+      ndaStatus: nda?.status ?? null,
+      ndaOwner: nda?.owner ?? null,
+      ndaUpdatedAt: nda ? (nda.updatedAt instanceof Date ? nda.updatedAt.toISOString() : nda.updatedAt) : null,
+    };
     if (stages.length === 0) {
       // Should not happen after seeding, but guard defensively
-      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode };
+      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode, ...ndaSummary };
     }
     const { stages: _, ...derived } = computeDerivedV2(stages, mode);
-    return { bankId: id, ...derived };
+    return { bankId: id, ...derived, ...ndaSummary };
   });
 
   res.json(summary);

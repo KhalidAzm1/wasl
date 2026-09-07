@@ -805,6 +805,21 @@ function CompactBankCard({
 
   const risksCount = bankDetail?.risks?.length || 0;
   const docsCount = bankDetail?.documents?.length || 0;
+  const ndaLabels: Record<string, string> = {
+    not_started: 'Not Started', in_progress: 'In Progress', under_review: 'Under Review', completed: 'Completed', on_hold: 'On Hold',
+  };
+  const ndaStyles: Record<string, string> = {
+    not_started: 'bg-foreground/5 text-foreground/50 border-foreground/10',
+    in_progress: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    under_review: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+    completed: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+    on_hold: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  };
+  const NdaBadge = () => implProgress?.ndaStatus ? (
+    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', ndaStyles[implProgress.ndaStatus] ?? ndaStyles.not_started)} title={implProgress.ndaUpdatedAt ? `Last updated: ${formatDateTime(implProgress.ndaUpdatedAt)}${implProgress.ndaOwner ? ` · ${implProgress.ndaOwner}` : ''}` : undefined}>
+      NDA: {ndaLabels[implProgress.ndaStatus] ?? implProgress.ndaStatus}
+    </span>
+  ) : null;
 
   const EditButton = ({ className }: { className?: string }) => {
     if (!canEdit) return null;
@@ -885,6 +900,8 @@ function CompactBankCard({
             }
             </div>
 
+            <div className="w-32 shrink-0"><NdaBadge /></div>
+
             <div className="w-32 shrink-0 text-xs text-foreground/70 flex items-center gap-2 truncate">
               <User className="w-3.5 h-3.5 text-primary/70 shrink-0" />
               <span className="truncate">{displayBank.responsiblePerson || '—'}</span>
@@ -956,6 +973,7 @@ function CompactBankCard({
           </div>
           
           <div className="relative z-20 pt-3 border-t border-foreground/5 flex flex-col gap-2">
+            <NdaBadge />
             {canEdit
               ? <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
               : <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full', getStatusColor(displayBank.status || '').text)}>{displayBank.status}</span>
@@ -1096,6 +1114,8 @@ function CompactBankCard({
               <ProductBadges codes={productCodes} />
             </div>
           )}
+
+          <NdaBadge />
 
           {/* Implementation progress */}
           <div className="space-y-1.5">

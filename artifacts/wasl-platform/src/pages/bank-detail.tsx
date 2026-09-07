@@ -11,6 +11,7 @@ import {
   useCreateDocument, useUploadDocument, useDeleteDocument,
   useListDocuments, getGetBankQueryKey, getListDocumentsQueryKey, getListProductsQueryKey,
   useGetBankStagesV2, usePatchStageV2, useAddStageV2, useDeleteStageV2, useReorderStagesV2,
+  useAddAgreementActivity,
   useAdvanceImplementationStage,
   useNdaStatusHistory,
   useAgreementStatusHistory,
@@ -1960,6 +1961,7 @@ const SortableStageRowV2 = React.memo(function SortableStageRowV2({ stage: s, in
 
           {/* Badges */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {s.activityType === 'custom_agreement' && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-500 border border-violet-500/20">Agreement Activity</span>}
             {s.skipped && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground/40 border border-foreground/15">Skipped</span>}
             {s.percentage > 0 && !s.skipped && (
               <span className="text-[10px] font-mono text-foreground/30">{Math.round(s.percentage)}%</span>
@@ -2218,6 +2220,7 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
   const advanceProduct = useAdvanceImplementationStage(bankId, track, productId);
   const patchStage = usePatchStageV2(bankId, track, productId);
   const addStage = useAddStageV2(bankId, track, productId);
+  const addAgreementActivity = useAddAgreementActivity(bankId, productId);
   const deleteStage = useDeleteStageV2(bankId, track, productId);
   const reorderStages = useReorderStagesV2(bankId, track, productId);
 
@@ -2236,6 +2239,9 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
   const [newStageName, setNewStageName] = useState('');
   const [addingStage, setAddingStage] = useState(false);
+  const [addingAgreementActivity, setAddingAgreementActivity] = useState(false);
+  const [agreementActivityName, setAgreementActivityName] = useState('');
+  const [agreementActivityOwner, setAgreementActivityOwner] = useState('');
 
   // Optimistic list order for DnD
   const [localOrder, setLocalOrder] = useState<number[] | null>(null);
@@ -2337,6 +2343,20 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
     });
   };
 
+  const handleAddAgreementActivity = () => {
+    const name = agreementActivityName.trim();
+    if (!name || !productId) return;
+    addAgreementActivity.mutate({ name, owner: agreementActivityOwner.trim() || null }, {
+      onSuccess: () => {
+        setAgreementActivityName('');
+        setAgreementActivityOwner('');
+        setAddingAgreementActivity(false);
+        toast({ title: 'Agreement activity added' });
+      },
+      onError: (error: any) => toast({ title: 'Could not add agreement activity', description: error?.message, variant: 'destructive' }),
+    });
+  };
+
   if (isLoading) return (
     <div className="flex items-center justify-center py-16 gap-3 text-foreground/40">
       <Loader2 className="w-5 h-5 animate-spin" />
@@ -2435,14 +2455,16 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">Stage Details</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-3 text-xs"
-            onClick={() => setAddingStage(true)}
-          >
-            <Plus className="w-3 h-3 mr-1" /> Add Stage
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {track === 'business' && productId && (
+              <Button variant="outline" size="sm" className="h-7 px-3 text-xs border-violet-500/30 text-violet-500" onClick={() => setAddingAgreementActivity(true)}>
+                <Plus className="w-3 h-3 mr-1" /> Add Agreement Activity
+              </Button>
+            )}
+            <Button variant="outline" size="sm" className="h-7 px-3 text-xs" onClick={() => setAddingStage(true)}>
+              <Plus className="w-3 h-3 mr-1" /> Add Stage
+            </Button>
+          </div>
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -2461,6 +2483,15 @@ function TrackProgress({ bankId, track, product }: { bankId: string; track: Impl
             </div>
           </SortableContext>
         </DndContext>
+
+        {track === 'business' && addingAgreementActivity && (
+          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] p-3 rounded-2xl border border-violet-500/20 bg-violet-500/5">
+            <Input autoFocus placeholder="Agreement activity name…" value={agreementActivityName} onChange={(e) => setAgreementActivityName(e.target.value)} className="h-9 text-sm" />
+            <Input placeholder="Owner / responsible…" value={agreementActivityOwner} onChange={(e) => setAgreementActivityOwner(e.target.value)} className="h-9 text-sm" />
+            <Button size="sm" className="h-9" disabled={!agreementActivityName.trim() || addAgreementActivity.isPending} onClick={handleAddAgreementActivity}>{addAgreementActivity.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}</Button>
+            <Button size="sm" variant="ghost" className="h-9" onClick={() => { setAddingAgreementActivity(false); setAgreementActivityName(''); setAgreementActivityOwner(''); }}>Cancel</Button>
+          </div>
+        )}
 
         {/* Add stage inline form */}
         {addingStage && (

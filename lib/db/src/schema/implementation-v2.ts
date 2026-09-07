@@ -9,6 +9,7 @@ export const implementationStagesTable = pgTable("implementation_stages", {
   bankId:       text("bank_id").notNull().references(() => banksTable.id, { onDelete: "cascade" }),
   productId:    integer("product_id").references(() => productsTable.id, { onDelete: "cascade" }),
   trackType:    text("track_type").notNull().default("business"),
+  activityType: text("activity_type").notNull().default("standard"),
   name:         text("name").notNull(),
   displayOrder: integer("display_order").notNull().default(0),
   percentage:   numeric("percentage", { precision: 5, scale: 2 }),

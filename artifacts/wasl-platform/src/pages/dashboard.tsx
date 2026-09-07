@@ -825,6 +825,11 @@ function CompactBankCard({
       Agreement: {ndaLabels[implProgress.agreementStatus] ?? implProgress.agreementStatus}
     </span>
   ) : null;
+  const CustomAgreementsBadge = () => (implProgress?.agreementActivitiesTotal ?? 0) > 0 ? (
+    <span className="inline-flex items-center rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-500 whitespace-nowrap">
+      Activities: {implProgress!.agreementActivitiesCompleted}/{implProgress!.agreementActivitiesTotal}
+    </span>
+  ) : null;
 
   const EditButton = ({ className }: { className?: string }) => {
     if (!canEdit) return null;
@@ -905,7 +910,7 @@ function CompactBankCard({
             }
             </div>
 
-            <div className="w-48 shrink-0 flex flex-wrap gap-1"><NdaBadge /><AgreementBadge /></div>
+            <div className="w-56 shrink-0 flex flex-wrap gap-1"><NdaBadge /><AgreementBadge /><CustomAgreementsBadge /></div>
 
             <div className="w-32 shrink-0 text-xs text-foreground/70 flex items-center gap-2 truncate">
               <User className="w-3.5 h-3.5 text-primary/70 shrink-0" />
@@ -978,7 +983,7 @@ function CompactBankCard({
           </div>
           
           <div className="relative z-20 pt-3 border-t border-foreground/5 flex flex-col gap-2">
-            <div className="flex flex-wrap gap-1"><NdaBadge /><AgreementBadge /></div>
+            <div className="flex flex-wrap gap-1"><NdaBadge /><AgreementBadge /><CustomAgreementsBadge /></div>
             {canEdit
               ? <StatusQuickPicker bankId={displayBank.id} status={displayBank.status} />
               : <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full', getStatusColor(displayBank.status || '').text)}>{displayBank.status}</span>
@@ -1120,7 +1125,7 @@ function CompactBankCard({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-1"><NdaBadge /><AgreementBadge /></div>
+          <div className="flex flex-wrap gap-1"><NdaBadge /><AgreementBadge /><CustomAgreementsBadge /></div>
 
           {/* Implementation progress */}
           <div className="space-y-1.5">

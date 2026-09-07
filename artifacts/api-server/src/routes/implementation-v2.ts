@@ -147,6 +147,7 @@ async function seedBankStages(bankId: string, trackType: ImplementationTrackType
         bankId,
         productId: productId ?? null,
         trackType,
+        activityType: trackType === "business" && name.trim().toLowerCase() === "nda" ? "nda" : trackType === "business" && name.trim().toLowerCase() === "agreement" ? "commercial_agreement" : "standard",
         name,
         displayOrder: idx,
         status: priorProductStage?.completed ? "completed" : priorProductStage?.isCurrent ? "in_progress" : prior?.status ?? "not_started",
@@ -227,12 +228,17 @@ router.get("/v2/implementation/summary", requirePermission("dashboard_access"), 
       agreementOwner: agreement?.owner ?? null,
       agreementUpdatedAt: agreement ? (agreement.updatedAt instanceof Date ? agreement.updatedAt.toISOString() : agreement.updatedAt) : null,
     };
+    const customAgreementActivities = allBusinessStages.filter((stage) => stage.bankId === id && stage.activityType === "custom_agreement" && stage.productId !== null);
+    const agreementActivitiesSummary = {
+      agreementActivitiesTotal: customAgreementActivities.length,
+      agreementActivitiesCompleted: customAgreementActivities.filter((stage) => stage.completed).length,
+    };
     if (stages.length === 0) {
       // Should not happen after seeding, but guard defensively
-      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode, ...ndaSummary, ...agreementSummary };
+      return { bankId: id, completionPercentage: 0, completedStages: 0, remainingStages: 0, skippedStages: 0, totalStages: 0, currentStageId: null, currentStageName: null, isBlocked: false, percentageMode: mode, ...ndaSummary, ...agreementSummary, ...agreementActivitiesSummary };
     }
     const { stages: _, ...derived } = computeDerivedV2(stages, mode);
-    return { bankId: id, ...derived, ...ndaSummary, ...agreementSummary };
+    return { bankId: id, ...derived, ...ndaSummary, ...agreementSummary, ...agreementActivitiesSummary };
   });
 
   res.json(summary);
@@ -362,6 +368,28 @@ router.post("/v2/banks/:bankId/stages", requireRole("super_admin", "admin"), asy
   res.status(201).json(computeDerivedV2(stages, mode));
 });
 
+router.post("/v2/banks/:bankId/agreement-activities", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
+  const bankId = req.params.bankId as string;
+  const productId = Number(req.query.productId);
+  const name = String(req.body?.name ?? "").trim();
+  const owner = String(req.body?.owner ?? "").trim() || null;
+  if (!Number.isInteger(productId) || productId <= 0) { res.status(400).json({ error: "productId is required" }); return; }
+  if (!name) { res.status(400).json({ error: "Activity name is required" }); return; }
+  const [product] = await db.select({ id: productsTable.id }).from(productsTable)
+    .where(and(eq(productsTable.id, productId), eq(productsTable.bankId, bankId)));
+  if (!product) { res.status(404).json({ error: "Product not found for bank" }); return; }
+  const existing = await db.select({ ord: implementationStagesTable.displayOrder }).from(implementationStagesTable)
+    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.productId, productId), eq(implementationStagesTable.trackType, "business")));
+  const maxOrder = existing.length > 0 ? Math.max(...existing.map((row) => row.ord)) + 1 : 0;
+  await db.insert(implementationStagesTable).values({ bankId, productId, trackType: "business", activityType: "custom_agreement", name, owner, displayOrder: maxOrder });
+  await logAudit(req, { action: "CREATE", entityType: "agreement_activity", entityId: `${bankId}:${productId}`, entityLabel: name, details: { bankId, productId, owner } });
+  const stages = await db.select().from(implementationStagesTable)
+    .where(and(eq(implementationStagesTable.bankId, bankId), eq(implementationStagesTable.productId, productId), eq(implementationStagesTable.trackType, "business")))
+    .orderBy(asc(implementationStagesTable.displayOrder));
+  const mode = await getPercentageMode();
+  res.status(201).json(computeDerivedV2(stages, mode));
+});
+
 /** POST /api/v2/banks/:bankId/stages/reorder — body: { orderedIds: number[] } */
 router.post("/v2/banks/:bankId/stages/reorder", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
   const bankId = req.params.bankId as string;
@@ -390,7 +418,7 @@ router.post("/v2/banks/:bankId/stages/reorder", requireRole("super_admin", "admi
 });
 
 /** PATCH /api/v2/stages/:stageId */
-router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin"), async (req, res): Promise<void> => {
+router.patch("/v2/stages/:stageId", requireRole("super_admin", "admin", "manager"), async (req, res): Promise<void> => {
   const stageId = parseInt(req.params.stageId as string, 10);
   if (isNaN(stageId)) { res.status(400).json({ error: "Invalid stageId" }); return; }
 

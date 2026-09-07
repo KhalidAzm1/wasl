@@ -14,6 +14,7 @@ export interface StageV2 {
   bankId: string;
   productId: number | null;
   trackType: "business" | "technical";
+  activityType: "standard" | "nda" | "commercial_agreement" | "custom_agreement";
   name: string;
   displayOrder: number;
   percentage: number;
@@ -75,6 +76,8 @@ export interface BankSummaryV2 {
   agreementStatus: string | null;
   agreementOwner: string | null;
   agreementUpdatedAt: string | null;
+  agreementActivitiesTotal: number;
+  agreementActivitiesCompleted: number;
 }
 
 export interface ImplementationSettingsV2 {
@@ -226,6 +229,12 @@ export function usePatchStageV2(bankId: string, track: ImplementationTrackType =
 export function useDeleteStageV2(bankId: string, track: ImplementationTrackType = "business", productId?: number) {
   return useBankStagesMutation<{ stageId: number }>(bankId, track, productId, ({ stageId }) =>
     customFetch<BankStagesViewV2>(`/api/v2/stages/${stageId}`, { method: "DELETE" })
+  );
+}
+
+export function useAddAgreementActivity(bankId: string, productId?: number) {
+  return useBankStagesMutation<{ name: string; owner?: string | null }>(bankId, "business", productId, ({ name, owner }) =>
+    customFetch<BankStagesViewV2>(`/api/v2/banks/${bankId}/agreement-activities?productId=${productId ?? ""}`, { method: "POST", body: JSON.stringify({ name, owner }) })
   );
 }
 

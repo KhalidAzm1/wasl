@@ -175,6 +175,21 @@ export async function getOneDriveDownloadUrl(itemId: string): Promise<string> {
   return url;
 }
 
+/** Downloads a OneDrive item through the authenticated connector. */
+export async function downloadFromOneDrive(itemId: string): Promise<Buffer> {
+  const connectors = getConnectors();
+  const response = await connectors.proxy(
+    "onedrive",
+    `/v1.0/me/drive/items/${encodeURIComponent(itemId)}/content`,
+    { method: "GET" },
+  );
+  if (!response.ok) {
+    const text = await response.text().catch(() => "(no body)");
+    throw new Error(`OneDrive download failed (${response.status}): ${text.slice(0, 240)}`);
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
 /**
  * Permanently deletes an OneDrive item by ID.
  * 404 is silently ignored (item already gone).

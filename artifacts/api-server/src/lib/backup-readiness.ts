@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 import { pipeline } from "node:stream/promises";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { backupRecoveryTestsTable, backupRunsTable, db } from "@workspace/db";
-import { deleteFromOneDrive, getOneDriveDownloadUrl, uploadFileToOneDrive } from "./onedrive-storage";
+import { deleteFromOneDrive, downloadFromOneDrive, uploadFileToOneDrive } from "./onedrive-storage";
 
 const CRITICAL_DATA = [
   "PostgreSQL schema",
@@ -142,10 +142,7 @@ export async function verifyLatestBackupIntegrity() {
   const encryptedPath = path.join(workDir, "backup.aes256");
   const plainPath = path.join(workDir, "backup.dump");
   try {
-    const downloadUrl = await getOneDriveDownloadUrl(latest.oneDriveItemId);
-    const response = await fetch(downloadUrl);
-    if (!response.ok) throw new Error(`Backup download failed (${response.status})`);
-    await writeFile(encryptedPath, Buffer.from(await response.arrayBuffer()));
+    await writeFile(encryptedPath, await downloadFromOneDrive(latest.oneDriveItemId));
 
     const actualChecksum = await sha256(encryptedPath);
     if (actualChecksum !== latest.checksumSha256) throw new Error("Backup checksum does not match the recorded SHA-256 value");

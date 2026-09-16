@@ -158,7 +158,7 @@ export async function getOneDriveDownloadUrl(itemId: string): Promise<string> {
   const connectors = getConnectors();
   const response = await connectors.proxy(
     "onedrive",
-    `/v1.0/me/drive/items/${encodeURIComponent(itemId)}?$select=id,%40microsoft.graph.downloadUrl`,
+    `/v1.0/me/drive/items/${encodeURIComponent(itemId)}`,
     { method: "GET" },
   );
 
@@ -168,7 +168,7 @@ export async function getOneDriveDownloadUrl(itemId: string): Promise<string> {
   }
 
   const item = (await response.json()) as Record<string, unknown>;
-  const url = item["@microsoft.graph.downloadUrl"] as string | undefined;
+  const url = (item["@microsoft.graph.downloadUrl"] ?? item["@microsoft.graph.downloadUrlNoAuth"]) as string | undefined;
   if (!url) throw new Error("OneDrive response missing @microsoft.graph.downloadUrl");
 
   downloadUrlCache.set(itemId, { url, expiresAt: Date.now() + DOWNLOAD_URL_CACHE_TTL_MS });

@@ -87,10 +87,10 @@ export async function createDatabaseBackup(createdBy?: string, backupType: Backu
   const folder = `backups/postgresql/${tier}/${startedAt.getUTCFullYear()}/${String(startedAt.getUTCMonth() + 1).padStart(2, "0")}`;
 
   try {
-    await run("pg_dump", ["--format=custom", "--compress=9", "--no-owner", "--no-acl", "--file", plainPath], {
-      ...process.env,
-      PGDATABASE: process.env.DATABASE_URL,
-    });
+    await run("pg_dump", [
+      "--dbname", process.env.DATABASE_URL,
+      "--format=custom", "--compress=9", "--no-owner", "--no-acl", "--file", plainPath,
+    ], process.env);
     await encryptAes256Gcm(plainPath, filePath);
     const [{ size }, checksum] = await Promise.all([stat(filePath), sha256(filePath)]);
     const itemId = await uploadFileToOneDrive(folder, fileName, filePath);

@@ -1,13 +1,13 @@
-import { createCipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { appendFile, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { pipeline } from "node:stream/promises";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { backupRecoveryTestsTable, backupRunsTable, db } from "@workspace/db";
-import { deleteFromOneDrive, uploadFileToOneDrive } from "./onedrive-storage";
+import { deleteFromOneDrive, getOneDriveDownloadUrl, uploadFileToOneDrive } from "./onedrive-storage";
 
 const CRITICAL_DATA = [
   "PostgreSQL schema",
@@ -53,6 +53,18 @@ function run(command: string, args: string[], env: NodeJS.ProcessEnv): Promise<v
     child.stderr.on("data", (chunk) => { stderr += String(chunk).slice(0, 4000); });
     child.on("error", reject);
     child.on("close", (code) => code === 0 ? resolve() : reject(new Error(`pg_dump exited with code ${code}: ${stderr}`)));
+  });
+}
+
+function runCapture(command: string, args: string[], env: NodeJS.ProcessEnv): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += String(chunk); });
+    child.stderr.on("data", (chunk) => { stderr += String(chunk).slice(0, 4000); });
+    child.on("error", reject);
+    child.on("close", (code) => code === 0 ? resolve(stdout) : reject(new Error(`pg_restore exited with code ${code}: ${stderr}`)));
   });
 }
 
@@ -113,6 +125,46 @@ export async function createDatabaseBackup(createdBy?: string, backupType: Backu
       completedAt: new Date(),
     }).where(eq(backupRunsTable.id, id));
     throw error;
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
+}
+
+/** Read-only integrity check. It never connects to or writes to a database. */
+export async function verifyLatestBackupIntegrity() {
+  const [latest] = await db.select().from(backupRunsTable)
+    .where(and(eq(backupRunsTable.status, "successful"), isNull(backupRunsTable.destroyedAt)))
+    .orderBy(desc(backupRunsTable.completedAt))
+    .limit(1);
+  if (!latest?.oneDriveItemId || !latest.checksumSha256) throw new Error("No successful backup is available to verify");
+
+  const workDir = await mkdtemp(path.join(tmpdir(), "wasl-backup-check-"));
+  const encryptedPath = path.join(workDir, "backup.aes256");
+  const plainPath = path.join(workDir, "backup.dump");
+  try {
+    const downloadUrl = await getOneDriveDownloadUrl(latest.oneDriveItemId);
+    const response = await fetch(downloadUrl);
+    if (!response.ok) throw new Error(`Backup download failed (${response.status})`);
+    await writeFile(encryptedPath, Buffer.from(await response.arrayBuffer()));
+
+    const actualChecksum = await sha256(encryptedPath);
+    if (actualChecksum !== latest.checksumSha256) throw new Error("Backup checksum does not match the recorded SHA-256 value");
+
+    const encrypted = await readFile(encryptedPath);
+    if (encrypted.length < 36 || encrypted.subarray(0, 8).toString() !== "WASLBAK1") {
+      throw new Error("Backup encryption header is invalid");
+    }
+    const iv = encrypted.subarray(8, 20);
+    const authTag = encrypted.subarray(encrypted.length - 16);
+    const ciphertext = encrypted.subarray(20, encrypted.length - 16);
+    const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), iv);
+    decipher.setAuthTag(authTag);
+    await writeFile(plainPath, Buffer.concat([decipher.update(ciphertext), decipher.final()]));
+
+    const listing = await runCapture("pg_restore", ["--list", plainPath], process.env);
+    const objectCount = listing.split("\n").filter((line) => line.trim() && !line.startsWith(";")).length;
+    if (objectCount === 0) throw new Error("Backup archive contains no restorable objects");
+    return { backupRunId: latest.id, status: "passed", checksumVerified: true, encryptionVerified: true, archiveReadable: true, objectCount };
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }

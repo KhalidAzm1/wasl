@@ -1,4 +1,5 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
+import { open, stat } from "node:fs/promises";
 
 /**
  * Root folder inside the user's OneDrive where all Wasl files are stored.
@@ -88,6 +89,61 @@ export async function uploadToOneDrive(
   const item = (await response.json()) as { id: string };
   if (!item?.id) throw new Error("OneDrive upload response missing item ID");
   return item.id;
+}
+
+/** Uploads a large local file with a resumable Microsoft Graph upload session. */
+export async function uploadFileToOneDrive(
+  folderPath: string,
+  fileName: string,
+  localPath: string,
+): Promise<string> {
+  const connectors = getConnectors();
+  const uploadPath = buildUploadUrl(folderPath, fileName).replace(/:\/content$/, ":/createUploadSession");
+  const sessionResponse = await connectors.proxy("onedrive", uploadPath, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ item: { "@microsoft.graph.conflictBehavior": "rename", name: fileName } }),
+  });
+  if (!sessionResponse.ok) {
+    const text = await sessionResponse.text().catch(() => "(no body)");
+    throw new Error(`OneDrive upload session failed (${sessionResponse.status}): ${text.slice(0, 240)}`);
+  }
+
+  const session = (await sessionResponse.json()) as { uploadUrl?: string };
+  if (!session.uploadUrl) throw new Error("OneDrive upload session did not return an upload URL");
+
+  const { size } = await stat(localPath);
+  const file = await open(localPath, "r");
+  const chunkSize = 10 * 320 * 1024;
+  try {
+    for (let start = 0; start < size; start += chunkSize) {
+      const length = Math.min(chunkSize, size - start);
+      const chunk = Buffer.allocUnsafe(length);
+      await file.read(chunk, 0, length, start);
+      const end = start + length - 1;
+      const response = await fetch(session.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Length": String(length),
+          "Content-Range": `bytes ${start}-${end}/${size}`,
+          "Content-Type": "application/octet-stream",
+        },
+        body: chunk,
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => "(no body)");
+        throw new Error(`OneDrive chunk upload failed (${response.status}): ${text.slice(0, 240)}`);
+      }
+      if (end === size - 1) {
+        const item = (await response.json()) as { id?: string };
+        if (!item.id) throw new Error("OneDrive final upload response missing item ID");
+        return item.id;
+      }
+    }
+  } finally {
+    await file.close();
+  }
+  throw new Error("Cannot upload an empty backup file");
 }
 
 /**

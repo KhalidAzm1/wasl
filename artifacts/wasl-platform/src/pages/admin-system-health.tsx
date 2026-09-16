@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { analytics } from '@/lib/analytics';
 import { NavControls } from '@/components/NavControls';
@@ -11,15 +11,17 @@ import {
   XCircle, Activity, FileText, Users, Calendar, Package, Zap, Server,
   FolderOpen, Link2Off, GitBranch,
   Cloud, Mail, BrainCircuit, Clock3,
+  Archive, Play, ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 // ── API helper ─────────────────────────────────────────────────────────────
 
-async function systemFetch(path: string) {
+async function systemFetch(path: string, init?: RequestInit) {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token ?? '';
-  const res = await fetch(`/api${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`/api${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, ...init?.headers } });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -78,6 +80,19 @@ function Stat({ label, value, icon: Icon, accent = false }: { label: string; val
 }
 
 type ExternalHealthStatus = 'healthy' | 'degraded' | 'unavailable';
+type BackupRun = {
+  id: string; backupType: 'manual_full' | 'weekly_full' | 'monthly_full'; status: 'running' | 'successful' | 'failed'; storagePath: string | null;
+  sizeBytes: number | null; checksumSha256: string | null; errorMessage: string | null;
+  startedAt: string; completedAt: string | null; createdBy: string | null;
+};
+type BackupReadiness = {
+  configured: boolean; provider: string; destination: string; encryption: string; encryptionConfigured: boolean;
+  schedules: { dailyIncremental: string; weeklyFull: string; monthlyFull: string; recoveryTest: string };
+  retention: { weeklyDays: number; monthlyDays: number };
+  criticalData: string[]; recoveryProcedure: string[]; latestSuccessfulBackup: BackupRun | null;
+  latestRecoveryTest: { status: 'passed' | 'failed'; testedAt: string; notes: string | null } | null;
+  runs: BackupRun[]; restoreEnabled: false;
+};
 type ExternalServiceHealth = {
   serviceKey: 'postgresql' | 'supabase_auth' | 'microsoft_graph' | 'ai_provider' | 'email_service' | 'hosting_environment';
   serviceName: string;
@@ -148,6 +163,8 @@ function ExternalServiceCard({ service }: { service: ExternalServiceHealth }) {
 
 export default function AdminSystemHealth() {
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: health, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['system-health'],
@@ -172,10 +189,29 @@ export default function AdminSystemHealth() {
     staleTime: 30_000,
   });
 
+  const { data: backupReadiness, isLoading: isBackupLoading } = useQuery<BackupReadiness>({
+    queryKey: ['backup-readiness'],
+    queryFn: () => systemFetch('/system/backup-readiness'),
+    refetchInterval: (query) => query.state.data?.runs?.some((run) => run.status === 'running') ? 5000 : false,
+  });
+
+  const createBackup = useMutation({
+    mutationFn: () => systemFetch('/system/backups', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backup-readiness'] });
+      toast({ title: 'Backup completed', description: 'The database backup was saved to OneDrive.' });
+    },
+    onError: (error: Error) => {
+      queryClient.invalidateQueries({ queryKey: ['backup-readiness'] });
+      toast({ title: 'Backup failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleRefresh = () => {
     setLastRefreshed(new Date());
     refetch();
     refetchExternal();
+    queryClient.invalidateQueries({ queryKey: ['backup-readiness'] });
   };
 
   const db = health?.database;
@@ -237,6 +273,56 @@ export default function AdminSystemHealth() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {(externalHealth?.services ?? []).map((service) => <ExternalServiceCard key={service.serviceKey} service={service} />)}
+          </div>
+        )}
+      </section>
+
+      {/* Backup & Recovery Readiness — User Story 1666. No restore action is exposed. */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Archive className="w-5 h-5 text-primary" /> Backup & Recovery
+            </h2>
+            <p className="text-xs text-foreground/45 mt-1">PostgreSQL backups stored independently in Microsoft OneDrive.</p>
+          </div>
+          <Button size="sm" className="gap-2" onClick={() => createBackup.mutate()} disabled={createBackup.isPending || backupReadiness?.runs.some((run) => run.status === 'running')}>
+            <Play className="w-4 h-4" /> {createBackup.isPending ? 'Creating backup…' : 'Create backup now'}
+          </Button>
+        </div>
+        {isBackupLoading ? <div className="h-48 rounded-2xl bg-foreground/5 animate-pulse" /> : backupReadiness && (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><HardDrive className="w-4 h-4 text-primary" /> Backup status</CardTitle></CardHeader>
+              <CardContent className="space-y-1">
+                <Stat label="Provider" value={backupReadiness.provider} icon={Cloud} />
+                <Stat label="Encryption" value={backupReadiness.encryptionConfigured ? backupReadiness.encryption : 'Key not configured'} icon={ShieldCheck} accent={backupReadiness.encryptionConfigured} />
+                <Stat label="Weekly full" value="Friday 02:00" icon={Calendar} />
+                <Stat label="Monthly full" value="1st day 03:00" icon={Calendar} />
+                <Stat label="Retention" value={`${backupReadiness.retention.weeklyDays}d weekly / ${backupReadiness.retention.monthlyDays}d monthly`} icon={Archive} />
+                <Stat label="Last successful" value={backupReadiness.latestSuccessfulBackup ? new Date(backupReadiness.latestSuccessfulBackup.startedAt).toLocaleString('en-US') : 'None yet'} icon={CheckCircle2} accent={Boolean(backupReadiness.latestSuccessfulBackup)} />
+                <Stat label="Size" value={backupReadiness.latestSuccessfulBackup?.sizeBytes ? `${(backupReadiness.latestSuccessfulBackup.sizeBytes / 1024 / 1024).toFixed(2)} MB` : '—'} icon={HardDrive} />
+              </CardContent>
+            </Card>
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /> Recovery readiness</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-sm"><span className="text-foreground/60">Latest recovery test</span><Badge variant="outline">{backupReadiness.latestRecoveryTest?.status ?? 'Not tested'}</Badge></div>
+                <p className="text-xs text-foreground/45">Restore is intentionally disabled. It will only be run against an isolated test database after explicit approval.</p>
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-500 flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0" /> No production restore action exists in this screen.</div>
+              </CardContent>
+            </Card>
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ClipboardCheck className="w-4 h-4 text-primary" /> Recent backup runs</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {backupReadiness.runs.length === 0 ? <p className="text-xs text-foreground/45">No backup has been executed yet.</p> : backupReadiness.runs.slice(0, 5).map((run) => (
+                  <div key={run.id} className="flex items-center justify-between gap-3 border-b border-foreground/5 pb-2 text-xs">
+                    <div><p>{new Date(run.startedAt).toLocaleString('en-US')}</p><p className="text-foreground/40 truncate max-w-52">{run.backupType.replaceAll('_', ' ')} · {run.errorMessage ?? run.createdBy ?? 'Scheduled job'}</p></div>
+                    <Badge variant="outline" className={cn(run.status === 'successful' && 'text-green-500', run.status === 'failed' && 'text-red-500', run.status === 'running' && 'text-amber-500')}>{run.status}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
         )}
       </section>

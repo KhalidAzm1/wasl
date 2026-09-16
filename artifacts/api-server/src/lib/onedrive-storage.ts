@@ -24,6 +24,20 @@ function getConnectors() {
   return new ReplitConnectors();
 }
 
+/** Read-only connectivity probe used by the System Health page. */
+export async function checkOneDriveConnection(): Promise<void> {
+  const connectors = getConnectors();
+  const response = await connectors.proxy(
+    "onedrive",
+    "/v1.0/me/drive?$select=id,driveType",
+    { method: "GET" },
+  );
+  if (!response.ok) {
+    const text = await response.text().catch(() => "(no body)");
+    throw new Error(`Microsoft Graph returned ${response.status}: ${text.slice(0, 160)}`);
+  }
+}
+
 /**
  * Builds the Graph API upload URL for a file path inside the Wasl root folder.
  * Each path segment is percent-encoded individually; slashes are kept as-is.

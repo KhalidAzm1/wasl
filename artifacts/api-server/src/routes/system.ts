@@ -30,12 +30,26 @@ import {
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import { runExternalServiceHealthChecks } from "../lib/external-service-health";
 
 const router: IRouter = Router();
 router.use(requireAuth);
 
 const BUCKET = "wasl-documents";
 const REPORTS_DIR = path.join(process.cwd(), "storage", "reports");
+
+/** Independent, read-only checks for the critical external services used by WASL. */
+router.get(
+  "/system/external-services-health",
+  requireRole("super_admin"),
+  async (_req, res): Promise<void> => {
+    const services = await runExternalServiceHealthChecks();
+    res.json({
+      checkedAt: new Date().toISOString(),
+      services,
+    });
+  },
+);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

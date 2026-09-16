@@ -10,6 +10,7 @@ import {
   Database, HardDrive, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle,
   XCircle, Activity, FileText, Users, Calendar, Package, Zap, Server,
   FolderOpen, Link2Off, GitBranch,
+  Cloud, Mail, BrainCircuit, Clock3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -76,6 +77,73 @@ function Stat({ label, value, icon: Icon, accent = false }: { label: string; val
   );
 }
 
+type ExternalHealthStatus = 'healthy' | 'degraded' | 'unavailable';
+type ExternalServiceHealth = {
+  serviceKey: 'postgresql' | 'supabase_auth' | 'microsoft_graph' | 'ai_provider' | 'email_service' | 'hosting_environment';
+  serviceName: string;
+  status: ExternalHealthStatus;
+  latencyMs: number;
+  message: string;
+  lastCheckedAt: string;
+  lastSuccessfulAt: string | null;
+};
+
+const externalStatusStyle: Record<ExternalHealthStatus, { label: string; badge: string; dot: string }> = {
+  healthy: { label: 'Healthy', badge: 'border-green-500/30 bg-green-500/10 text-green-500', dot: 'bg-green-500' },
+  degraded: { label: 'Degraded', badge: 'border-amber-500/30 bg-amber-500/10 text-amber-500', dot: 'bg-amber-500' },
+  unavailable: { label: 'Unavailable', badge: 'border-red-500/30 bg-red-500/10 text-red-500', dot: 'bg-red-500' },
+};
+
+const externalServiceIcons: Record<ExternalServiceHealth['serviceKey'], React.ElementType> = {
+  postgresql: Database,
+  supabase_auth: ShieldCheck,
+  microsoft_graph: Cloud,
+  ai_provider: BrainCircuit,
+  email_service: Mail,
+  hosting_environment: Server,
+};
+
+function ExternalServiceCard({ service }: { service: ExternalServiceHealth }) {
+  const style = externalStatusStyle[service.status];
+  const Icon = externalServiceIcons[service.serviceKey];
+  const formatTimestamp = (value: string | null) => value
+    ? new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'No successful check yet';
+
+  return (
+    <Card className="glass-card">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Icon className="w-4 h-4 text-primary" /> {service.serviceName}
+          </CardTitle>
+          <Badge variant="outline" className={cn('gap-1.5', style.badge)}>
+            <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} />
+            {style.label}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="min-h-10 text-xs leading-relaxed text-foreground/55">{service.message}</p>
+        <div className="space-y-2 border-t border-foreground/5 pt-3">
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-foreground/45"><Zap className="w-3 h-3" /> Response</span>
+            <span className="font-mono font-semibold">{service.latencyMs} ms</span>
+          </div>
+          <div className="flex items-start justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-foreground/45"><Clock3 className="w-3 h-3 mt-0.5" /> Last check</span>
+            <span className="text-right text-foreground/70">{formatTimestamp(service.lastCheckedAt)}</span>
+          </div>
+          <div className="flex items-start justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-foreground/45"><CheckCircle2 className="w-3 h-3 mt-0.5" /> Last success</span>
+            <span className="text-right text-foreground/70">{formatTimestamp(service.lastSuccessfulAt)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function AdminSystemHealth() {
@@ -91,9 +159,23 @@ export default function AdminSystemHealth() {
     staleTime: 30_000,
   });
 
+  const {
+    data: externalHealth,
+    isLoading: isExternalLoading,
+    isError: isExternalError,
+    error: externalError,
+    refetch: refetchExternal,
+    isFetching: isExternalFetching,
+  } = useQuery<{ checkedAt: string; services: ExternalServiceHealth[] }>({
+    queryKey: ['external-services-health'],
+    queryFn: () => systemFetch('/system/external-services-health'),
+    staleTime: 30_000,
+  });
+
   const handleRefresh = () => {
     setLastRefreshed(new Date());
     refetch();
+    refetchExternal();
   };
 
   const db = health?.database;
@@ -120,9 +202,9 @@ export default function AdminSystemHealth() {
           <span className="text-xs text-foreground/40">
             Last checked: {lastRefreshed.toLocaleTimeString('en-US')}
           </span>
-          <Button onClick={handleRefresh} variant="outline" size="sm" className="gap-2" disabled={isFetching}>
-            <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
-            Refresh
+          <Button onClick={handleRefresh} variant="outline" size="sm" className="gap-2" disabled={isFetching || isExternalFetching}>
+            <RefreshCw className={cn('w-4 h-4', (isFetching || isExternalFetching) && 'animate-spin')} />
+            Run Health Check
           </Button>
         </div>
       </div>
@@ -133,6 +215,31 @@ export default function AdminSystemHealth() {
           Failed to load health data: {(error as Error).message}
         </div>
       )}
+
+      {isExternalError && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          Failed to load external service health: {(externalError as Error).message}
+        </div>
+      )}
+
+      {/* External services required by User Story 1664 */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Cloud className="w-5 h-5 text-primary" /> External Services Health
+          </h2>
+          <p className="text-xs text-foreground/45 mt-1">Independent availability checks — one failure does not affect the other service results.</p>
+        </div>
+        {isExternalLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="h-52 rounded-2xl bg-foreground/5 animate-pulse" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {(externalHealth?.services ?? []).map((service) => <ExternalServiceCard key={service.serviceKey} service={service} />)}
+          </div>
+        )}
+      </section>
 
       {/* Loading skeleton */}
       {isLoading && (

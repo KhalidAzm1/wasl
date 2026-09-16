@@ -65,11 +65,11 @@ router.post(
   requireRole("super_admin"),
   async (req, res): Promise<void> => {
     try {
-      const result = await createDatabaseBackup(req.authUser?.email);
+      const result = await createDatabaseBackup(req.authUser?.email, "monthly_full");
       res.status(201).json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Backup failed";
-      res.status(message === "A backup is already running" ? 409 : 500).json({ error: message });
+      res.status(message === "A backup is already running" || message === "This month's backup has already been completed" ? 409 : 500).json({ error: message });
     }
   },
 );

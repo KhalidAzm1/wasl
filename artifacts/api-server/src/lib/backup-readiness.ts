@@ -85,6 +85,18 @@ export async function createDatabaseBackup(createdBy?: string, backupType: Backu
   const running = await db.select({ id: backupRunsTable.id }).from(backupRunsTable)
     .where(eq(backupRunsTable.status, "running")).limit(1);
   if (running.length) throw new Error("A backup is already running");
+  if (backupType === "monthly_full") {
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const recentMonthly = await db.select({ startedAt: backupRunsTable.startedAt }).from(backupRunsTable)
+      .where(and(eq(backupRunsTable.backupType, "monthly_full"), eq(backupRunsTable.status, "successful")))
+      .orderBy(desc(backupRunsTable.startedAt))
+      .limit(1);
+    if (recentMonthly[0]?.startedAt >= monthStart) {
+      throw new Error("This month's backup has already been completed");
+    }
+  }
 
   const id = randomUUID();
   const startedAt = new Date();
@@ -178,13 +190,13 @@ export async function getBackupReadiness() {
   return {
     configured: Boolean(process.env.DATABASE_URL),
     provider: "Microsoft OneDrive",
-    destination: "Wasl Platform/Backups/PostgreSQL/{weekly|monthly}/YYYY/MM",
+    destination: "Wasl Platform/backups/postgresql/monthly/YYYY/MM",
     criticalData: CRITICAL_DATA,
     recoveryProcedure: RECOVERY_PROCEDURE,
     schedules: {
       dailyIncremental: "Provider-managed Replit PostgreSQL PITR — verify recovery window in Replit",
-      weeklyFull: "Every Friday at 02:00 Asia/Riyadh",
-      monthlyFull: "First day of every month at 03:00 Asia/Riyadh",
+      weeklyFull: "Disabled",
+      monthlyFull: "Manual — one successful backup per calendar month",
       recoveryTest: "Every 3 months — isolated test database, explicit approval required",
     },
     retention: { weeklyDays: 56, monthlyDays: 365 },

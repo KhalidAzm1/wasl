@@ -199,7 +199,7 @@ export default function AdminSystemHealth() {
     mutationFn: () => systemFetch('/system/backups', { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backup-readiness'] });
-      toast({ title: 'Backup completed', description: 'The database backup was saved to OneDrive.' });
+      toast({ title: 'Monthly backup completed', description: 'This month’s encrypted database backup was saved to OneDrive.' });
     },
     onError: (error: Error) => {
       queryClient.invalidateQueries({ queryKey: ['backup-readiness'] });
@@ -284,10 +284,10 @@ export default function AdminSystemHealth() {
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Archive className="w-5 h-5 text-primary" /> Backup & Recovery
             </h2>
-            <p className="text-xs text-foreground/45 mt-1">PostgreSQL backups stored independently in Microsoft OneDrive.</p>
+            <p className="text-xs text-foreground/45 mt-1">One encrypted PostgreSQL backup per month, started manually by a super admin.</p>
           </div>
           <Button size="sm" className="gap-2" onClick={() => createBackup.mutate()} disabled={createBackup.isPending || backupReadiness?.runs.some((run) => run.status === 'running')}>
-            <Play className="w-4 h-4" /> {createBackup.isPending ? 'Creating backup…' : 'Create backup now'}
+            <Play className="w-4 h-4" /> {createBackup.isPending ? 'Creating backup…' : 'Create this month’s backup'}
           </Button>
         </div>
         {isBackupLoading ? <div className="h-48 rounded-2xl bg-foreground/5 animate-pulse" /> : backupReadiness && (
@@ -297,9 +297,9 @@ export default function AdminSystemHealth() {
               <CardContent className="space-y-1">
                 <Stat label="Provider" value={backupReadiness.provider} icon={Cloud} />
                 <Stat label="Encryption" value={backupReadiness.encryptionConfigured ? backupReadiness.encryption : 'Key not configured'} icon={ShieldCheck} accent={backupReadiness.encryptionConfigured} />
-                <Stat label="Weekly full" value="Friday 02:00" icon={Calendar} />
-                <Stat label="Monthly full" value="1st day 03:00" icon={Calendar} />
-                <Stat label="Retention" value={`${backupReadiness.retention.weeklyDays}d weekly / ${backupReadiness.retention.monthlyDays}d monthly`} icon={Archive} />
+                <Stat label="Execution" value="Manual only" icon={Calendar} />
+                <Stat label="Frequency" value="Once per month" icon={Calendar} />
+                <Stat label="Retention" value={`${backupReadiness.retention.monthlyDays} days`} icon={Archive} />
                 <Stat label="Last successful" value={backupReadiness.latestSuccessfulBackup ? new Date(backupReadiness.latestSuccessfulBackup.startedAt).toLocaleString('en-US') : 'None yet'} icon={CheckCircle2} accent={Boolean(backupReadiness.latestSuccessfulBackup)} />
                 <Stat label="Size" value={backupReadiness.latestSuccessfulBackup?.sizeBytes ? `${(backupReadiness.latestSuccessfulBackup.sizeBytes / 1024 / 1024).toFixed(2)} MB` : '—'} icon={HardDrive} />
               </CardContent>

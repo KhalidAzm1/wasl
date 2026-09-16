@@ -10,7 +10,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
     ,"backup": "tsx src/scripts/run-backup.ts",
-    "backup:weekly": "tsx src/scripts/run-backup.ts weekly_full",
     "backup:monthly": "tsx src/scripts/run-backup.ts monthly_full",
     "backup:retention": "tsx src/scripts/apply-backup-retention.ts",
     "backup:verify": "tsx src/scripts/verify-backup-integrity.ts"
